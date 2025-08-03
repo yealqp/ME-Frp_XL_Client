@@ -120,7 +120,7 @@ def upload_file_to_cos(file_path, cos_key, bucket, region, secret_id, secret_key
             else:
                 latest_filename = original_name  # fallback to original name
             
-            latest_key = f"latest/{latest_filename}"
+            latest_key = f"windows/latest/{latest_filename}"
             
             # Delete existing files with 'me' prefix in latest folder
             delete_files_with_prefix(client, bucket, "latest/", "me")
