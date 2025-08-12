@@ -1270,13 +1270,13 @@ async fn check_for_updates() -> Result<VersionCheckResult, String> {
     
     // 请求远程版本信息
     let response = client
-        .get("https://alist.yealqp.cn/d/mefrp-desktop/latest/version.json?sign=F3lfDhDXLsJUshAXmzFuY7QfQD0T3dCJY4Jxr1Y9eOg=:0")
+        .get("https://check.yealqp.cn/version.json")
         .send()
         .await
         .map_err(|e| format!("请求版本信息失败: {}", e))?;
     
     if !response.status().is_success() {
-        return Err(format!("获取版本信息失败，状态码: {}", response.status()));
+        return Err(format!("获取版本信息失败，状态码: {:?}", response.status()));
     }
     
     let remote_version: RemoteVersion = response

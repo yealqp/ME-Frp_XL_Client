@@ -394,7 +394,7 @@ const checkForUpdates = async (showNoUpdateMessage = true) => {
           // 这里可以添加实际的更新逻辑
           message.info('正在准备更新...');
           // 可以打开下载页面或执行更新程序
-          window.open('https://alist.yealqp.cn/mefrp-desktop', '_blank');
+          window.open('https://alist.yealqp.fun/windows', '_blank');
         },
         onNegativeClick: () => {
           message.info('已取消更新，下次启动时会再次检查');
