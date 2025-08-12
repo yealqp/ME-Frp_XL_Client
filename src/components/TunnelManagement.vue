@@ -331,6 +331,106 @@
       </div>
     </div>
   </n-modal>
+
+  <!-- 配置文件模态框 -->
+  <n-modal v-model:show="showConfigModal" preset="card" title="隧道配置文件" style="width: 80%; max-width: 800px; height: 80vh;">
+    <div v-if="currentConfigTunnelId" class="config-container">
+      <div class="config-header">
+          <span class="config-title">隧道 ID: {{ currentConfigTunnelId }}</span>
+          <n-space>
+            <template v-if="!isEditingConfig">
+              <n-button 
+                type="primary" 
+                size="small" 
+                @click="startEditConfig"
+                :disabled="!configContents[activeConfigType]"
+              >
+                <template #icon>
+                  <i class="fas fa-edit"></i>
+                </template>
+                编辑配置
+              </n-button>
+              <n-button 
+                type="success" 
+                size="small" 
+                @click="saveConfigFile(currentConfigTunnelId!, activeConfigType, configContents[activeConfigType])"
+                :disabled="!configContents[activeConfigType]"
+              >
+                <template #icon>
+                  <i class="fas fa-save"></i>
+                </template>
+                保存到本地
+              </n-button>
+            </template>
+            
+            <template v-else>
+              <n-button 
+                type="success" 
+                size="small" 
+                @click="saveEditedConfig"
+              >
+                <template #icon>
+                  <i class="fas fa-check"></i>
+                </template>
+                保存修改
+              </n-button>
+              <n-button 
+                type="default" 
+                size="small" 
+                @click="cancelEditConfig"
+              >
+                <template #icon>
+                  <i class="fas fa-times"></i>
+                </template>
+                取消
+              </n-button>
+            </template>
+          </n-space>
+        </div>
+      
+      <div class="config-content">
+        <n-tabs 
+           :value="activeConfigType" 
+           @update:value="handleConfigTypeChange"
+           type="line" 
+           placement="left" 
+           tab-style="min-width: 80px;"
+         >
+          <n-tab-pane 
+             v-for="format in configTypes" 
+             :key="format" 
+             :name="format" 
+             :tab="format.toUpperCase()"
+             :disabled="!configContents[format]"
+           >
+             <div class="config-code-container">
+               <template v-if="configContents[format]">
+                 <n-input 
+                   v-if="isEditingConfig"
+                   v-model:value="editableConfigContents[format]"
+                   type="textarea"
+                   :rows="20"
+                   :autosize="{ minRows: 20, maxRows: 30 }"
+                   placeholder="请输入配置内容"
+                   style="font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px;"
+                 />
+                 <n-code 
+                   v-else
+                   :code="configContents[format]"
+                   :language="getLanguageForFormat(format)"
+                   show-line-numbers
+                   word-wrap
+                 />
+               </template>
+               <div v-else class="no-config">
+                 <n-empty description="该格式配置文件不可用" />
+               </div>
+             </div>
+           </n-tab-pane>
+        </n-tabs>
+      </div>
+    </div>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
@@ -410,15 +510,26 @@ async function loadNodeNames() {
   }
 }
 
+// 加载配置文件状态
+async function loadConfigFileStatus() {
+  try {
+    const tunnelsWithConfig = await invoke('check_tunnel_config_files');
+    usingConfigFile.value = new Set(tunnelsWithConfig as number[]);
+  } catch (err) {
+    console.error('加载配置文件状态失败:', err);
+  }
+}
+
 // 加载隧道列表
 async function loadTunnels() {
   loading.value = true;
   error.value = '';
   
   try {
-    // 同时加载隧道列表和节点名称
+    // 同时加载隧道列表、节点名称和配置文件状态
     await Promise.all([
       loadNodeNames(),
+      loadConfigFileStatus(),
       (async () => {
         const responseText = await invoke('api_get_tunnel_list');
         const result: ApiResponse = JSON.parse(responseText as string);
@@ -693,6 +804,194 @@ const getFreePortForEdit = async () => {
   }
 };
 
+// 配置文件相关
+const showConfigModal = ref(false);
+const currentConfigTunnelId = ref<number | null>(null);
+const configTypes = ['toml', 'json', 'yml', 'ini'];
+const activeConfigType = ref('toml');
+const configContents = ref<Record<string, string>>({});
+const editableConfigContents = ref<Record<string, string>>({});
+const loadingConfig = ref(false);
+const usingConfigFile = ref<Set<number>>(new Set());
+const isEditingConfig = ref(false);
+
+// 获取隧道配置文件
+async function getTunnelConfig(tunnelId: number, format: string) {
+  try {
+    loadingConfig.value = true;
+    const requestData = {
+      proxyId: tunnelId,
+      format: format
+    };
+    
+    const responseText = await invoke('api_request', {
+      method: 'POST',
+      url: 'https://api.mefrp.com/api/auth/proxy/config',
+      data: JSON.stringify(requestData)
+    });
+    
+    const result = JSON.parse(responseText as string);
+    
+    if (result.code === 200 && result.data && result.data.config) {
+      return result.data.config;
+    } else {
+      throw new Error(result.message || '获取配置文件失败');
+    }
+  } catch (err) {
+    console.error('获取配置文件失败:', err);
+    message.error(err instanceof Error ? err.message : '获取配置文件失败');
+    return null;
+  } finally {
+    loadingConfig.value = false;
+  }
+}
+
+// 保存配置文件到本地
+async function saveConfigFile(tunnelId: number, format: string, content: string) {
+  try {
+    const fileName = `${tunnelId}.${format}`;
+    await invoke('save_config_file', {
+      fileName: fileName,
+      content: content
+    });
+    message.success(`配置文件已保存: ${fileName}，下次启动将使用配置文件模式`);
+    usingConfigFile.value.add(tunnelId);
+    
+    // 关闭模态框
+    showConfigModal.value = false;
+  } catch (err) {
+    console.error('保存配置文件失败:', err);
+    message.error(err instanceof Error ? err.message : '保存配置文件失败');
+  }
+}
+
+// 改用配置文件
+async function useConfigFile(tunnelId: number) {
+  currentConfigTunnelId.value = tunnelId;
+  configContents.value = {};
+  editableConfigContents.value = {};
+  isEditingConfig.value = false;
+  
+  // 获取所有格式的配置文件
+  for (const format of configTypes) {
+    const config = await getTunnelConfig(tunnelId, format);
+    if (config) {
+      configContents.value[format] = config;
+      editableConfigContents.value[format] = config;
+    }
+  }
+  
+  if (Object.keys(configContents.value).length > 0) {
+    showConfigModal.value = true;
+  } else {
+    message.error('无法获取配置文件');
+  }
+}
+
+// 开始编辑配置
+function startEditConfig() {
+  isEditingConfig.value = true;
+}
+
+// 取消编辑配置
+function cancelEditConfig() {
+  isEditingConfig.value = false;
+  // 恢复原始内容
+  editableConfigContents.value = { ...configContents.value };
+}
+
+// 保存编辑的配置
+async function saveEditedConfig() {
+  if (!currentConfigTunnelId.value) return;
+  
+  try {
+    const tunnelId = currentConfigTunnelId.value;
+    const format = activeConfigType.value;
+    const content = editableConfigContents.value[format];
+    
+    if (!content) {
+      message.error('配置内容不能为空');
+      return;
+    }
+    
+    await saveConfigFile(tunnelId, format, content);
+    
+    // 更新原始内容
+    configContents.value[format] = content;
+    isEditingConfig.value = false;
+    
+    message.success('配置文件修改成功');
+  } catch (err) {
+    console.error('保存配置失败:', err);
+    message.error(err instanceof Error ? err.message : '保存配置失败');
+  }
+}
+
+// 处理配置文件类型切换
+async function handleConfigTypeChange(newType: string) {
+  if (!currentConfigTunnelId.value) return;
+  
+  const oldType = activeConfigType.value;
+  if (oldType === newType) return;
+  
+  try {
+    // 删除旧的配置文件
+    const tunnelId = currentConfigTunnelId.value;
+    const oldFileName = `${tunnelId}.${oldType}`;
+    
+    await invoke('delete_config_file', { fileName: oldFileName }).catch(() => {
+      // 忽略文件不存在的错误
+    });
+    
+    // 更新活动类型
+    activeConfigType.value = newType;
+    
+    message.success(`已切换到 ${newType.toUpperCase()} 格式`);
+  } catch (err) {
+    console.error('切换配置文件类型失败:', err);
+    message.error(err instanceof Error ? err.message : '切换配置文件类型失败');
+  }
+}
+
+// 查看配置文件
+async function viewConfigFile(tunnelId: number) {
+  await useConfigFile(tunnelId);
+}
+
+// 切换到快速启动模式
+async function switchToQuickStart(tunnelId: number) {
+  try {
+    // 删除所有格式的配置文件
+    const configFormats = ['toml', 'json', 'yml', 'ini'];
+    const deletePromises = configFormats.map(format => {
+      const fileName = `${tunnelId}.${format}`;
+      return invoke('delete_config_file', { fileName }).catch(() => {
+        // 忽略文件不存在的错误
+      });
+    });
+    
+    await Promise.all(deletePromises);
+    
+    // 更新状态
+    usingConfigFile.value.delete(tunnelId);
+    message.success('已切换到快速启动模式');
+  } catch (err) {
+    console.error('切换到快速启动失败:', err);
+    message.error(err instanceof Error ? err.message : '切换到快速启动失败');
+  }
+}
+
+// 获取代码高亮语言
+function getLanguageForFormat(format: string): string {
+  const languageMap: Record<string, string> = {
+    'toml': 'toml',
+    'json': 'json',
+    'yml': 'yaml',
+    'ini': 'ini'
+  };
+  return languageMap[format] || 'text';
+}
+
 // 强制隧道下线
 async function kickTunnel(tunnelId: number) {
   try {
@@ -750,9 +1049,9 @@ function goToCreateTunnel() {
 
 function getMoreOptions(tunnelId: number) {
   const tunnel = tunnels.value.find(t => t.proxyId === tunnelId);
-  const isRunning = runningTunnels.value.has(tunnelId);
+  const isUsingConfig = usingConfigFile.value.has(tunnelId);
   
-  return [
+  const options = [
     {
       label: '查看详情',
       key: 'details',
@@ -761,6 +1060,35 @@ function getMoreOptions(tunnelId: number) {
     {
       type: 'divider',
       key: 'd1'
+    }
+  ];
+  
+  // 根据是否使用配置文件显示不同选项
+  if (isUsingConfig) {
+    options.push(
+      {
+        label: '配置文件',
+        key: 'view-config',
+        icon: () => h('i', { class: 'fas fa-file-code' })
+      },
+      {
+        label: '改用快速启动',
+        key: 'use-quick-start',
+        icon: () => h('i', { class: 'fas fa-rocket' })
+      }
+    );
+  } else {
+    options.push({
+      label: '改用配置文件',
+      key: 'use-config',
+      icon: () => h('i', { class: 'fas fa-file-export' })
+    });
+  }
+  
+  options.push(
+    {
+      type: 'divider',
+      key: 'd2'
     },
     {
       label: tunnel?.isDisabled ? '启用隧道' : '禁用隧道',
@@ -770,28 +1098,35 @@ function getMoreOptions(tunnelId: number) {
     {
       label: '强制下线',
       key: 'kick',
-      icon: () => h('i', { class: 'fas fa-sign-out-alt' }),
-      disabled: !isRunning
+      icon: () => h('i', { class: 'fas fa-sign-out-alt' })
     },
     {
       type: 'divider',
-      key: 'd2'
+      key: 'd3'
     },
     {
       label: '删除隧道',
       key: 'delete',
-      icon: () => h('i', { class: 'fas fa-trash' }),
-      props: {
-        style: 'color: #d03050;'
-      }
+      icon: () => h('i', { class: 'fas fa-trash', style: 'color: #d03050;' })
     }
-  ];
+  );
+  
+  return options;
 }
 
 async function handleMoreAction(action: string, tunnelId: number) {
   switch (action) {
     case 'details':
       await viewTunnelDetails(tunnelId);
+      break;
+    case 'use-config':
+      await useConfigFile(tunnelId);
+      break;
+    case 'view-config':
+      await viewConfigFile(tunnelId);
+      break;
+    case 'use-quick-start':
+      await switchToQuickStart(tunnelId);
       break;
     case 'enable':
       await toggleTunnel(tunnelId, true);
@@ -848,6 +1183,15 @@ defineExpose({
   editingTunnel,
   editForm,
   gettingPortForEdit,
+  showConfigModal,
+  currentConfigTunnelId,
+  configTypes,
+  activeConfigType,
+  configContents,
+  editableConfigContents,
+  loadingConfig,
+  usingConfigFile,
+  isEditingConfig,
   refreshTunnels: loadTunnels,
   startTunnel,
   stopTunnel,
@@ -863,7 +1207,18 @@ defineExpose({
   formatTimestamp,
   getNodeName,
   getNodeAddress,
-  getFreePortForEdit
+  getFreePortForEdit,
+  getTunnelConfig,
+  saveConfigFile,
+  useConfigFile,
+  viewConfigFile,
+  getLanguageForFormat,
+  loadConfigFileStatus,
+  switchToQuickStart,
+  startEditConfig,
+  cancelEditConfig,
+  saveEditedConfig,
+  handleConfigTypeChange
 });
 </script>
 
@@ -1140,5 +1495,60 @@ defineExpose({
   padding-top: 16px;
   border-top: 1px solid var(--n-border-color);
   margin-top: 16px;
+}
+
+/* 配置文件模态框样式 */
+.config-container {
+  display: flex;
+  flex-direction: column;
+  height: 70vh;
+}
+
+.config-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--n-border-color);
+  margin-bottom: 16px;
+}
+
+.config-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--n-text-color);
+}
+
+.config-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.config-code-container {
+  height: 100%;
+  overflow: auto;
+}
+
+.no-config {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--n-text-color-disabled);
+}
+
+/* 配置文件标签页样式 */
+.config-content .n-tabs {
+  height: 100%;
+}
+
+.config-content .n-tabs .n-tabs-pane-wrapper {
+  height: calc(100% - 40px);
+  overflow: auto;
+}
+
+.config-content .n-code {
+  height: 100%;
+  max-height: none;
 }
 </style>

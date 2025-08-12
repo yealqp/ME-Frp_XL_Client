@@ -16,7 +16,7 @@ use reqwest;
 use tokio::task;
 
 // 当前应用版本
-const CURRENT_VERSION: &str = "1.3";
+const CURRENT_VERSION: &str = "1.4";
 
 // 远程版本信息结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -163,6 +163,14 @@ struct FreePortRequest {
     #[serde(rename = "nodeId")]
     node_id: i32,
     protocol: String,
+}
+
+// 通用API请求结构体
+#[derive(Serialize, Deserialize, Debug)]
+struct ApiRequest {
+    method: String,
+    url: String,
+    data: Option<String>,
 }
 
 // 创建隧道请求结构体
@@ -923,13 +931,36 @@ async fn api_start_tunnel(app_handle: tauri::AppHandle, proxy_id: i32, process_m
         return Err(format!("mefrpc.exe 不存在: {}", mefrpc_path.display()));
     }
 
+    // 检查是否存在配置文件（按优先级：toml > json > yml > ini）
+    let config_formats = ["toml", "json", "yml", "ini"];
+    let mut config_file_path = None;
+    
+    for format in &config_formats {
+        let config_path = exe_dir.join(format!("{}.{}", proxy_id, format));
+        if config_path.exists() {
+            config_file_path = Some(config_path);
+            break;
+        }
+    }
+
     // 启动mefrpc进程
     let mut command = Command::new(&mefrpc_path);
+    
+    if let Some(config_path) = config_file_path {
+        // 使用配置文件启动：mefrpc -c {config}路径
+        command
+            .arg("-c")
+            .arg(&config_path);
+    } else {
+        // 使用传统参数启动
+        command
+            .arg("-t")
+            .arg(&config.frp_token)
+            .arg("-p")
+            .arg(proxy_id.to_string());
+    }
+    
     command
-        .arg("-t")
-        .arg(&config.frp_token)
-        .arg("-p")
-        .arg(proxy_id.to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     
@@ -1330,6 +1361,116 @@ async fn load_unified_config(app_handle: tauri::AppHandle) -> Result<UnifiedConf
     migrate_old_configs(app_handle).await
 }
 
+// 通用API请求命令
+#[tauri::command]
+async fn api_request(app_handle: tauri::AppHandle, method: String, url: String, data: String) -> Result<String, String> {
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    let mut request_builder = match method.to_uppercase().as_str() {
+        "GET" => client.get(&url),
+        "POST" => client.post(&url),
+        "PUT" => client.put(&url),
+        "DELETE" => client.delete(&url),
+        _ => return Err("不支持的HTTP方法".to_string()),
+    };
+
+    request_builder = request_builder
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json");
+
+    if !data.is_empty() && (method.to_uppercase() == "POST" || method.to_uppercase() == "PUT") {
+        request_builder = request_builder.body(data);
+    }
+
+    let response = request_builder
+        .send()
+        .await
+        .map_err(|e| format!("API请求失败: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("API请求失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析API响应失败: {}", e))?;
+
+    Ok(response_text)
+}
+
+// 保存配置文件到本地
+#[tauri::command]
+async fn save_config_file(_app_handle: tauri::AppHandle, file_name: String, content: String) -> Result<String, String> {
+    let current_dir = env::current_dir()
+        .map_err(|e| format!("获取当前目录失败: {}", e))?;
+    
+    let config_file_path = current_dir.join(&file_name);
+    
+    fs::write(&config_file_path, content)
+        .map_err(|e| format!("保存配置文件失败: {}", e))?;
+    
+    Ok(format!("配置文件已保存到: {}", config_file_path.display()))
+}
+
+// 删除配置文件
+#[tauri::command]
+async fn delete_config_file(_app_handle: tauri::AppHandle, file_name: String) -> Result<String, String> {
+    let current_dir = env::current_dir()
+        .map_err(|e| format!("获取当前目录失败: {}", e))?;
+    
+    let config_file_path = current_dir.join(&file_name);
+    
+    if config_file_path.exists() {
+        fs::remove_file(&config_file_path)
+            .map_err(|e| format!("删除配置文件失败: {}", e))?;
+        Ok(format!("配置文件已删除: {}", file_name))
+    } else {
+        Ok(format!("配置文件不存在: {}", file_name))
+    }
+}
+
+// 检查隧道是否有配置文件
+#[tauri::command]
+async fn check_tunnel_config_files(_app_handle: tauri::AppHandle) -> Result<Vec<i32>, String> {
+    let current_dir = env::current_dir()
+        .map_err(|e| format!("获取当前目录失败: {}", e))?;
+    
+    let config_formats = ["toml", "json", "yml", "ini"];
+    let mut tunnels_with_config = Vec::new();
+    
+    // 读取目录中的所有文件
+    let entries = fs::read_dir(&current_dir)
+        .map_err(|e| format!("读取目录失败: {}", e))?;
+    
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let file_name = entry.file_name();
+            let file_name_str = file_name.to_string_lossy();
+            
+            // 检查文件名是否匹配隧道配置文件格式
+            for format in &config_formats {
+                if file_name_str.ends_with(&format!(".{}", format)) {
+                    let name_without_ext = file_name_str.trim_end_matches(&format!(".{}", format));
+                    if let Ok(tunnel_id) = name_without_ext.parse::<i32>() {
+                        if !tunnels_with_config.contains(&tunnel_id) {
+                            tunnels_with_config.push(tunnel_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(tunnels_with_config)
+}
+
 #[tauri::command]
 async fn migrate_old_configs(app_handle: tauri::AppHandle) -> Result<UnifiedConfig, String> {
     let mut unified_config = UnifiedConfig::default();
@@ -1536,6 +1677,10 @@ pub fn run() {
             api_get_node_name_list,
             api_get_tunnel_logs,
             api_get_running_tunnels,
+            api_request,
+            save_config_file,
+            delete_config_file,
+            check_tunnel_config_files,
             save_settings,
             load_settings,
             save_unified_config,
