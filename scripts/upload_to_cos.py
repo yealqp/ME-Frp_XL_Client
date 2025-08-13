@@ -114,9 +114,9 @@ def upload_file_to_cos(file_path, cos_key, bucket, region, secret_id, secret_key
             # Use fixed filename for latest folder (remove version number)
             original_name = os.path.basename(file_path)
             if '.msi' in original_name:
-                latest_filename = "XL-ME-Frp-Luncher-amd64-latest.msi"
+                latest_filename = "XL-ME-Frp-Launcher-amd64-latest.msi"
             elif '.exe' in original_name:
-                latest_filename = "XL-ME-Frp-Luncher-amd64-latest.exe"
+                latest_filename = "XL-ME-Frp-Launcher-amd64-latest.exe"
             else:
                 latest_filename = original_name  # fallback to original name
             

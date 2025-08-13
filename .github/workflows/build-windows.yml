@@ -55,14 +55,14 @@ jobs:
       run: |
         $msiFile = Get-ChildItem "src-tauri/target/release/bundle/msi/*.msi" | Select-Object -First 1
         if ($msiFile) {
-          python scripts/upload_to_cos.py "$($msiFile.FullName)" "windows/v${{ steps.version.outputs.version }}/XL-ME-Frp-Luncher-amd64-${{ steps.version.outputs.version }}.msi" --bucket "${{ secrets.BUCKET }}" --region "${{ secrets.REGION }}" --secret-id "${{ secrets.KEYID }}" --secret-key "${{ secrets.KEY }}" --also-latest
+          python scripts/upload_to_cos.py "$($msiFile.FullName)" "windows/v${{ steps.version.outputs.version }}/XL-ME-Frp-Launcher-amd64-${{ steps.version.outputs.version }}.msi" --bucket "${{ secrets.BUCKET }}" --region "${{ secrets.REGION }}" --secret-id "${{ secrets.KEYID }}" --secret-key "${{ secrets.KEY }}" --also-latest
         }
         
     - name: Upload NSIS to COS
       run: |
         $nsisFile = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.exe" | Select-Object -First 1
         if ($nsisFile) {
-          python scripts/upload_to_cos.py "$($nsisFile.FullName)" "windows/v${{ steps.version.outputs.version }}/XL-ME-Frp-Luncher-amd64-${{ steps.version.outputs.version }}.exe" --bucket "${{ secrets.BUCKET }}" --region "${{ secrets.REGION }}" --secret-id "${{ secrets.KEYID }}" --secret-key "${{ secrets.KEY }}" --also-latest
+          python scripts/upload_to_cos.py "$($nsisFile.FullName)" "windows/v${{ steps.version.outputs.version }}/XL-ME-Frp-Launcher-amd64-${{ steps.version.outputs.version }}.exe" --bucket "${{ secrets.BUCKET }}" --region "${{ secrets.REGION }}" --secret-id "${{ secrets.KEYID }}" --secret-key "${{ secrets.KEY }}" --also-latest
         }
         
     - name: Upload MSI installer
