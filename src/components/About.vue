@@ -13,7 +13,7 @@
         <template #header>关于面板</template>
         <n-descriptions label-placement="left" bordered :column="2">
           <n-descriptions-item label="版本">
-            v1.2
+            v1.5
           </n-descriptions-item>
           <n-descriptions-item label="开发者">
             <a href="https://github.com/Yealqp">Yealqp</a>

@@ -16,7 +16,7 @@ use reqwest;
 use tokio::task;
 
 // 当前应用版本
-const CURRENT_VERSION: &str = "1.4";
+const CURRENT_VERSION: &str = "1.5";
 
 // 远程版本信息结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -119,6 +119,10 @@ struct ApiResponse<T> {
 struct LoginRequest {
     username: String,
     password: String,
+    #[serde(rename = "vaptchaToken", skip_serializing_if = "Option::is_none")]
+    vaptcha_token: Option<String>,
+    #[serde(rename = "vaptchaServe", skip_serializing_if = "Option::is_none")]
+    vaptcha_serve: Option<String>,
 }
 
 // 登录响应数据结构体
@@ -405,12 +409,19 @@ async fn clear_config(_app_handle: tauri::AppHandle) -> Result<String, String> {
 
 // 登录API命令
 #[tauri::command]
-async fn api_login(app_handle: tauri::AppHandle, username: String, password: String) -> Result<Config, String> {
+async fn api_login(
+    app_handle: tauri::AppHandle, 
+    username: String, 
+    password: String,
+    captcha_token: Option<String>
+) -> Result<Config, String> {
     let client = reqwest::Client::new();
     
     let login_request = LoginRequest {
         username: username.clone(),
         password,
+        vaptcha_token: captcha_token.clone(),
+        vaptcha_serve: None, // 新的验证方式不需要server参数
     };
     
     // 调用登录API

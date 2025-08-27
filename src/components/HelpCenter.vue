@@ -80,6 +80,21 @@
           </div>
         </template>
       </n-card>
+       <n-card title="仙林云计算" hoverable>
+        <template #header-extra>
+          <div class="tags">
+            <n-tag type="success" size="small">低价</n-tag>
+            <n-tag type="info" size="small">种类多样</n-tag>
+          </div>
+        </template>
+        <p class="card-description">赞助商 低价云服务器 NAT机 挂机宝</p>
+        <template #footer>
+          <div class="card-actions">
+            <n-button type="primary" @click="xlwy">点击前往</n-button>
+            <n-button type="primary" @click="xlqq">QQ群</n-button>
+          </div>
+        </template>
+      </n-card>
     </div>
   </div>
 </template>
@@ -110,6 +125,18 @@ const sendEmail = () => {
   // 打开邮件客户端
   window.open('mailto:support@mefrp.com?subject=用户支持请求', '_blank');
   message.success('正在打开邮件客户端');
+};
+
+const xlwy = () => {
+  // 打开邮件客户端
+  window.open('https://idc.yealqp.fun', '_blank');
+  message.success('正在跳转到仙林云计算');
+};
+
+const xlqq = () => {
+  // 打开邮件客户端
+  window.open('https://qm.qq.com/cgi-bin/qm/qr?k=S5tzhFVCoN28LIyPA5BJEZ0EFayLz4zh&jump_from=webapi&authKey=/FxL2ZT41DaqB5gyb8f9jauks1L6b/143XAXv5z0MhYkET0OeVdyT+umItJVlzrL', '_blank');
+  message.success('正在跳转到仙林云计算QQ群');
 };
 
 const sendyEmail = () => {
