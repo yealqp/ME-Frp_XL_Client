@@ -388,13 +388,13 @@ const checkForUpdates = async (showNoUpdateMessage = true) => {
       dialog.warning({
         title: '发现新版本',
         content: `发现新版本 ${result.latest_version}，当前版本 ${result.current_version}，是否要立即更新？注意:更新前请关闭进程或所有正在运行的隧道。`,
-        positiveText: '立即更新',
+        positiveText: '立即更新 (密码btyv)',
         negativeText: '稍后提醒',
         onPositiveClick: () => {
           // 这里可以添加实际的更新逻辑
           message.info('正在准备更新...');
           // 可以打开下载页面或执行更新程序
-          window.open('https://alist.yealqp.fun/windows', '_blank');
+          window.open('https://wwoq.lanzouo.com/b00tbv513c', '_blank');
         },
         onNegativeClick: () => {
           message.info('已取消更新，下次启动时会再次检查');
