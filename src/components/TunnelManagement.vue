@@ -47,34 +47,18 @@
     <!-- 隧道卡片网格 -->
     <div v-else-if="tunnels.length > 0" class="tunnels-container">
       <div class="tunnels-grid">
-        <n-card 
-          v-for="tunnel in tunnels" 
-          :key="tunnel.proxyId" 
-          :bordered="true" 
-          class="tunnel-card"
-          hoverable
-        >
+        <n-card v-for="tunnel in tunnels" :key="tunnel.proxyId" :bordered="true" class="tunnel-card" hoverable>
           <!-- 卡片头部 -->
           <template #header>
             <div class="tunnel-header">
               <div class="tunnel-title">
                 <h3 class="tunnel-name">{{ tunnel.proxyName }}</h3>
                 <div class="status-tags">
-                  <n-tag 
-                    v-if="tunnel.isDisabled" 
-                    type="warning" 
-                    :bordered="false" 
-                    size="small"
-                    class="disabled-tag"
-                  >
+                  <n-tag v-if="tunnel.isDisabled" type="warning" :bordered="false" size="small" class="disabled-tag">
                     已禁用
                   </n-tag>
-                  <n-tag 
-                    :type="tunnel.isOnline ? 'success' : 'default'" 
-                    :bordered="false" 
-                    size="small"
-                    class="status-tag"
-                  >
+                  <n-tag :type="tunnel.isOnline ? 'success' : 'default'" :bordered="false" size="small"
+                    class="status-tag">
                     {{ tunnel.isOnline ? '在线' : '离线' }}
                   </n-tag>
                 </div>
@@ -115,59 +99,45 @@
           <!-- 卡片底部操作 -->
           <template #action>
             <div class="tunnel-actions">
-              <n-button 
-                v-if="!runningTunnels.has(tunnel.proxyId)" 
-                type="primary" 
-                size="small" 
-                @click="startTunnel(tunnel.proxyId)"
-                :loading="actionLoading[tunnel.proxyId]"
-              >
+              <n-button v-if="!runningTunnels.has(tunnel.proxyId)" type="primary" size="small"
+                @click="startTunnel(tunnel.proxyId)" :loading="actionLoading[tunnel.proxyId]">
                 <template #icon>
                   <i class="fas fa-play"></i>
                 </template>
                 启动
               </n-button>
-              <n-button 
-                v-else 
-                type="warning" 
-                size="small" 
-                @click="stopTunnel(tunnel.proxyId)"
-                :loading="actionLoading[tunnel.proxyId]"
-              >
+              <n-button v-else type="warning" size="small" @click="stopTunnel(tunnel.proxyId)"
+                :loading="actionLoading[tunnel.proxyId]">
                 <template #icon>
                   <i class="fas fa-stop"></i>
                 </template>
                 停止
               </n-button>
-              
-              <n-button 
-                v-if="runningTunnels.has(tunnel.proxyId)"
-                type="info" 
-                size="small" 
-                @click="viewLogs(tunnel.proxyId)"
-              >
+
+              <n-button v-if="runningTunnels.has(tunnel.proxyId)" type="info" size="small"
+                @click="viewLogs(tunnel.proxyId)">
                 <template #icon>
                   <i class="fas fa-file-alt"></i>
                 </template>
                 日志
               </n-button>
-              
-              <n-button 
-                type="default" 
-                size="small" 
-                @click="editTunnel(tunnel.proxyId)"
-              >
+              <n-button type="default" size="small" @click="copyRemoteAddress(tunnel.proxyId)">
                 <template #icon>
-                  <i class="fas fa-edit"></i>
+                  <i class="fas fa-copy"></i>
                 </template>
-                编辑
+                复制地址
               </n-button>
-              
-              <n-dropdown 
-                trigger="click" 
-                :options="getMoreOptions(tunnel.proxyId)"
-                @select="(key: string) => handleMoreAction(key, tunnel.proxyId)"
-              >
+              <n-button type="default" size="small" @click="viewTunnelDetails(tunnel.proxyId)">
+                <template #icon>
+                  <i class="fas fa-info-circle"></i>
+                </template>
+                详情
+              </n-button>
+
+
+
+              <n-dropdown trigger="click" :options="getMoreOptions(tunnel.proxyId)"
+                @select="(key: string) => handleMoreAction(key, tunnel.proxyId)">
                 <n-button type="default" size="small">
                   <template #icon>
                     <i class="fas fa-cog"></i>
@@ -245,11 +215,13 @@
       </div>
       <div class="detail-item">
         <span class="detail-label">节点名称：</span>
-        <span class="detail-value">#{{ currentTunnelDetails.nodeId }} - {{ nodeNameMap[currentTunnelDetails.nodeId] || '未知节点' }}</span>
+        <span class="detail-value">#{{ currentTunnelDetails.nodeId }} - {{ nodeNameMap[currentTunnelDetails.nodeId] ||
+          '未知节点' }}</span>
       </div>
       <div class="detail-item">
         <span class="detail-label">链接地址：</span>
-        <span class="detail-value">{{ getNodeAddress(currentTunnelDetails.proxyId) }}:{{ currentTunnelDetails.remotePort || '未分配' }}</span>
+        <span class="detail-value">{{ getNodeAddress(currentTunnelDetails.proxyId) }}:{{ currentTunnelDetails.remotePort
+          || '未分配' }}</span>
       </div>
       <div class="detail-item">
         <span class="detail-label">上次启动时间：</span>
@@ -260,7 +232,7 @@
         <span class="detail-value">{{ formatTimestamp(currentTunnelDetails.lastCloseTime) }}</span>
       </div>
     </div>
-   </n-modal>
+  </n-modal>
 
   <!-- 编辑隧道模态框 -->
   <n-modal v-model:show="showEditModal" preset="card" title="编辑隧道" style="width: 80%; max-width: 600px;">
@@ -269,38 +241,39 @@
         <n-form-item label="隧道名称" required>
           <n-input v-model:value="editForm.proxyName" placeholder="请输入隧道名称" />
         </n-form-item>
-        
+
         <n-form-item label="本地地址" required>
           <n-input v-model:value="editForm.localIp" placeholder="请输入本地地址" />
         </n-form-item>
-        
+
         <n-form-item label="本地端口" required>
           <n-input-number v-model:value="editForm.localPort" placeholder="请输入本地端口" style="width: 100%" />
         </n-form-item>
-        
+
         <n-form-item label="远程端口">
-           <div style="display: flex; gap: 8px; width: 100%;">
-             <n-input-number v-model:value="editForm.remotePort" :min="1" :max="65535" placeholder="请输入远程端口" style="flex: 1;" />
-             <n-button type="primary" @click="getFreePortForEdit" :loading="gettingPortForEdit">
-               获取空闲端口
-             </n-button>
-           </div>
-         </n-form-item>
-        
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <n-input-number v-model:value="editForm.remotePort" :min="1" :max="65535" placeholder="请输入远程端口"
+              style="flex: 1;" />
+            <n-button type="primary" @click="getFreePortForEdit" :loading="gettingPortForEdit">
+              获取空闲端口
+            </n-button>
+          </div>
+        </n-form-item>
+
         <n-divider>高级配置</n-divider>
-        
+
         <n-form-item label="访问密钥">
           <n-input v-model:value="editForm.accessKey" placeholder="请输入访问密钥" />
         </n-form-item>
-        
+
         <n-form-item label="Host Header Rewrite">
           <n-input v-model:value="editForm.hostHeaderRewrite" placeholder="请输入 Host 请求头重写值" />
         </n-form-item>
-        
+
         <n-form-item label="X-From-Where">
           <n-input v-model:value="editForm.headerXFromWhere" placeholder="请输入 X-From-Where 请求头值" />
         </n-form-item>
-        
+
         <n-form-item label="Proxy Protocol">
           <n-select v-model:value="editForm.proxyProtocolVersion" placeholder="请选择 Proxy Protocol 版本">
             <n-option value="" label="不启用" />
@@ -308,7 +281,7 @@
             <n-option value="v2" label="v2" />
           </n-select>
         </n-form-item>
-        
+
         <n-form-item label="其他选项">
           <n-space>
             <n-switch v-model:value="editForm.useEncryption">
@@ -322,7 +295,7 @@
           </n-space>
         </n-form-item>
       </n-form>
-      
+
       <div class="edit-actions">
         <n-space>
           <n-button @click="cancelEdit">取消</n-button>
@@ -333,100 +306,65 @@
   </n-modal>
 
   <!-- 配置文件模态框 -->
-  <n-modal v-model:show="showConfigModal" preset="card" title="隧道配置文件" style="width: 80%; max-width: 800px; height: 80vh;">
+  <n-modal v-model:show="showConfigModal" preset="card" title="隧道配置文件"
+    style="width: 80%; max-width: 800px; height: 80vh;">
     <div v-if="currentConfigTunnelId" class="config-container">
       <div class="config-header">
-          <span class="config-title">隧道 ID: {{ currentConfigTunnelId }}</span>
-          <n-space>
-            <template v-if="!isEditingConfig">
-              <n-button 
-                type="primary" 
-                size="small" 
-                @click="startEditConfig"
-                :disabled="!configContents[activeConfigType]"
-              >
-                <template #icon>
-                  <i class="fas fa-edit"></i>
-                </template>
-                编辑配置
-              </n-button>
-              <n-button 
-                type="success" 
-                size="small" 
-                @click="saveConfigFile(currentConfigTunnelId!, activeConfigType, configContents[activeConfigType])"
-                :disabled="!configContents[activeConfigType]"
-              >
-                <template #icon>
-                  <i class="fas fa-save"></i>
-                </template>
-                保存到本地
-              </n-button>
-            </template>
-            
-            <template v-else>
-              <n-button 
-                type="success" 
-                size="small" 
-                @click="saveEditedConfig"
-              >
-                <template #icon>
-                  <i class="fas fa-check"></i>
-                </template>
-                保存修改
-              </n-button>
-              <n-button 
-                type="default" 
-                size="small" 
-                @click="cancelEditConfig"
-              >
-                <template #icon>
-                  <i class="fas fa-times"></i>
-                </template>
-                取消
-              </n-button>
-            </template>
-          </n-space>
-        </div>
-      
+        <span class="config-title">隧道 ID: {{ currentConfigTunnelId }}</span>
+        <n-space>
+          <template v-if="!isEditingConfig">
+            <n-button type="primary" size="small" @click="startEditConfig"
+              :disabled="!configContents[activeConfigType]">
+              <template #icon>
+                <i class="fas fa-edit"></i>
+              </template>
+              编辑配置
+            </n-button>
+            <n-button type="success" size="small"
+              @click="saveConfigFile(currentConfigTunnelId!, activeConfigType, configContents[activeConfigType])"
+              :disabled="!configContents[activeConfigType]">
+              <template #icon>
+                <i class="fas fa-save"></i>
+              </template>
+              保存到本地
+            </n-button>
+          </template>
+
+          <template v-else>
+            <n-button type="success" size="small" @click="saveEditedConfig">
+              <template #icon>
+                <i class="fas fa-check"></i>
+              </template>
+              保存修改
+            </n-button>
+            <n-button type="default" size="small" @click="cancelEditConfig">
+              <template #icon>
+                <i class="fas fa-times"></i>
+              </template>
+              取消
+            </n-button>
+          </template>
+        </n-space>
+      </div>
+
       <div class="config-content">
-        <n-tabs 
-           :value="activeConfigType" 
-           @update:value="handleConfigTypeChange"
-           type="line" 
-           placement="left" 
-           tab-style="min-width: 80px;"
-         >
-          <n-tab-pane 
-             v-for="format in configTypes" 
-             :key="format" 
-             :name="format" 
-             :tab="format.toUpperCase()"
-             :disabled="!configContents[format]"
-           >
-             <div class="config-code-container">
-               <template v-if="configContents[format]">
-                 <n-input 
-                   v-if="isEditingConfig"
-                   v-model:value="editableConfigContents[format]"
-                   type="textarea"
-                   :rows="20"
-                   :autosize="{ minRows: 20, maxRows: 30 }"
-                   placeholder="请输入配置内容"
-                   style="font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px;"
-                 />
-                 <n-code 
-                   v-else
-                   :code="configContents[format]"
-                   :language="getLanguageForFormat(format)"
-                   show-line-numbers
-                   word-wrap
-                 />
-               </template>
-               <div v-else class="no-config">
-                 <n-empty description="该格式配置文件不可用" />
-               </div>
-             </div>
-           </n-tab-pane>
+        <n-tabs :value="activeConfigType" @update:value="handleConfigTypeChange" type="line" placement="left"
+          tab-style="min-width: 80px;">
+          <n-tab-pane v-for="format in configTypes" :key="format" :name="format" :tab="format.toUpperCase()"
+            :disabled="!configContents[format]">
+            <div class="config-code-container">
+              <template v-if="configContents[format]">
+                <n-input v-if="isEditingConfig" v-model:value="editableConfigContents[format]" type="textarea"
+                  :rows="20" :autosize="{ minRows: 20, maxRows: 30 }" placeholder="请输入配置内容"
+                  style="font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px;" />
+                <n-code v-else :code="configContents[format]" :language="getLanguageForFormat(format)" show-line-numbers
+                  word-wrap />
+              </template>
+              <div v-else class="no-config">
+                <n-empty description="该格式配置文件不可用" />
+              </div>
+            </div>
+          </n-tab-pane>
         </n-tabs>
       </div>
     </div>
@@ -494,7 +432,7 @@ async function loadNodeNames() {
   try {
     const responseText = await invoke('api_get_node_name_list');
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200 && Array.isArray(result.data)) {
       const nameMap: Record<number, string> = {};
       const hostnameMap: Record<number, string> = {};
@@ -524,7 +462,7 @@ async function loadConfigFileStatus() {
 async function loadTunnels() {
   loading.value = true;
   error.value = '';
-  
+
   try {
     // 同时加载隧道列表、节点名称和配置文件状态
     await Promise.all([
@@ -533,7 +471,7 @@ async function loadTunnels() {
       (async () => {
         const responseText = await invoke('api_get_tunnel_list');
         const result: ApiResponse = JSON.parse(responseText as string);
-        
+
         if (result.code === 200) {
           tunnels.value = result.data;
           message.success(`成功加载 ${result.data.length} 个隧道`);
@@ -569,7 +507,7 @@ async function startTunnel(id: number) {
   try {
     const responseText = await invoke('api_start_tunnel', { proxyId: id });
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200) {
       message.success('隧道启动成功');
       // 更新运行状态
@@ -577,7 +515,7 @@ async function startTunnel(id: number) {
     } else {
       throw new Error(result.message || '启动隧道失败');
     }
-    
+
     emit('tunnel-start', id);
   } catch (err) {
     console.error('启动隧道失败:', err);
@@ -593,7 +531,7 @@ async function stopTunnel(id: number) {
   try {
     const responseText = await invoke('api_stop_tunnel', { proxyId: id });
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200) {
       message.success('隧道停止成功');
       // 更新运行状态
@@ -601,7 +539,7 @@ async function stopTunnel(id: number) {
     } else {
       throw new Error(result.message || '停止隧道失败');
     }
-    
+
     emit('tunnel-stop', id);
   } catch (err) {
     console.error('停止隧道失败:', err);
@@ -700,7 +638,7 @@ function editTunnel(id: number) {
       message.warning('隧道当前在线，请先关闭隧道');
       return;
     }
-    
+
     editingTunnel.value = tunnel;
     editForm.value = {
       proxyName: tunnel.proxyName,
@@ -734,7 +672,7 @@ async function updateTunnel(tunnelId: number, updateData: any) {
       data: JSON.stringify(requestData)
     });
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200) {
       message.success('隧道配置更新成功');
       await loadTunnels();
@@ -752,7 +690,7 @@ async function updateTunnel(tunnelId: number, updateData: any) {
 // 保存编辑
 const saveEdit = async () => {
   if (!editingTunnel.value) return;
-  
+
   try {
     await updateTunnel(editingTunnel.value.proxyId, editForm.value);
     showEditModal.value = false;
@@ -771,25 +709,25 @@ const cancelEdit = () => {
 // 获取空闲端口（编辑时）
 const getFreePortForEdit = async () => {
   if (!editingTunnel.value) return;
-  
+
   // 检查隧道类型是否支持获取端口
   if (!editingTunnel.value.proxyType || (editingTunnel.value.proxyType !== 'tcp' && editingTunnel.value.proxyType !== 'udp')) {
     message.warning('只有TCP和UDP隧道支持获取空闲端口');
     return;
   }
-  
+
   gettingPortForEdit.value = true;
   try {
     const requestData = {
       nodeId: editingTunnel.value.nodeId,
       protocol: editingTunnel.value.proxyType
     };
-    
+
     const responseText = await invoke<string>('api_get_free_port', {
       data: JSON.stringify(requestData)
     });
     const result = JSON.parse(responseText);
-    
+
     if (result.code === 200 && result.data) {
       editForm.value.remotePort = result.data;
       message.success(`获取到空闲端口: ${result.data}`);
@@ -819,19 +757,13 @@ const isEditingConfig = ref(false);
 async function getTunnelConfig(tunnelId: number, format: string) {
   try {
     loadingConfig.value = true;
-    const requestData = {
+    const responseText = await invoke('api_get_tunnel_config', {
       proxyId: tunnelId,
       format: format
-    };
-    
-    const responseText = await invoke('api_request', {
-      method: 'POST',
-      url: 'https://api.mefrp.com/api/auth/proxy/config',
-      data: JSON.stringify(requestData)
     });
-    
+
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200 && result.data && result.data.config) {
       return result.data.config;
     } else {
@@ -855,8 +787,13 @@ async function saveConfigFile(tunnelId: number, format: string, content: string)
       content: content
     });
     message.success(`配置文件已保存: ${fileName}，下次启动将使用配置文件模式`);
+    
+    // 立即更新本地状态
     usingConfigFile.value.add(tunnelId);
     
+    // 立即刷新配置文件状态以确保与文件系统同步
+    await loadConfigFileStatus();
+
     // 关闭模态框
     showConfigModal.value = false;
   } catch (err) {
@@ -871,7 +808,7 @@ async function useConfigFile(tunnelId: number) {
   configContents.value = {};
   editableConfigContents.value = {};
   isEditingConfig.value = false;
-  
+
   // 获取所有格式的配置文件
   for (const format of configTypes) {
     const config = await getTunnelConfig(tunnelId, format);
@@ -880,7 +817,7 @@ async function useConfigFile(tunnelId: number) {
       editableConfigContents.value[format] = config;
     }
   }
-  
+
   if (Object.keys(configContents.value).length > 0) {
     showConfigModal.value = true;
   } else {
@@ -903,23 +840,23 @@ function cancelEditConfig() {
 // 保存编辑的配置
 async function saveEditedConfig() {
   if (!currentConfigTunnelId.value) return;
-  
+
   try {
     const tunnelId = currentConfigTunnelId.value;
     const format = activeConfigType.value;
     const content = editableConfigContents.value[format];
-    
+
     if (!content) {
       message.error('配置内容不能为空');
       return;
     }
-    
+
     await saveConfigFile(tunnelId, format, content);
-    
+
     // 更新原始内容
     configContents.value[format] = content;
     isEditingConfig.value = false;
-    
+
     message.success('配置文件修改成功');
   } catch (err) {
     console.error('保存配置失败:', err);
@@ -930,22 +867,22 @@ async function saveEditedConfig() {
 // 处理配置文件类型切换
 async function handleConfigTypeChange(newType: string) {
   if (!currentConfigTunnelId.value) return;
-  
+
   const oldType = activeConfigType.value;
   if (oldType === newType) return;
-  
+
   try {
     // 删除旧的配置文件
     const tunnelId = currentConfigTunnelId.value;
     const oldFileName = `${tunnelId}.${oldType}`;
-    
+
     await invoke('delete_config_file', { fileName: oldFileName }).catch(() => {
       // 忽略文件不存在的错误
     });
-    
+
     // 更新活动类型
     activeConfigType.value = newType;
-    
+
     message.success(`已切换到 ${newType.toUpperCase()} 格式`);
   } catch (err) {
     console.error('切换配置文件类型失败:', err);
@@ -969,9 +906,9 @@ async function switchToQuickStart(tunnelId: number) {
         // 忽略文件不存在的错误
       });
     });
-    
+
     await Promise.all(deletePromises);
-    
+
     // 更新状态
     usingConfigFile.value.delete(tunnelId);
     message.success('已切换到快速启动模式');
@@ -998,7 +935,7 @@ async function kickTunnel(tunnelId: number) {
     actionLoading.value[tunnelId] = true;
     const responseText = await invoke('api_kick_tunnel', { proxyId: tunnelId });
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200) {
       message.success('隧道已强制下线');
       await loadRunningTunnels();
@@ -1017,12 +954,12 @@ async function kickTunnel(tunnelId: number) {
 async function toggleTunnel(tunnelId: number, enable: boolean) {
   try {
     actionLoading.value[tunnelId] = true;
-    const responseText = await invoke('api_toggle_tunnel', { 
+    const responseText = await invoke('api_toggle_tunnel', {
       proxyId: tunnelId,
-      isDisabled: !enable 
+      isDisabled: !enable
     });
     const result = JSON.parse(responseText as string);
-    
+
     if (result.code === 200) {
       message.success(enable ? '隧道已启用' : '隧道已禁用');
       await loadTunnels();
@@ -1034,6 +971,50 @@ async function toggleTunnel(tunnelId: number, enable: boolean) {
     message.error(err instanceof Error ? err.message : '切换隧道状态失败');
   } finally {
     actionLoading.value[tunnelId] = false;
+  }
+}
+
+// 复制远程地址到剪贴板
+async function copyRemoteAddress(tunnelId: number) {
+  try {
+    const tunnel = tunnels.value.find(t => t.proxyId === tunnelId);
+    if (!tunnel) {
+      message.error('未找到隧道信息');
+      return;
+    }
+
+    // 获取节点地址
+    const nodeAddress = getNodeAddress(tunnelId);
+    if (!nodeAddress) {
+      message.error('无法获取节点地址');
+      return;
+    }
+
+    // 构建远程地址格式：nodeAddress:remotePort
+    const remoteAddress = `${nodeAddress}:${tunnel.remotePort}`;
+
+    // 复制到剪贴板
+    if (navigator.clipboard && window.isSecureContext) {
+      // 使用现代 Clipboard API
+      await navigator.clipboard.writeText(remoteAddress);
+    } else {
+      // 降级方案：使用传统方法
+      const textArea = document.createElement('textarea');
+      textArea.value = remoteAddress;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      document.execCommand('copy');
+      textArea.remove();
+    }
+
+    message.success(`远程地址已复制: ${remoteAddress}`);
+  } catch (err) {
+    console.error('复制远程地址失败:', err);
+    message.error('复制远程地址失败');
   }
 }
 
@@ -1050,19 +1031,19 @@ function goToCreateTunnel() {
 function getMoreOptions(tunnelId: number) {
   const tunnel = tunnels.value.find(t => t.proxyId === tunnelId);
   const isUsingConfig = usingConfigFile.value.has(tunnelId);
-  
+
   const options = [
     {
-      label: '查看详情',
-      key: 'details',
-      icon: () => h('i', { class: 'fas fa-info-circle' })
+      label: '编辑',
+      key: 'edit',
+      icon: () => h('i', { class: 'fas fa-edit' })
     },
     {
       type: 'divider',
       key: 'd1'
     }
   ];
-  
+
   // 根据是否使用配置文件显示不同选项
   if (isUsingConfig) {
     options.push(
@@ -1084,7 +1065,7 @@ function getMoreOptions(tunnelId: number) {
       icon: () => h('i', { class: 'fas fa-file-export' })
     });
   }
-  
+
   options.push(
     {
       type: 'divider',
@@ -1110,14 +1091,14 @@ function getMoreOptions(tunnelId: number) {
       icon: () => h('i', { class: 'fas fa-trash', style: 'color: #d03050;' })
     }
   );
-  
+
   return options;
 }
 
 async function handleMoreAction(action: string, tunnelId: number) {
   switch (action) {
-    case 'details':
-      await viewTunnelDetails(tunnelId);
+    case 'edit':
+      editTunnel(tunnelId);
       break;
     case 'use-config':
       await useConfigFile(tunnelId);
@@ -1141,7 +1122,7 @@ async function handleMoreAction(action: string, tunnelId: number) {
       try {
         const responseText = await invoke('api_delete_tunnel', { proxyId: tunnelId });
         const result = JSON.parse(responseText as string);
-        
+
         if (result.code === 200) {
           message.success('隧道删除成功');
           // 重新加载隧道列表
@@ -1199,6 +1180,7 @@ defineExpose({
   updateTunnel,
   kickTunnel,
   toggleTunnel,
+  copyRemoteAddress,
   handleMoreAction,
   viewLogs,
   viewTunnelDetails,
@@ -1351,22 +1333,22 @@ defineExpose({
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
     padding: 0 16px;
   }
-  
+
   .tunnel-actions {
     flex-direction: column;
   }
-  
+
   .tunnel-actions .n-button {
     flex: none;
   }
-  
+
   .tunnel-card {
     margin: 0 16px;
   }
@@ -1377,17 +1359,17 @@ defineExpose({
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .tunnel-card {
     margin: 0 12px;
   }
-  
+
   .info-row {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .info-value {
     justify-content: flex-start;
   }

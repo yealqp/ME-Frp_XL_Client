@@ -89,7 +89,7 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
   siteId: '2bf50e050d',
-  workerCount: 8,
+  workerCount: 2,
   hiddenFieldName: 'cap-token',
   width: '230px',
   height: '60px',

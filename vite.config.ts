@@ -41,6 +41,16 @@ export default defineConfig(async () => ({
           return 'assets/[name]-[hash][extname]';
         },
       },
+      external: [],
+    },
+    // 确保 cap.js 依赖被正确包含
+    commonjsOptions: {
+      include: [/node_modules/],
+    },
+    // 优化依赖预构建
+    optimizeDeps: {
+      include: ['@cap.js/widget'],
+      force: false,
     },
   },
 }));

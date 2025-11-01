@@ -5,18 +5,22 @@
         <template #header>
           <img src="../assets/icon.png" alt="logo" class="logo">
         </template>
-        <div class="app-logo">ME-Frp 非官方客户端</div>
+        <div class="app-logo">ME-Frp XL客户端</div>
         <p class="description"></p>
       </n-card>
 
       <n-card :bordered="true" class="tech-stack">
-        <template #header>关于面板</template>
+        <template #header>关于ME-Frp XL客户端</template>
         <n-descriptions label-placement="left" bordered :column="2">
           <n-descriptions-item label="版本">
-            v1.5
+            v1.5.4
           </n-descriptions-item>
           <n-descriptions-item label="开发者">
-            <a href="https://github.com/Yealqp">Yealqp</a>
+            <div class="member-avatar-wrapper">
+              <img src="https://img.fastmirror.net/s/2025/08/26/68adce35907c1.jpg" :alt="`yealqp Avatar`"
+                class="member-avatar-img">
+              <a>Yealqp/猫羽雫 @1592239257</a>
+            </div>
           </n-descriptions-item>
           <n-descriptions-item label="技术栈">
             <n-space>
@@ -46,13 +50,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-
-
-// 应用信息
-</script>
-
 <style scoped>
 .about {
   padding: 0;
@@ -191,5 +188,30 @@
 .build-info {
   font-size: 12px !important;
   color: #999 !important;
+}
+
+/* 团队信息样式 */
+.team-info {
+  margin-bottom: 16px;
+}
+
+/* 公司信息样式 */
+.company-info {
+  margin-bottom: 16px;
+}
+
+/* 头像样式 */
+.member-avatar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 </style>

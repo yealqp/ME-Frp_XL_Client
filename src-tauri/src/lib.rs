@@ -16,7 +16,7 @@ use reqwest;
 use tokio::task;
 
 // 当前应用版本
-const CURRENT_VERSION: &str = "1.5";
+const CURRENT_VERSION: &str = "1.5.4";
 
 // 远程版本信息结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -211,6 +211,14 @@ struct CreateTunnelRequest {
 #[derive(Serialize, Deserialize, Debug)]
 struct FrpTokenData {
     token: String,
+}
+
+// 获取隧道配置文件请求结构体
+#[derive(Serialize, Deserialize, Debug)]
+struct TunnelConfigRequest {
+    #[serde(rename = "proxyId")]
+    proxy_id: i32,
+    format: String,
 }
 
 // 统一的配置结构体，包含登录信息和应用设置
@@ -542,6 +550,57 @@ async fn api_get_user_info(app_handle: tauri::AppHandle) -> Result<UserDetailInf
     }
     
     api_response.data.ok_or("用户信息响应数据为空".to_string())
+}
+
+/**
+ * 获取 FRP Token API 命令
+ * 专门用于获取 frpToken，并自动更新到统一配置中
+ */
+#[tauri::command]
+async fn api_get_frp_token(app_handle: tauri::AppHandle) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle.clone()).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = reqwest::Client::new();
+    
+    // 获取frp_token
+    let response = client
+        .get("https://api.mefrp.com/api/auth/user/frpToken")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取frp_token失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("获取frp_token失败，状态码: {}", response.status()));
+    }
+    
+    let api_response: ApiResponse<FrpTokenData> = response
+        .json()
+        .await
+        .map_err(|e| format!("解析frp_token响应失败: {}", e))?;
+    
+    if api_response.code != 200 {
+        return Err(format!("获取frp_token失败: {}", api_response.message));
+    }
+    
+    let frp_data = api_response.data.ok_or("frp_token响应数据为空")?;
+    let frp_token = frp_data.token;
+    
+    // 更新统一配置中的frp_token
+    let mut updated_config = config;
+    updated_config.frp_token = frp_token.clone();
+    
+    // 保存更新后的配置
+    save_unified_config(app_handle, updated_config).await?;
+    
+    Ok(frp_token)
 }
 
 // 获取系统公告API命令
@@ -1107,6 +1166,43 @@ async fn api_delete_tunnel(app_handle: tauri::AppHandle, proxy_id: i32) -> Resul
     Ok(response_text)
 }
 
+// 获取隧道配置文件API命令
+#[tauri::command]
+async fn api_get_tunnel_config(app_handle: tauri::AppHandle, proxy_id: i32, format: String) -> Result<String, String> {
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    let request_data = TunnelConfigRequest {
+        proxy_id,
+        format,
+    };
+
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.mefrp.com/api/auth/proxy/config")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .json(&request_data)
+        .send()
+        .await
+        .map_err(|e| format!("获取隧道配置文件请求失败: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("获取隧道配置文件失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析隧道配置文件响应失败: {}", e))?;
+
+    Ok(response_text)
+}
+
 // 保存应用设置
 #[tauri::command]
 async fn save_settings(_app_handle: tauri::AppHandle, settings: AppSettings) -> Result<String, String> {
@@ -1557,7 +1653,7 @@ pub fn run() {
             // 创建系统托盘
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("ME-Frp 非官方客户端")
+                .tooltip("ME-Frp XL客户端")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(move |app, event| {
@@ -1673,6 +1769,7 @@ pub fn run() {
             clear_config,
             api_login,
             api_get_user_info,
+            api_get_frp_token,
             api_get_announcements,
             api_get_node_list,
             api_get_node_status,
@@ -1688,6 +1785,7 @@ pub fn run() {
             api_get_node_name_list,
             api_get_tunnel_logs,
             api_get_running_tunnels,
+            api_get_tunnel_config,
             api_request,
             save_config_file,
             delete_config_file,

@@ -12,9 +12,24 @@
         <p class="card-description">加入用户交流群获取帮助，与其他用户交流使用经验，快速解决问题</p>
         <template #footer>
           <div class="card-actions">
-            <n-button type="primary" @click="joinQQGroup">加入QQ群</n-button>
-            <n-button @click="copyQQGroup">复制群号</n-button>
+            <n-button-group>
+              <n-button type="primary" @click="joinQQGroup1">
+                加入一群
+              </n-button>
+              <n-button @click="copyQQGroup1">
+                复制群号
+              </n-button>
+            </n-button-group>
+            <n-button-group>
+              <n-button type="primary" @click="joinQQGroup2">
+                加入二群
+              </n-button>
+              <n-button @click="copyQQGroup2">
+                复制群号
+              </n-button>
+            </n-button-group>
           </div>
+
         </template>
       </n-card>
 
@@ -65,29 +80,29 @@
           </div>
         </template>
       </n-card>
-       <n-card title="桌面版反馈" hoverable>
+      <n-card title="桌面版反馈" hoverable>
         <template #header-extra>
           <div class="tags">
             <n-tag type="success" size="small">推荐</n-tag>
             <n-tag type="info" size="small">快速响应</n-tag>
           </div>
         </template>
-        <p class="card-description">如果发现图形化客户端的BUG 或者有任何建议 欢迎去Github提交issue/PR 或者去QQ群找@1592239257 反馈</p>
+        <p class="card-description">如果发现图形化客户端的BUG 或者有任何建议 欢迎去QQ群找@1592239257反馈</p>
         <template #footer>
           <div class="card-actions">
-            <n-button type="primary" @click="openGithub">Github</n-button>
             <n-button type="primary" @click="sendyEmail">发送邮件</n-button>
+            <n-button type="primary" @click="OpenDownloadpage">查看下载页</n-button>
           </div>
         </template>
       </n-card>
-       <n-card title="仙林云计算" hoverable>
+      <n-card title="仙林云计算" hoverable>
         <template #header-extra>
           <div class="tags">
             <n-tag type="success" size="small">低价</n-tag>
             <n-tag type="info" size="small">种类多样</n-tag>
           </div>
         </template>
-        <p class="card-description">赞助商 低价云服务器 NAT机 挂机宝</p>
+        <p class="card-description">赞助商 低价云服务器 NAT机 挂机宝 铂金4-8一年仅需80</p>
         <template #footer>
           <div class="card-actions">
             <n-button type="primary" @click="xlwy">点击前往</n-button>
@@ -105,18 +120,34 @@ import { useMessage, NCard, NButton, NTag } from 'naive-ui';
 const message = useMessage();
 
 // QQ群相关
-const joinQQGroup = () => {
+const joinQQGroup1 = () => {
   // 打开QQ群链接
-  window.open('https://qm.qq.com/cgi-bin/qm/qr?authKey=W%2BsWnBZYMUyqre2CMvoILZ4TQniiva5PNFFYkBtY0TaMNb%2BSWiToLDbiglufNaaT&k=bqlThMvikRF4ZaOwEq_ckpedjzthHccE&noverify=0', '_blank');
+  window.open('https://qm.qq.com/q/XX6tpcvNo4', '_blank');
   message.success('正在跳转到QQ群');
 };
 
-const copyQQGroup = () => {
+const copyQQGroup1 = () => {
   // 复制QQ群号
   navigator.clipboard.writeText('1019501085').then(() => {
     message.success('QQ群号已复制到剪贴板');
   }).catch(() => {
     message.error('复制失败，请手动复制群号：1019501085');
+  });
+};
+
+// QQ群相关
+const joinQQGroup2 = () => {
+  // 打开QQ群链接
+  window.open('https://qm.qq.com/q/fBtW7lJ1Xa', '_blank');
+  message.success('正在跳转到QQ群');
+};
+
+const copyQQGroup2 = () => {
+  // 复制QQ群号
+  navigator.clipboard.writeText('708797546').then(() => {
+    message.success('QQ群号已复制到剪贴板');
+  }).catch(() => {
+    message.error('复制失败，请手动复制群号：708797546');
   });
 };
 
@@ -126,10 +157,15 @@ const sendEmail = () => {
   window.open('mailto:support@mefrp.com?subject=用户支持请求', '_blank');
   message.success('正在打开邮件客户端');
 };
+const OpenDownloadpage = () => {
+  // 打开下载页面
+  window.open('https://alist.yealqp.cn/', '_blank');
+  message.success('正在打开下载页面');
+};
 
 const xlwy = () => {
   // 打开邮件客户端
-  window.open('https://idc.yealqp.fun', '_blank');
+  window.open('https://www.xianlin.cloud/', '_blank');
   message.success('正在跳转到仙林云计算');
 };
 
@@ -144,15 +180,10 @@ const sendyEmail = () => {
   window.open('mailto:yealqp@163.com', '_blank');
   message.success('正在打开邮件客户端');
 };
-
-const openGithub = () => {
-  window.open('https://github.com/yealqp/ME-Frp_Desktop_unoffical', '_blank');
-  message.success('正在跳转到Github');
-};
 // 飞书群
 const joinFeishu = () => {
   // 打开飞书群链接
-  window.open('https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=ccbqa557-698a-479d-a495-877f0c283c37', '_blank');
+  window.open('https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=874l3500-4e85-4a04-a4b4-cbc02945de90', '_blank');
   message.success('正在跳转到飞书群');
 };
 
@@ -202,11 +233,11 @@ const openDocs = () => {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .help-center {
     padding: 16px;
   }
-  
+
   .card-actions {
     flex-direction: column;
   }

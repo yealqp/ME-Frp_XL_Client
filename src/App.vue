@@ -51,11 +51,7 @@ interface Node {
   version: string;
 }
 
-interface UpdateCheckResult {
-  has_update: boolean;
-  latest_version: string;
-  current_version: string;
-}
+
 
 interface Settings {
   autoStart: boolean;
@@ -92,7 +88,7 @@ const isLoggedIn = ref(false)
 const isCheckingAuth = ref(true)
 
 // 消息和对话框 - 使用 createDiscreteApi
-const { message, dialog } = createDiscreteApi(['message', 'dialog'], {
+const { message } = createDiscreteApi(['message'], {
   configProviderProps: {
     theme: customTheme
   }
@@ -104,16 +100,6 @@ const activeNav = ref('dashboard');
 // 页面状态管理
 const currentPage = ref('node-selection'); // 'node-selection' | 'tunnel-config'
 const selectedNode = ref<Node | null>(null);
-
-
-
-// 隧道数据
-const tunnelData = ref<Tunnel[]>([
-  { id: 1, name: 'Web服务', type: 'HTTP', status: '运行中', port: 8080 },
-  { id: 2, name: 'SSH隧道', type: 'TCP', status: '已停止', port: 22 }
-]);
-
-
 
 // 切换导航
 function handleNavChange(navId: string) {
@@ -139,6 +125,8 @@ function handleGoBackToNodeSelection() {
   currentPage.value = 'node-selection';
   selectedNode.value = null;
 }
+
+const tunnelData = ref<Tunnel[]>([])
 
 // 创建隧道
 function handleTunnelCreated(tunnel: TunnelForm) {
@@ -248,39 +236,7 @@ const handleLogout = async (): Promise<void> => {
   }
 }
 
-// 启动时自动检查更新
-const autoCheckForUpdates = async () => {
-  try {
-    // 延迟5秒后检查更新，确保应用完全启动
-    setTimeout(async () => {
-      try {
-        const result = await invoke('check_for_updates') as UpdateCheckResult;
-        if (result.has_update) {
-          // 弹窗询问用户是否要更新
-          dialog.warning({
-            title: '发现新版本',
-            content: `发现新版本 ${result.latest_version}，当前版本 ${result.current_version}。是否要立即更新？`,
-            positiveText: '立即更新',
-            negativeText: '稍后提醒',
-            onPositiveClick: () => {
-              message.info('正在准备更新...');
-              // 可以打开下载页面或执行更新程序
-              window.open('https://github.com/your-repo/releases', '_blank');
-            },
-            onNegativeClick: () => {
-              message.info('已取消更新，下次启动时会再次检查');
-            }
-          });
-        }
-      } catch (error) {
-        console.log('自动检查更新失败:', error);
-        // 静默失败，不显示错误消息
-      }
-    }, 5000);
-  } catch (error) {
-    console.log('启动自动更新检查失败:', error);
-  }
-};
+
 
 // 自动启动隧道的函数
 const autoStartTunnels = async () => {
@@ -397,7 +353,6 @@ console.log(`     __  _________   ______                  ___          __  __   
     });
 
     checkAuthStatus();
-    autoCheckForUpdates();
     
     // 等待登录完成后再启动自启动隧道
     const waitForLogin = () => {

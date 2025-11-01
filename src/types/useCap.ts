@@ -54,6 +54,10 @@ export function useCap(config: CapConfig) {
   const token = ref<string | null>(null);
   const error = ref<string | null>(null);
   const isMounted = ref(true);
+  const initAttempts = ref(0);
+  const maxInitAttempts = ref(3);
+  const verificationTimeout = ref<number | null>(null);
+  const VERIFICATION_TIMEOUT_MS = 60000; // 60秒超时
 
   // 不再需要动态加载脚本，因为已经通过 import 导入
   const ensureCapReady = (): Promise<void> => {
@@ -104,15 +108,34 @@ export function useCap(config: CapConfig) {
         console.warn('Failed to destroy Cap widget:', err);
       }
     }
+    
+    // 清除超时定时器
+    if (verificationTimeout.value) {
+      clearTimeout(verificationTimeout.value);
+      verificationTimeout.value = null;
+    }
+    
+    // 重置重试计数
+    initAttempts.value = 0;
   };
 
   const handleSolve = (event: CapSolveEvent) => {
     if (isMounted.value) {
       const captchaToken = event.detail.token;
       if (captchaToken) {
+        // 清除超时定时器
+        if (verificationTimeout.value) {
+          clearTimeout(verificationTimeout.value);
+          verificationTimeout.value = null;
+        }
+        
+        // 重置重试计数
+        initAttempts.value = 0;
+        
         isVerified.value = true;
         token.value = captchaToken;
-        console.log('Cap.js verification completed:', captchaToken);
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] Cap.js verification completed successfully:`, captchaToken);
       }
     }
   };
@@ -120,8 +143,19 @@ export function useCap(config: CapConfig) {
   const handleError = (event: any) => {
     if (isMounted.value) {
       const errorMessage = event.detail?.error || 'Cap.js verification failed';
+      const timestamp = new Date().toISOString();
       error.value = errorMessage;
-      console.error('Cap.js error:', errorMessage);
+      console.error(`[${timestamp}] Cap.js error:`, {
+        message: errorMessage,
+        detail: event.detail,
+        config: {
+          apiEndpoint: config.apiEndpoint,
+          siteId: config.siteId,
+          workerCount: config.workerCount
+        },
+        userAgent: navigator.userAgent,
+        buildMode: import.meta.env.MODE || 'development'
+      });
     }
   };
 
@@ -134,22 +168,71 @@ export function useCap(config: CapConfig) {
     }
   };
 
-  const handleProgress = (_event: any) => {
-    // if (isMounted.value) {
-    //   const progress = event.detail?.progress || 0;
-    //   console.log('Cap.js progress:', progress);
-    //   // 可以在这里添加进度状态管理
-    // }
+  const handleProgress = (event: any) => {
+    if (isMounted.value) {
+      const progress = event.detail?.progress || 0;
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] Cap.js progress: ${progress}%`);
+      
+      // 检测是否卡在13%附近
+      if (progress >= 10 && progress <= 15) {
+        console.warn(`[${timestamp}] Cap.js verification potentially stuck at ${progress}% - monitoring for timeout`);
+        
+        // 在13%卡住时设置额外的监控
+        setTimeout(() => {
+          if (isMounted.value && !isVerified.value && !error.value) {
+            const currentProgress = event.detail?.progress || 0;
+            if (currentProgress >= 10 && currentProgress <= 15) {
+              console.error(`[${new Date().toISOString()}] Cap.js stuck at ${currentProgress}% for too long, triggering retry`);
+              // 触发重试
+              if (initAttempts.value < maxInitAttempts.value) {
+                setTimeout(() => {
+                  if (isMounted.value && capWidget.value) {
+                    console.log('Attempting to reset widget due to progress stuck');
+                    reset();
+                  }
+                }, 2000);
+              }
+            }
+          }
+        }, 8000); // 8秒后检查是否还卡在13%
+      }
+      
+      // 添加网络连接检测
+      if (progress === 0 && navigator.onLine === false) {
+        console.error(`[${timestamp}] Network appears to be offline`);
+        error.value = '网络连接异常，请检查网络后重试';
+      }
+    }
   };
 
   const initCap = async (containerId: string) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[${timestamp}] Cap.js initialization started (attempt ${initAttempts.value + 1}/${maxInitAttempts.value})`, {
+      containerId,
+      config: {
+        apiEndpoint: config.apiEndpoint,
+        siteId: config.siteId,
+        workerCount: config.workerCount
+      },
+      buildMode: import.meta.env.MODE || 'development'
+    });
+    
     try {
       if (!isMounted.value) {
+        console.warn(`[${timestamp}] Component unmounted, aborting initialization`);
         return;
       }
 
+      initAttempts.value++;
       isLoading.value = true;
       error.value = null;
+      
+      // 清除之前的超时定时器
+      if (verificationTimeout.value) {
+        clearTimeout(verificationTimeout.value);
+        verificationTimeout.value = null;
+      }
 
       // 确保容器存在
       let container: Element | null = null;
@@ -247,11 +330,33 @@ export function useCap(config: CapConfig) {
       // 保存 widget 引用
       capWidget.value = capWidgetElement;
 
+      // 设置验证超时监控
+      verificationTimeout.value = window.setTimeout(() => {
+        if (isMounted.value && !isVerified.value) {
+          const timeoutTimestamp = new Date().toISOString();
+          console.error(`[${timeoutTimestamp}] Cap.js verification timeout after ${VERIFICATION_TIMEOUT_MS}ms`);
+          
+          if (initAttempts.value < maxInitAttempts.value) {
+            console.log(`[${timeoutTimestamp}] Retrying initialization (${initAttempts.value}/${maxInitAttempts.value})`);
+            // 重试初始化
+            setTimeout(() => {
+              if (isMounted.value) {
+                initCap(containerId);
+              }
+            }, 1000);
+          } else {
+            error.value = `验证超时，已重试${maxInitAttempts.value}次`;
+            isLoading.value = false;
+          }
+        }
+      }, VERIFICATION_TIMEOUT_MS);
+
       // 等待 widget 初始化完成
       await new Promise(resolve => setTimeout(resolve, 200));
 
       if (isMounted.value) {
         isLoading.value = false;
+        console.log(`[${timestamp}] Cap.js widget initialized successfully`);
       }
     } catch (err) {
       if (isMounted.value) {
