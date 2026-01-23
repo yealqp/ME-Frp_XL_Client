@@ -32,6 +32,8 @@ fn create_http_client() -> reqwest::Client {
 #[derive(Serialize, Deserialize, Debug)]
 struct RemoteVersion {
     version: String,
+    #[serde(default)]
+    updateinfo: Vec<String>,
 }
 
 // 版本检查结果
@@ -40,6 +42,7 @@ struct VersionCheckResult {
     current_version: String,
     latest_version: String,
     has_update: bool,
+    update_info: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1543,6 +1546,7 @@ async fn check_for_updates() -> Result<VersionCheckResult, String> {
     
     let current_version = CURRENT_VERSION.to_string();
     let latest_version = remote_version.version;
+    let update_info = remote_version.updateinfo;
     
     // 比较版本号
     let has_update = compare_versions(&current_version, &latest_version);
@@ -1551,6 +1555,7 @@ async fn check_for_updates() -> Result<VersionCheckResult, String> {
         current_version,
         latest_version,
         has_update,
+        update_info,
     })
 }
 

@@ -76,19 +76,69 @@
     <!-- 更新提示模态框 -->
     <n-modal
       v-model:show="showUpdateModal"
-      preset="dialog"
-      type="warning"
+      preset="card"
+      :style="{ width: '600px', maxHeight: '80vh' }"
       title="发现新版本"
-      :positive-text="'立即更新'"
-      :negative-text="'稍后提醒'"
-      @positive-click="handleUpdate"
-      @negative-click="handleCancelUpdate"
+      :bordered="false"
+      :segmented="{ content: true, footer: 'soft' }"
     >
-      <p>发现新版本 {{ latestVersion }}，当前版本 {{ currentVersion }}，是否要立即更新？</p>
-      <p style="color: #f0a020; margin-top: 8px;">
-        <i class="fas fa-exclamation-triangle"></i>
-        注意: 更新前请关闭进程或所有正在运行的隧道。
-      </p>
+      <div class="update-modal-content">
+        <div class="version-info">
+          <div class="version-item">
+            <span class="version-label">当前版本:</span>
+            <n-tag type="info" :bordered="false" size="medium">
+              v{{ currentVersion }}
+            </n-tag>
+          </div>
+          <i class="fas fa-arrow-right version-arrow"></i>
+          <div class="version-item">
+            <span class="version-label">最新版本:</span>
+            <n-tag type="success" :bordered="false" size="medium">
+              v{{ latestVersion }}
+            </n-tag>
+          </div>
+        </div>
+
+        <n-divider style="margin: 16px 0" />
+
+        <div class="update-info-section">
+          <div class="update-info-header">
+            <i class="fas fa-list-ul"></i>
+            <span>更新内容</span>
+          </div>
+          <div class="update-info-list">
+            <div
+              v-for="(info, index) in updateInfo"
+              :key="index"
+              :class="getUpdateInfoClass(info)"
+            >
+              <i :class="getUpdateInfoIcon(info)"></i>
+              <span>{{ formatUpdateInfo(info) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <n-alert type="warning" :bordered="false" style="margin-top: 16px">
+          <template #icon>
+            <i class="fas fa-exclamation-triangle"></i>
+          </template>
+          更新前请关闭所有正在运行的隧道
+        </n-alert>
+      </div>
+
+      <template #footer>
+        <div class="modal-footer">
+          <n-button @click="handleCancelUpdate" size="large">
+            稍后提醒
+          </n-button>
+          <n-button type="primary" @click="handleUpdate" size="large">
+            <template #icon>
+              <i class="fas fa-download"></i>
+            </template>
+            立即更新
+          </n-button>
+        </div>
+      </template>
     </n-modal>
   </div>
 </template>
@@ -102,6 +152,7 @@ interface UpdateCheckResult {
   has_update: boolean;
   latest_version: string;
   current_version: string;
+  update_info: string[];
 }
 
 const message = useMessage();
@@ -109,6 +160,7 @@ const updateChecking = ref(false);
 const showUpdateModal = ref(false);
 const latestVersion = ref("");
 const currentVersion = ref("");
+const updateInfo = ref<string[]>([]);
 
 // 检查更新
 const checkForUpdates = async () => {
@@ -118,6 +170,7 @@ const checkForUpdates = async () => {
     if (result.has_update) {
       latestVersion.value = result.latest_version;
       currentVersion.value = result.current_version;
+      updateInfo.value = result.update_info || [];
       showUpdateModal.value = true;
     } else {
       message.success(`当前已是最新版本 ${result.current_version}`);
@@ -126,6 +179,39 @@ const checkForUpdates = async () => {
     message.error(`检查更新失败: ${error}`);
   } finally {
     updateChecking.value = false;
+  }
+};
+
+// 格式化更新信息
+const formatUpdateInfo = (info: string): string => {
+  // 移除版本号前缀，如 (v1.5.6)
+  return info.replace(/^\(v[\d.]+\)\s*/, "");
+};
+
+// 获取更新信息的CSS类
+const getUpdateInfoClass = (info: string): string => {
+  if (info.includes("优化:") || info.includes("新增:") || info.includes("其他:")) {
+    return "update-info-category";
+  }
+  return "update-info-item";
+};
+
+// 获取更新信息的图标
+const getUpdateInfoIcon = (info: string): string => {
+  if (info.includes("优化:")) {
+    return "fas fa-wrench";
+  } else if (info.includes("新增:")) {
+    return "fas fa-plus-circle";
+  } else if (info.includes("其他:")) {
+    return "fas fa-info-circle";
+  } else if (info.includes("修复")) {
+    return "fas fa-bug";
+  } else if (info.includes("优化")) {
+    return "fas fa-cog";
+  } else if (info.includes("新增") || info.includes("功能")) {
+    return "fas fa-star";
+  } else {
+    return "fas fa-chevron-right";
   }
 };
 
@@ -338,5 +424,125 @@ const handleCancelUpdate = () => {
   font-size: 14px;
   margin: 0;
   text-align: center;
+}
+
+/* 更新模态框样式 */
+.update-modal-content {
+  padding: 8px 0;
+}
+
+.version-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px;
+  background: #18181c;
+  border-radius: 8px;
+}
+
+.version-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-label {
+  font-size: 13px;
+  color: #a0a0a0;
+}
+
+.version-arrow {
+  font-size: 20px;
+  color: #349ff4;
+}
+
+.update-info-section {
+  margin-top: 16px;
+}
+
+.update-info-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffffd1;
+  margin-bottom: 12px;
+}
+
+.update-info-header i {
+  color: #349ff4;
+}
+
+.update-info-list {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 12px;
+  background: #18181c;
+  border-radius: 8px;
+}
+
+.update-info-category {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #349ff4;
+  margin-top: 12px;
+}
+
+.update-info-category:first-child {
+  margin-top: 0;
+}
+
+.update-info-category i {
+  font-size: 14px;
+}
+
+.update-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0 6px 16px;
+  font-size: 13px;
+  color: #a0a0a0;
+  line-height: 1.6;
+}
+
+.update-info-item i {
+  font-size: 10px;
+  color: #63e2b7;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+/* 滚动条样式 */
+.update-info-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.update-info-list::-webkit-scrollbar-track {
+  background: #242428;
+  border-radius: 3px;
+}
+
+.update-info-list::-webkit-scrollbar-thumb {
+  background: #3e3e42;
+  border-radius: 3px;
+}
+
+.update-info-list::-webkit-scrollbar-thumb:hover {
+  background: #4e4e52;
 }
 </style>
