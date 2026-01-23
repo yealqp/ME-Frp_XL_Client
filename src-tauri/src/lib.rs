@@ -13,10 +13,20 @@ use std::env;
 use std::io::{BufRead, BufReader};
 use tauri::{Manager, Emitter, tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState}, menu::{Menu, MenuItem}};
 use reqwest;
-use tokio::task;
 
 // 当前应用版本
-const CURRENT_VERSION: &str = "1.5.4";
+const CURRENT_VERSION: &str = "1.5.7";
+
+// User-Agent 常量
+const USER_AGENT: &str = "MeFrp-XL/1.5.7";
+
+// 创建带有统一 User-Agent 的 HTTP 客户端
+fn create_http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .build()
+        .expect("Failed to create HTTP client")
+}
 
 // 远程版本信息结构体
 #[derive(Serialize, Deserialize, Debug)]
@@ -42,6 +52,7 @@ struct UserInfo {
 // 隧道进程信息
 #[derive(Debug, Clone)]
 struct TunnelProcess {
+    #[allow(dead_code)]
     proxy_id: i32,
     child: Arc<Mutex<Option<Child>>>,
     logs: Arc<Mutex<Vec<String>>>,
@@ -423,7 +434,7 @@ async fn api_login(
     password: String,
     captcha_token: Option<String>
 ) -> Result<Config, String> {
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     let login_request = LoginRequest {
         username: username.clone(),
@@ -526,7 +537,7 @@ async fn api_get_user_info(app_handle: tauri::AppHandle) -> Result<UserDetailInf
         return Err("未找到有效的token".to_string());
     }
     
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     let response = client
         .get("https://api.mefrp.com/api/auth/user/info")
@@ -552,6 +563,112 @@ async fn api_get_user_info(app_handle: tauri::AppHandle) -> Result<UserDetailInf
     api_response.data.ok_or("用户信息响应数据为空".to_string())
 }
 
+// 用户签到API命令
+#[tauri::command]
+async fn api_user_sign(app_handle: tauri::AppHandle, captcha_token: String) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = create_http_client();
+    
+    let response = client
+        .post("https://api.mefrp.com/api/auth/user/sign")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "captchaToken": captcha_token
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("签到请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("签到失败，状态码: {}", response.status()));
+    }
+    
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析签到响应失败: {}", e))?;
+    
+    Ok(response_text)
+}
+
+// CDK兑换API命令
+#[tauri::command]
+async fn api_redeem_cdk(app_handle: tauri::AppHandle, code: String, captcha_token: String) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = create_http_client();
+    
+    let response = client
+        .post("https://api.mefrp.com/api/auth/cdk/redeem")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "code": code,
+            "captchaToken": captcha_token
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("CDK兑换请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("CDK兑换失败，状态码: {}", response.status()));
+    }
+    
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析CDK兑换响应失败: {}", e))?;
+    
+    Ok(response_text)
+}
+
+// 获取CDK兑换历史API命令
+#[tauri::command]
+async fn api_get_cdk_history(app_handle: tauri::AppHandle) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = create_http_client();
+    
+    let response = client
+        .get("https://api.mefrp.com/api/auth/cdk/usage")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取CDK兑换历史请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("获取CDK兑换历史失败，状态码: {}", response.status()));
+    }
+    
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析CDK兑换历史响应失败: {}", e))?;
+    
+    Ok(response_text)
+}
+
 /**
  * 获取 FRP Token API 命令
  * 专门用于获取 frpToken，并自动更新到统一配置中
@@ -566,7 +683,7 @@ async fn api_get_frp_token(app_handle: tauri::AppHandle) -> Result<String, Strin
         return Err("未找到有效的token".to_string());
     }
     
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     // 获取frp_token
     let response = client
@@ -614,7 +731,7 @@ async fn api_get_announcements(app_handle: tauri::AppHandle) -> Result<String, S
         return Err("未找到有效的token".to_string());
     }
     
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     let response = client
         .get("https://api.mefrp.com/api/auth/notice")
@@ -641,6 +758,39 @@ async fn api_get_announcements(app_handle: tauri::AppHandle) -> Result<String, S
     Ok(api_response.data.unwrap_or_default())
 }
 
+// 获取系统状态API命令
+#[tauri::command]
+async fn api_get_system_status(app_handle: tauri::AppHandle) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = create_http_client();
+    
+    let response = client
+        .get("https://api.mefrp.com/api/auth/system/status")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取系统状态请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("获取系统状态失败，状态码: {}", response.status()));
+    }
+    
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析系统状态响应失败: {}", e))?;
+    
+    Ok(response_text)
+}
+
 // 获取节点列表API命令
 #[tauri::command]
 async fn api_get_node_list(app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -652,7 +802,7 @@ async fn api_get_node_list(app_handle: tauri::AppHandle) -> Result<String, Strin
         return Err("未找到有效的token".to_string());
     }
     
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     let response = client
         .get("https://api.mefrp.com/api/auth/node/list")
@@ -687,7 +837,7 @@ async fn api_update_tunnel(app_handle: tauri::AppHandle, data: String) -> Result
     let request_data: UpdateTunnelRequest = serde_json::from_str(&data)
         .map_err(|e| format!("解析请求数据失败: {}", e))?;
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/proxy/update")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -723,7 +873,7 @@ async fn api_kick_tunnel(app_handle: tauri::AppHandle, proxy_id: i32) -> Result<
         proxy_id,
     };
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/proxy/kick")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -760,7 +910,7 @@ async fn api_toggle_tunnel(app_handle: tauri::AppHandle, proxy_id: i32, is_disab
         is_disabled,
     };
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/proxy/toggle")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -792,7 +942,7 @@ async fn api_get_node_name_list(app_handle: tauri::AppHandle) -> Result<String, 
         return Err("未找到有效的token".to_string());
     }
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .get("https://api.mefrp.com/api/auth/node/nameList")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -845,7 +995,7 @@ async fn api_get_node_status(app_handle: tauri::AppHandle) -> Result<String, Str
         return Err("未找到有效的token".to_string());
     }
     
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     let response = client
         .get("https://api.mefrp.com/api/auth/node/status")
@@ -880,7 +1030,7 @@ async fn api_get_free_port(app_handle: tauri::AppHandle, data: String) -> Result
     let request_data: FreePortRequest = serde_json::from_str(&data)
         .map_err(|e| format!("解析请求数据失败: {}", e))?;
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/node/freePort")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -918,7 +1068,7 @@ async fn api_create_tunnel(app_handle: tauri::AppHandle, data: String) -> Result
     let request_data: CreateTunnelRequest = serde_json::from_str(&data)
         .map_err(|e| format!("解析请求数据失败: {}", e))?;
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/proxy/create")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -950,7 +1100,7 @@ async fn api_get_tunnel_list(app_handle: tauri::AppHandle) -> Result<String, Str
         return Err("未找到有效的token".to_string());
     }
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .get("https://api.mefrp.com/api/auth/proxy/list")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -1050,9 +1200,9 @@ async fn api_start_tunnel(app_handle: tauri::AppHandle, proxy_id: i32, process_m
     let stdout = child.stdout.take().ok_or("无法获取进程stdout")?;
     let stderr = child.stderr.take().ok_or("无法获取进程stderr")?;
 
-    // 启动异步任务读取 stdout
+    // 启动异步任务读取 stdout（使用 spawn_blocking 避免阻塞主线程）
     let logs_stdout = logs.clone();
-    task::spawn(async move {
+    tokio::task::spawn_blocking(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(line) = line {
@@ -1067,9 +1217,9 @@ async fn api_start_tunnel(app_handle: tauri::AppHandle, proxy_id: i32, process_m
         }
     });
 
-    // 启动异步任务读取 stderr
+    // 启动异步任务读取 stderr（使用 spawn_blocking 避免阻塞主线程）
     let logs_stderr = logs.clone();
-    task::spawn(async move {
+    tokio::task::spawn_blocking(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(line) = line {
@@ -1144,7 +1294,7 @@ async fn api_delete_tunnel(app_handle: tauri::AppHandle, proxy_id: i32) -> Resul
         proxy_id,
     };
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/proxy/delete")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -1181,7 +1331,7 @@ async fn api_get_tunnel_config(app_handle: tauri::AppHandle, proxy_id: i32, form
         format,
     };
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
         .post("https://api.mefrp.com/api/auth/proxy/config")
         .header("authorization", format!("Bearer {}", config.user_token))
@@ -1373,7 +1523,7 @@ async fn quit_app(app_handle: tauri::AppHandle, process_manager: tauri::State<'_
 // 检查版本更新
 #[tauri::command]
 async fn check_for_updates() -> Result<VersionCheckResult, String> {
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     
     // 请求远程版本信息
     let response = client
@@ -1478,7 +1628,7 @@ async fn api_request(app_handle: tauri::AppHandle, method: String, url: String, 
         return Err("未找到有效的token".to_string());
     }
 
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let mut request_builder = match method.to_uppercase().as_str() {
         "GET" => client.get(&url),
         "POST" => client.post(&url),
@@ -1769,8 +1919,12 @@ pub fn run() {
             clear_config,
             api_login,
             api_get_user_info,
+            api_user_sign,
+            api_redeem_cdk,
+            api_get_cdk_history,
             api_get_frp_token,
             api_get_announcements,
+            api_get_system_status,
             api_get_node_list,
             api_get_node_status,
             api_get_free_port,

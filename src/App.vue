@@ -12,6 +12,7 @@ import Settings from './components/Settings.vue'
 import About from './components/About.vue'
 import HelpCenter from './components/HelpCenter.vue'
 import Login from './components/Login.vue'
+import UserCenter from './components/UserCenter.vue'
 import type { UnifiedConfig } from './types/config'
 
 interface Tunnel {
@@ -158,7 +159,7 @@ function handleTunnelStop(id: number) {
 
 // 编辑隧道
 function handleTunnelEdit(id: number) {
-  alert(`编辑隧道 ID: ${id}`);
+  message.info(`编辑隧道 ID: ${id}`);
 }
 
 // 删除隧道
@@ -409,20 +410,22 @@ console.log(`     __  _________   ______                  ___          __  __   
           <main class="main-content">
             <div class="content-body">
             <!-- 面板首页 -->
-            <Dashboard v-if="activeNav === 'dashboard'" :tunnel-data="tunnelData" />
+            <Dashboard v-if="activeNav === 'dashboard'" :tunnel-data="tunnelData" :key="'dashboard'" />
 
             <!-- 创建隧道 -->
             <template v-else-if="activeNav === 'create-tunnel'">
               <!-- 节点选择页面 -->
               <CreateTunnel v-if="currentPage === 'node-selection'" 
                 @tunnel-created="handleTunnelCreated" 
-                @node-selected="handleNodeSelected" />
+                @node-selected="handleNodeSelected"
+                :key="'create-tunnel-node'" />
               
               <!-- 隧道配置页面 -->
               <TunnelConfig v-else-if="currentPage === 'tunnel-config' && selectedNode" 
                 :selected-node="selectedNode"
                 @go-back="handleGoBackToNodeSelection"
-                @tunnel-created="handleTunnelCreated" />
+                @tunnel-created="handleTunnelCreated"
+                :key="'create-tunnel-config'" />
             </template>
 
             <!-- 隧道管理 -->
@@ -434,18 +437,22 @@ console.log(`     __  _________   ______                  ___          __  __   
                 @tunnel-delete="handleTunnelDelete"
                 @refresh-tunnels="handleRefreshTunnels"
                 @go-to-create="handleGoToCreateTunnel"
+                :key="'tunnel-management'"
               />
 
 
 
+            <!-- 用户中心 -->
+            <UserCenter v-else-if="activeNav === 'user-center'" :key="'user-center'" />
+
             <!-- 设置 -->
-            <Settings v-else-if="activeNav === 'settings'" />
+            <Settings v-else-if="activeNav === 'settings'" :key="'settings'" />
 
             <!-- 帮助中心 -->
-            <HelpCenter v-else-if="activeNav === 'help-center'" />
+            <HelpCenter v-else-if="activeNav === 'help-center'" :key="'help-center'" />
 
             <!-- 关于面板 -->
-            <About v-else-if="activeNav === 'about'" />
+            <About v-else-if="activeNav === 'about'" :key="'about'" />
             </div>
           </main>
         </template>
@@ -488,7 +495,7 @@ html, body {
   justify-content: center;
   height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
 }
 
 .loading-spinner {
@@ -541,6 +548,89 @@ html, body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* 自定义滚动条样式 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3e3e42 #18181c;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #18181c;
+  border-radius: 0;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #3e3e42;
+  border-radius: 0;
+  border: none;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #4e4e52;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: #5e5e62;
+}
+
+*::-webkit-scrollbar-corner {
+  background: #18181c;
+}
+
+/* Naive UI 组件滚动条样式 */
+.n-scrollbar-rail {
+  background: #18181c !important;
+}
+
+.n-scrollbar-rail__scrollbar {
+  background: #3e3e42 !important;
+  border-radius: 0 !important;
+}
+
+.n-scrollbar-rail__scrollbar:hover {
+  background: #4e4e52 !important;
+}
+
+.n-modal-body-wrapper::-webkit-scrollbar,
+.n-drawer-body-content-wrapper::-webkit-scrollbar,
+.n-data-table-base-table-body::-webkit-scrollbar,
+.n-select-menu::-webkit-scrollbar,
+.n-dropdown-menu::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.n-modal-body-wrapper::-webkit-scrollbar-track,
+.n-drawer-body-content-wrapper::-webkit-scrollbar-track,
+.n-data-table-base-table-body::-webkit-scrollbar-track,
+.n-select-menu::-webkit-scrollbar-track,
+.n-dropdown-menu::-webkit-scrollbar-track {
+  background: #18181c;
+  border-radius: 0;
+}
+
+.n-modal-body-wrapper::-webkit-scrollbar-thumb,
+.n-drawer-body-content-wrapper::-webkit-scrollbar-thumb,
+.n-data-table-base-table-body::-webkit-scrollbar-thumb,
+.n-select-menu::-webkit-scrollbar-thumb,
+.n-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #3e3e42;
+  border-radius: 0;
+}
+
+.n-modal-body-wrapper::-webkit-scrollbar-thumb:hover,
+.n-drawer-body-content-wrapper::-webkit-scrollbar-thumb:hover,
+.n-data-table-base-table-body::-webkit-scrollbar-thumb:hover,
+.n-select-menu::-webkit-scrollbar-thumb:hover,
+.n-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: #4e4e52;
 }
 
 /* 响应式设计 */

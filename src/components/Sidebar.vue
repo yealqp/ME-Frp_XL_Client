@@ -9,7 +9,15 @@
       </div>
 
       <div class="nav-content">
-        <n-menu :options="menuOptions" :value="props.activeNav" @update:value="handleMenuSelect" />
+        <n-menu 
+          :options="menuOptions" 
+          :value="props.activeNav" 
+          @update:value="handleMenuSelect"
+          :collapsed="false"
+          :collapsed-width="64"
+          :collapsed-icon-size="22"
+          :render-extra="() => null"
+        />
       </div>
 
       <div class="sidebar-footer">
@@ -23,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue'
+import { h, onMounted } from 'vue'
 import { darkTheme } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
 
@@ -69,8 +77,9 @@ const navItems: NavItem[] = [
   { id: 'dashboard', name: '面板首页', icon: 'fas fa-home' },
   { id: 'create-tunnel', name: '创建隧道', icon: 'fas fa-plus-circle' },
   { id: 'tunnel-management', name: '隧道管理', icon: 'fas fa-cogs' },
-  { id: 'settings', name: '设置', icon: 'fas fa-cog' },
+  { id: 'user-center', name: '用户中心', icon: 'fas fa-user' },
   { id: 'help-center', name: '帮助中心', icon: 'fas fa-question-circle' },
+  { id: 'settings', name: '设置', icon: 'fas fa-cog' },
   { id: 'about', name: '关于面板', icon: 'fas fa-info-circle' }
 ];
 
@@ -92,6 +101,36 @@ function handleNavClick(navId: string) {
     emit('nav-change', navId);
   }
 }
+
+// 隐藏 Menu 的 tooltip
+onMounted(() => {
+  // 使用 MutationObserver 监听 DOM 变化，移除 popover
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.addedNodes.forEach((node) => {
+        if (node instanceof HTMLElement) {
+          // 查找并隐藏 n-popover 元素
+          if (node.classList && (node.classList.contains('n-popover') || node.classList.contains('n-popover-shared'))) {
+            node.style.display = 'none'
+          }
+          // 也检查子元素
+          const popovers = node.querySelectorAll('.n-popover, .n-popover-shared')
+          popovers.forEach((popover) => {
+            if (popover instanceof HTMLElement) {
+              popover.style.display = 'none'
+            }
+          })
+        }
+      })
+    })
+  })
+  
+  // 监听 body 的变化
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  })
+})
 </script>
 
 <style scoped>
@@ -191,5 +230,10 @@ function handleNavClick(navId: string) {
 :deep(.n-menu .n-menu-item-content__icon) {
   margin-right: 12px !important;
   font-size: 16px !important;
+}
+
+/* 隐藏菜单项的 tooltip，避免显示两个悬浮框 */
+:deep(.n-menu .n-menu-item .n-tooltip) {
+  display: none !important;
 }
 </style>

@@ -11,13 +11,17 @@
         <!-- 复选框组 -->
         <div class="checkbox-group">
           <n-checkbox v-model:checked="showWebsiteNodes">
-            仅显示可建站节点
+            可建站
           </n-checkbox>
           <n-checkbox v-model:checked="showHighTrafficNodes">
-            仅显示允许大流量节点
+            大流量
           </n-checkbox>
           <n-checkbox v-model:checked="showUnexpiredNodes">
-            仅显示未过载节点
+            未过载
+          </n-checkbox>
+          <!-- 新增：仅显示免费节点（allowGroup 包含 default） -->
+          <n-checkbox v-model:checked="showFreeNodes">
+            非VIP
           </n-checkbox>
         </div>
       </div>
@@ -88,12 +92,13 @@
           </template>
           <div class="nodes-grid">
             <n-card v-for="node in groupedNodes.mainland" :key="node.nodeId" :bordered="true"
-              :hoverable="isNodeSelectable(node.nodeId)" :class="[
+              :hoverable="isNodeSelectable(node)" :class="[
                 'node-card',
                 {
                   'node-card--selected': selectedNode?.nodeId === node.nodeId,
-                  'node-card--disabled': !isNodeSelectable(node.nodeId),
-                  'node-card--selectable': isNodeSelectable(node.nodeId)
+                  'node-card--disabled': !isNodeSelectable(node),
+                  'node-card--selectable': isNodeSelectable(node),
+                  'node-card--vip': showVipStyle(node)
                 }
               ]" size="small" @click="selectNode(node)">
               <template #header>
@@ -126,13 +131,20 @@
                   :color="getLoadColor(getNodeLoad(node.nodeId))" :show-indicator="false" :height="6" />
               </div>
 
-              <!-- 不可选择时的蒙层 -->
-              <div v-if="!isNodeSelectable(node.nodeId)" class="node-overlay"></div>
+              <!-- 不可选择或VIP时的蒙层与标签 -->
+              <div v-if="isNodeOverloaded(node.nodeId)" class="node-overlay"></div>
+              <div v-else-if="isVipRequired(node) && !isUserVip()" class="vip-overlay"></div>
 
-              <!-- 负载过高标识 -->
-              <div v-if="!isNodeSelectable(node.nodeId)" class="error-indicator">
+              <!-- 负载过高标识（优先显示） -->
+              <div v-if="isNodeOverloaded(node.nodeId)" class="error-indicator">
                 <n-tag type="error" size="small" :bordered="true">
                   负载过高
+                </n-tag>
+              </div>
+              <!-- VIP 标签（当非过载且需要VIP显示时显示） -->
+              <div v-else-if="showVipStyle(node)" class="vip-indicator">
+                <n-tag type="warning" size="small" :bordered="true">
+                  VIP专享
                 </n-tag>
               </div>
             </n-card>
@@ -146,12 +158,13 @@
           </template>
           <div class="nodes-grid">
             <n-card v-for="node in groupedNodes.hkMacaoTaiwan" :key="node.nodeId" :bordered="true"
-              :hoverable="isNodeSelectable(node.nodeId)" :class="[
+              :hoverable="isNodeSelectable(node)" :class="[
                 'node-card',
                 {
                   'node-card--selected': selectedNode?.nodeId === node.nodeId,
-                  'node-card--disabled': !isNodeSelectable(node.nodeId),
-                  'node-card--selectable': isNodeSelectable(node.nodeId)
+                  'node-card--disabled': !isNodeSelectable(node),
+                  'node-card--selectable': isNodeSelectable(node),
+                  'node-card--vip': showVipStyle(node)
                 }
               ]" size="small" @click="selectNode(node)">
               <template #header>
@@ -184,13 +197,20 @@
                   :color="getLoadColor(getNodeLoad(node.nodeId))" :show-indicator="false" :height="6" />
               </div>
 
-              <!-- 不可选择时的蒙层 -->
-              <div v-if="!isNodeSelectable(node.nodeId)" class="node-overlay"></div>
+              <!-- 不可选择或VIP时的蒙层与标签 -->
+              <div v-if="isNodeOverloaded(node.nodeId)" class="node-overlay"></div>
+              <div v-else-if="isVipRequired(node) && !isUserVip()" class="vip-overlay"></div>
 
-              <!-- 负载过高标识 -->
-              <div v-if="!isNodeSelectable(node.nodeId)" class="error-indicator">
+              <!-- 负载过高标识（优先显示） -->
+              <div v-if="isNodeOverloaded(node.nodeId)" class="error-indicator">
                 <n-tag type="error" size="small" :bordered="true">
                   负载过高
+                </n-tag>
+              </div>
+              <!-- VIP 标签（当非过载且需要VIP显示时显示） -->
+              <div v-else-if="showVipStyle(node)" class="vip-indicator">
+                <n-tag type="warning" size="small" :bordered="true">
+                  VIP专享
                 </n-tag>
               </div>
             </n-card>
@@ -204,12 +224,13 @@
           </template>
           <div class="nodes-grid">
             <n-card v-for="node in groupedNodes.overseas" :key="node.nodeId" :bordered="true"
-              :hoverable="isNodeSelectable(node.nodeId)" :class="[
+              :hoverable="isNodeSelectable(node)" :class="[
                 'node-card',
                 {
                   'node-card--selected': selectedNode?.nodeId === node.nodeId,
-                  'node-card--disabled': !isNodeSelectable(node.nodeId),
-                  'node-card--selectable': isNodeSelectable(node.nodeId)
+                  'node-card--disabled': !isNodeSelectable(node),
+                  'node-card--selectable': isNodeSelectable(node),
+                  'node-card--vip': showVipStyle(node)
                 }
               ]" size="small" @click="selectNode(node)">
               <template #header>
@@ -242,13 +263,20 @@
                   :color="getLoadColor(getNodeLoad(node.nodeId))" :show-indicator="false" :height="6" />
               </div>
 
-              <!-- 不可选择时的蒙层 -->
-              <div v-if="!isNodeSelectable(node.nodeId)" class="node-overlay"></div>
+              <!-- 不可选择或VIP时的蒙层与标签 -->
+              <div v-if="isNodeOverloaded(node.nodeId)" class="node-overlay"></div>
+              <div v-else-if="isVipRequired(node) && !isUserVip()" class="vip-overlay"></div>
 
-              <!-- 负载过高标识 -->
-              <div v-if="!isNodeSelectable(node.nodeId)" class="error-indicator">
+              <!-- 负载过高标识（优先显示） -->
+              <div v-if="isNodeOverloaded(node.nodeId)" class="error-indicator">
                 <n-tag type="error" size="small" :bordered="true">
                   负载过高
+                </n-tag>
+              </div>
+              <!-- VIP 标签（当非过载且需要VIP显示时显示） -->
+              <div v-else-if="showVipStyle(node)" class="vip-indicator">
+                <n-tag type="warning" size="small" :bordered="true">
+                  VIP
                 </n-tag>
               </div>
             </n-card>
@@ -327,6 +355,77 @@ const error = ref('');
 const selectedNode = ref<Node | null>(null);
 const message = useMessage();
 
+// 用户组（用于VIP判断）
+const userGroup = ref<string>('default');
+
+/**
+ * 获取用户组信息（从 config.yaml / 统一配置读取）
+ * 使用后端命令 `load_unified_config` 获取配置中的 `userInfo.group`
+ */
+async function fetchUserGroup(): Promise<void> {
+  try {
+    const config = await invoke<any>('load_unified_config');
+    const group = config?.userInfo?.group ?? 'default';
+    userGroup.value = String(group).toLowerCase();
+  } catch (err) {
+    console.error('获取用户组失败:', err);
+    userGroup.value = 'default';
+  }
+}
+
+/**
+ * 判断节点 allowGroup 是否包含 default
+ */
+function allowGroupIncludesDefault(node: Node): boolean {
+  const groups = (node.allowGroup || '')
+    .split(';')
+    .map(g => g.trim().toLowerCase())
+    .filter(Boolean);
+  return groups.includes('default');
+}
+
+/**
+ * 节点是否需要 VIP（allowGroup 不含 default）
+ */
+function isVipRequired(node: Node): boolean {
+  return !allowGroupIncludesDefault(node);
+}
+
+/**
+ * 当前用户是否为 VIP（非 noRealname 与 default）
+ */
+function isUserVip(): boolean {
+  const g = (userGroup.value || '').toLowerCase();
+  return g !== 'default' && g !== 'norealname';
+}
+
+/**
+ * 节点是否过载
+ * 阈值：负载 > 85%
+ */
+function isNodeOverloaded(nodeId: number): boolean {
+  const load = getNodeLoad(nodeId);
+  return load > 85;
+}
+
+/**
+ * 节点是否可选择
+ * 优先级：过载禁选 > VIP要求且用户非VIP禁选；其余可选
+ */
+function isNodeSelectable(node: Node): boolean {
+  if (isNodeOverloaded(node.nodeId)) return false;
+  if (isVipRequired(node) && !isUserVip()) return false;
+  return true;
+}
+
+/**
+ * 是否显示 VIP 样式（金色边框与金色蒙层）
+ * 过载时优先显示过载，不显示 VIP 样式
+ */
+function showVipStyle(node: Node): boolean {
+  return isVipRequired(node) && !isNodeOverloaded(node.nodeId);
+}
+
 // 筛选条件
 const searchKeyword = ref('');
 const showWebsiteNodes = ref(false);
@@ -348,6 +447,17 @@ const isNotOverloadedNode = (node: Node): boolean => {
   const load = getNodeLoad(node.nodeId);
   return load < 85;
 };
+
+// 新增：仅显示免费节点筛选开关
+const showFreeNodes = ref(false);
+
+/**
+ * 判断是否为免费节点
+ * 免费节点定义：allowGroup 包含 default
+ */
+function isFreeNode(node: Node): boolean {
+  return allowGroupIncludesDefault(node);
+}
 
 const shouldShowNode = (node: Node): boolean => {
   // 搜索关键词筛选
@@ -371,6 +481,11 @@ const shouldShowNode = (node: Node): boolean => {
 
   // 未过载节点筛选
   if (showUnexpiredNodes.value && !isNotOverloadedNode(node)) {
+    return false;
+  }
+
+  // 新增：仅显示免费节点筛选
+  if (showFreeNodes.value && !isFreeNode(node)) {
     return false;
   }
 
@@ -479,16 +594,12 @@ function getLoadColor(load: number): string {
   }
 }
 
-// 检查节点是否可选择（负载不超过85%）
-function isNodeSelectable(nodeId: number): boolean {
-  const load = getNodeLoad(nodeId);
-  return load <= 85;
-}
+// 旧版节点选择函数已移除，改用基于VIP与过载的 isNodeSelectable(node)
 
 // 选择节点
 function selectNode(node: Node) {
-  if (!isNodeSelectable(node.nodeId)) {
-    return; // 负载超过85%的节点不可选择
+  if (!isNodeSelectable(node)) {
+    return; // 不可选择
   }
 
   if (selectedNode.value?.nodeId === node.nodeId) {
@@ -507,17 +618,17 @@ function nextStep() {
   }
 }
 
-// 重新加载数据
+// 重新加载数据（增加用户组获取）
 async function reloadData() {
   loading.value = true;
   error.value = '';
   await Promise.all([
     fetchNodes(),
-    fetchNodeStatus()
+    fetchNodeStatus(),
+    fetchUserGroup()
   ]);
   loading.value = false;
 }
-
 // 组件挂载时获取数据
 onMounted(async () => {
   await reloadData();
@@ -596,6 +707,14 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   background-color: rgba(24, 160, 251, 0.05);
   border-color: rgba(24, 160, 251, 0.3);
+}
+
+/* VIP 节点悬停样式：覆盖普通悬停样式，保持金色主题 */
+.node-card--vip.node-card--selectable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(242, 201, 76, 0.25);
+  background-color: rgba(242, 201, 76, 0.12);
+  border-color: #f2c94c;
 }
 
 /* 选中状态的卡片 */
@@ -696,13 +815,135 @@ onMounted(async () => {
   z-index: 1;
 }
 
-/* 负载过高标识 */
-.error-indicator {
+/* VIP 卡片样式：默认不显示金色边框与背景，仅用于标识 */
+.node-card--vip {
+  /* 默认状态无金色边框与背景，悬停时才显示（见下方规则） */
+}
+
+/* VIP 金色蒙层：仅在需要VIP且用户非VIP时显示；不包含边框 */
+.vip-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(242, 201, 76, 0.25), rgba(242, 201, 76, 0.10));
+  /* 移除边框，避免默认状态出现边框 */
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* VIP 节点悬停样式：覆盖普通悬停样式，保持金色主题 */
+.node-card--vip.node-card--selectable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(242, 201, 76, 0.25);
+  background-color: rgba(242, 201, 76, 0.12);
+  border-color: #f2c94c;
+}
+
+/* VIP 标签：右上角黄色标签，优先级低于过载标签 */
+.vip-indicator {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 2;
 }
+
+/* 负载过高标识 */
+.error-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  /* 高于 VIP 标签 */
+}
+
+/* 选中状态的卡片 */
+.node-card--selected {
+  background-color: rgba(24, 160, 251, 0.1);
+  border-color: #18a0fb;
+  box-shadow: 0 0 0 2px rgba(24, 160, 251, 0.2);
+}
+
+/* 不可选择的卡片 */
+.node-card--disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.node-card--disabled:hover {
+  background-color: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.node-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #d5d3d2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.node-description {
+  margin: 0;
+  color: #666;
+  font-size: 12px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.node-tags-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 4px;
+}
+
+.protocol-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.protocol-tag {
+  font-size: 10px;
+}
+
+.node-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.bandwidth-tag {
+  font-size: 10px;
+}
+
+.load-text {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+}
+
+
 
 /* 下一步按钮容器 */
 .next-button-container {

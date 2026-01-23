@@ -102,7 +102,7 @@
             <n-tag type="info" size="small">种类多样</n-tag>
           </div>
         </template>
-        <p class="card-description">赞助商 低价云服务器 NAT机 挂机宝 铂金4-8一年仅需80</p>
+        <p class="card-description">赞助商 低价云服务器 NAT机 挂机宝</p>
         <template #footer>
           <div class="card-actions">
             <n-button type="primary" @click="xlwy">点击前往</n-button>
@@ -165,7 +165,7 @@ const OpenDownloadpage = () => {
 
 const xlwy = () => {
   // 打开邮件客户端
-  window.open('https://www.xianlin.cloud/', '_blank');
+  window.open('https://www.idcxl.cn/', '_blank');
   message.success('正在跳转到仙林云计算');
 };
 

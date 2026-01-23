@@ -1,8 +1,8 @@
 [package]
 name = "me-frp_desktop_unoffical"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "1.5.7"
+description = "ME-Frp XL Client"
+authors = ["yealqp"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,13 +15,13 @@ name = "me_frp_desktop_unoffical_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
-tauri-plugin-opener = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-single-instance = "2"
+tauri = { version = "2.5", features = ["tray-icon"] }
+tauri-plugin-opener = "2.5"
+tauri-plugin-fs = "2.4"
+tauri-plugin-single-instance = "2.3"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

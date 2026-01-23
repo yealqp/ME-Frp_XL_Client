@@ -13,7 +13,7 @@
         <template #header>关于ME-Frp XL客户端</template>
         <n-descriptions label-placement="left" bordered :column="2">
           <n-descriptions-item label="版本">
-            v1.5.4
+            v1.5.7
           </n-descriptions-item>
           <n-descriptions-item label="开发者">
             <div class="member-avatar-wrapper">
@@ -47,9 +47,102 @@
 
         </n-descriptions>
       </n-card>
+
+      <!-- 检查更新卡片 -->
+      <n-card :bordered="true" class="update-card">
+        <template #header>
+          <div class="section-header">
+            <i class="fas fa-sync-alt"></i>
+            <span>检查更新</span>
+          </div>
+        </template>
+        <div class="update-content">
+          <n-button
+            type="primary"
+            size="large"
+            @click="checkForUpdates"
+            :loading="updateChecking"
+            block
+          >
+            <template #icon>
+              <i class="fas fa-download"></i>
+            </template>
+            {{ updateChecking ? "检查中..." : "检查更新" }}
+          </n-button>
+        </div>
+      </n-card>
     </div>
+
+    <!-- 更新提示模态框 -->
+    <n-modal
+      v-model:show="showUpdateModal"
+      preset="dialog"
+      type="warning"
+      title="发现新版本"
+      :positive-text="'立即更新'"
+      :negative-text="'稍后提醒'"
+      @positive-click="handleUpdate"
+      @negative-click="handleCancelUpdate"
+    >
+      <p>发现新版本 {{ latestVersion }}，当前版本 {{ currentVersion }}，是否要立即更新？</p>
+      <p style="color: #f0a020; margin-top: 8px;">
+        <i class="fas fa-exclamation-triangle"></i>
+        注意: 更新前请关闭进程或所有正在运行的隧道。
+      </p>
+    </n-modal>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import { useMessage, NCard, NDescriptions, NDescriptionsItem, NSpace, NTag, NButton, NModal } from "naive-ui";
+import { invoke } from "@tauri-apps/api/core";
+
+interface UpdateCheckResult {
+  has_update: boolean;
+  latest_version: string;
+  current_version: string;
+}
+
+const message = useMessage();
+const updateChecking = ref(false);
+const showUpdateModal = ref(false);
+const latestVersion = ref("");
+const currentVersion = ref("");
+
+// 检查更新
+const checkForUpdates = async () => {
+  updateChecking.value = true;
+  try {
+    const result = (await invoke("check_for_updates")) as UpdateCheckResult;
+    if (result.has_update) {
+      latestVersion.value = result.latest_version;
+      currentVersion.value = result.current_version;
+      showUpdateModal.value = true;
+    } else {
+      message.success(`当前已是最新版本 ${result.current_version}`);
+    }
+  } catch (error) {
+    message.error(`检查更新失败: ${error}`);
+  } finally {
+    updateChecking.value = false;
+  }
+};
+
+// 处理更新
+const handleUpdate = () => {
+  message.info("正在准备更新...");
+  window.open(
+    "https://alist.yealqp.cn/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF",
+    "_blank",
+  );
+};
+
+// 处理取消更新
+const handleCancelUpdate = () => {
+  message.info("已取消更新，下次启动时会再次检查");
+};
+</script>
 <style scoped>
 .about {
   padding: 0;
@@ -213,5 +306,37 @@
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+}
+
+/* 检查更新卡片样式 */
+.update-card {
+  background: #18181c;
+  border: 1px solid #29292c;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.section-header i {
+  color: #349ff4;
+}
+
+.update-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.update-description {
+  color: #a0a0a0;
+  font-size: 14px;
+  margin: 0;
+  text-align: center;
 }
 </style>

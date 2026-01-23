@@ -26,6 +26,7 @@
             <n-tag :bordered="false" type="warning" size="small" class="port-range-tag">
               {{ selectedNode.allowPort }}
             </n-tag>
+            <a href="https://www.mefrp.com/dashboard/create-proxy" target="_blank"><n-tag :bordered="false" type="error" size="small" link>仅支持创建TCP/UDP隧道 HTTP/S隧道还请前往官网创建 点击跳转</n-tag></a>
           </div>
         </div>
 
@@ -56,7 +57,7 @@
       <n-form ref="formRef" :model="tunnelForm" :rules="formRules" label-placement="left" label-width="120px"
         class="tunnel-form">
         <n-form-item label="隧道名称" path="name">
-          <n-input v-model:value="tunnelForm.name" placeholder="请输入隧道名称" maxlength="50" show-count />
+          <n-input v-model:value="tunnelForm.name" placeholder="请输入隧道名称"/>
 
         </n-form-item>
 
@@ -82,8 +83,8 @@
           </div>
         </n-form-item>
 
-        <n-form-item label="自定义域名" path="customDomain" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
-          <n-input v-model:value="tunnelForm.customDomain" placeholder="请输入自定义域名（可选）" />
+        <n-form-item label="域名" path="customDomain" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+          <n-input v-model:value="tunnelForm.customDomain" placeholder="域名" />
         </n-form-item>
 
 
@@ -230,10 +231,7 @@ const tunnelTypeOptions = computed(() => {
   const allowedTypes = props.selectedNode.allowType.toLowerCase().split(';');
   const allTypes = [
     { label: 'TCP', value: 'tcp' },
-    { label: 'UDP', value: 'udp' },
-    { label: 'HTTP', value: 'http' },
-    { label: 'HTTPS', value: 'https' }
-
+    { label: 'UDP', value: 'udp' }
   ];
 
   return allTypes.filter(type => allowedTypes.includes(type.value));

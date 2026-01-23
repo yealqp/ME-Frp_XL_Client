@@ -20,16 +20,10 @@
 
             <!-- 人机验证区域 -->
             <div class="vaptcha-section">
-              <!-- CapVerify验证组件 -->
-              <div class="cap-verify-container">
-                <CapVerify 
-                  :width="'100%'"
-                  :height="'60px'"
-                  @solve="handleCapSolve"
-                  @error="handleCapError"
-                  @ready="handleCapReady"
-                />
-              </div>
+              <!-- 人机验证组件 -->
+              <CaptchaVerify 
+                @solve="handleCapSolve"
+              />
               
               <!-- 隐藏的token输入框，用于表单验证 -->
               <n-form-item path="captchaToken" style="display: none;">
@@ -97,7 +91,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { darkTheme, useMessage } from 'naive-ui'
 import { openUrl } from '@tauri-apps/plugin-opener'
-import CapVerify from './CapVerify.vue'
+import CaptchaVerify from './CaptchaVerify.vue'
 import type { UnifiedConfig } from '../types/config'
 
 // 自定义主题配置
@@ -137,10 +131,16 @@ const isTokenMode = ref(false)
 // 验证状态
 const isVerified = ref(false)
 
-
+// 处理CaptchaVerify验证成功事件
+function handleCapSolve(token: string) {
+  console.log('验证成功，获得token:', token)
+  loginForm.value.captchaToken = token
+  isVerified.value = true
+  message.success('人机验证完成')
+}
 
 // 表单引用
-const formRef = ref(null)
+const formRef = ref<any>(null)
 
 // 表单验证规则
 const rules = computed(() => {
@@ -177,27 +177,6 @@ const rules = computed(() => {
 
 // 登录状态
 const isLogging = ref(false)
-
-// 处理CapVerify验证成功事件
-function handleCapSolve(token: string) {
-  console.log('Cap.js验证成功，获得token:', token)
-  loginForm.value.captchaToken = token
-  isVerified.value = true
-  message.success('人机验证完成')
-}
-
-// 处理CapVerify验证错误事件
-function handleCapError(error: string) {
-  console.error('Cap.js验证失败:', error)
-  isVerified.value = false
-  loginForm.value.captchaToken = ''
-  message.error(`验证失败: ${error}`)
-}
-
-// 处理CapVerify准备就绪事件
-function handleCapReady() {
-  console.log('Cap.js验证组件已准备就绪')
-}
 
 /**
  * 切换登录模式（普通登录 <-> Token登录）
@@ -377,6 +356,14 @@ async function handleTokenLogin() {
 async function handleLogin() {
   if (isLogging.value) return
 
+  // 表单验证
+  try {
+    await formRef.value?.validate()
+  } catch (error) {
+    console.log('表单验证失败:', error)
+    return
+  }
+
   isLogging.value = true
   message.loading('正在登录中，请稍候...')
 
@@ -488,30 +475,6 @@ onUnmounted(() => {
 
 .vaptcha-section {
   margin: 15px 0;
-}
-
-.cap-verify-container {
-  margin: 15px 0;
-}
-
-/* CapVerify暗色主题覆盖 */
-.cap-verify-container :deep(cap-widget) {
-  --cap-background: #18181c;
-  --cap-border-color: #29292c;
-  --cap-border-radius: 6px;
-  --cap-color: #ffffffd1;
-  --cap-checkbox-background: #303033;
-  --cap-checkbox-border: 1px solid #29292c;
-  --cap-checkbox-border-radius: 4px;
-  --cap-spinner-color: #349ff4;
-  --cap-spinner-background-color: #29292c;
-  --cap-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.cap-verify-container :deep(.cap-container) {
-  background-color: #18181c !important;
-  border-color: #29292c !important;
-  color: #ffffffd1 !important;
 }
 
 /* Token提示样式 */
