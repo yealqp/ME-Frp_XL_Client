@@ -3,7 +3,7 @@
     <n-config-provider :theme="customTheme">
       <n-card class="login-card" :bordered="true">
         <!-- 登录标题 -->
-        <h1 class="login-title">登录到ME-Frp</h1>
+        <h1 class="login-title">登录到ME-Frp XL客户端</h1>
 
         <!-- 登录表单 -->
         <n-form ref="formRef" :model="loginForm" :rules="rules" @submit.prevent="handleLogin">

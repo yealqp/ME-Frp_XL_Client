@@ -1,5 +1,34 @@
 <template>
   <div class="dashboard">
+    <!-- 弹窗公告 Modal -->
+    <n-modal
+      v-model:show="showPopupNotice"
+      preset="card"
+      title="重要公告"
+      :bordered="true"
+      size="large"
+      :closable="true"
+      :mask-closable="false"
+      style="max-width: 700px;"
+      @after-leave="closePopupNotice"
+    >
+      <div class="popup-notice-content">
+        <div v-if="popupNoticeLoading" class="loading-container">
+          <n-spin size="large" />
+        </div>
+        <div v-else class="notice-text">
+          {{ popupNoticeContent }}
+        </div>
+      </div>
+      <template #footer>
+        <div style="display: flex; justify-content: flex-end;">
+          <n-button type="primary" @click="closePopupNotice">
+            我已知晓
+          </n-button>
+        </div>
+      </template>
+    </n-modal>
+
     <!-- 欢迎信息 -->
     <div class="welcome-header">
       <h2 class="welcome-text">
@@ -290,6 +319,12 @@ interface SystemStatus {
   remark: string;
 }
 
+interface PopupNoticeResponse {
+  code: number;
+  data: string;
+  message: string;
+}
+
 // 用户信息响应式数据
 const userInfo = ref<UserInfo>({
   email: "",
@@ -319,6 +354,11 @@ const systemStatus = ref<SystemStatus>({
 
 // 系统状态是否已加载
 const systemStatusLoaded = ref(false);
+
+// 弹窗公告相关
+const showPopupNotice = ref(false);
+const popupNoticeContent = ref("");
+const popupNoticeLoading = ref(false);
 
 // 加载状态
 const userInfoLoading = ref(true);
@@ -677,11 +717,51 @@ const getAnnouncementCardClass = (announcement: any): string => {
   }
 };
 
+// 获取弹窗公告
+const fetchPopupNotice = async () => {
+  // 检查是否已经显示过（使用 localStorage 记录）
+  const lastShownTime = localStorage.getItem('popup_notice_last_shown');
+  const now = Date.now();
+  
+  // 如果距离上次显示不到 24 小时，则不再显示
+  if (lastShownTime && now - parseInt(lastShownTime) < 24 * 60 * 60 * 1000) {
+    console.log('弹窗公告今日已显示过，跳过');
+    return;
+  }
+
+  popupNoticeLoading.value = true;
+  
+  try {
+    const responseText = await invoke("api_get_popup_notice");
+    const result: PopupNoticeResponse = JSON.parse(responseText as string);
+    
+    if (result.code === 200 && result.data) {
+      popupNoticeContent.value = result.data;
+      showPopupNotice.value = true;
+      
+      // 记录显示时间
+      localStorage.setItem('popup_notice_last_shown', now.toString());
+    } else {
+      console.error("获取弹窗公告失败:", result.message);
+    }
+  } catch (error) {
+    console.error("获取弹窗公告失败:", error);
+  } finally {
+    popupNoticeLoading.value = false;
+  }
+};
+
+// 关闭弹窗公告
+const closePopupNotice = () => {
+  showPopupNotice.value = false;
+};
+
 // 组件挂载时获取用户信息和系统公告
 onMounted(() => {
   fetchSystemStatus();
   fetchUserInfo();
   fetchAnnouncements();
+  fetchPopupNotice();
 });
 </script>
 
@@ -1212,5 +1292,27 @@ onMounted(() => {
 
 :deep(.n-dialog cap-widget div) {
   max-width: 100% !important;
+}
+
+/* 弹窗公告样式 */
+.popup-notice-content {
+  min-height: 200px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.popup-notice-content .loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.popup-notice-content .notice-text {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  color: #ffffffd1;
+  font-size: 14px;
+  padding: 10px 0;
 }
 </style>

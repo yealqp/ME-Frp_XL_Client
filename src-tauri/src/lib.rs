@@ -672,6 +672,42 @@ async fn api_get_cdk_history(app_handle: tauri::AppHandle) -> Result<String, Str
     Ok(response_text)
 }
 
+// 获取流量统计API命令
+#[tauri::command]
+async fn api_get_traffic_stats(app_handle: tauri::AppHandle, date_period: u32) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = create_http_client();
+    
+    let response = client
+        .post("https://api.mefrp.com/api/auth/user/trafficStats")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "datePeriod": date_period
+        }))
+        .send()
+        .await
+        .map_err(|e| format!("获取流量统计请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("获取流量统计失败，状态码: {}", response.status()));
+    }
+    
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析流量统计响应失败: {}", e))?;
+    
+    Ok(response_text)
+}
+
 /**
  * 获取 FRP Token API 命令
  * 专门用于获取 frpToken，并自动更新到统一配置中
@@ -790,6 +826,39 @@ async fn api_get_system_status(app_handle: tauri::AppHandle) -> Result<String, S
         .text()
         .await
         .map_err(|e| format!("解析系统状态响应失败: {}", e))?;
+    
+    Ok(response_text)
+}
+
+// 获取弹窗公告API命令
+#[tauri::command]
+async fn api_get_popup_notice(app_handle: tauri::AppHandle) -> Result<String, String> {
+    // 从统一配置读取token
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+    
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+    
+    let client = create_http_client();
+    
+    let response = client
+        .get("https://api.mefrp.com/api/auth/popupNotice")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取弹窗公告请求失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("获取弹窗公告失败，状态码: {}", response.status()));
+    }
+    
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析弹窗公告响应失败: {}", e))?;
     
     Ok(response_text)
 }
@@ -1927,9 +1996,11 @@ pub fn run() {
             api_user_sign,
             api_redeem_cdk,
             api_get_cdk_history,
+            api_get_traffic_stats,
             api_get_frp_token,
             api_get_announcements,
             api_get_system_status,
+            api_get_popup_notice,
             api_get_node_list,
             api_get_node_status,
             api_get_free_port,

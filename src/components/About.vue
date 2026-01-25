@@ -3,7 +3,7 @@
     <div class="about-content">
       <n-card :bordered="true" class="app-info">
         <template #header>
-          <img src="../assets/icon.png" alt="logo" class="logo">
+          <img src="../assets/icon.png" alt="logo" class="logo" />
         </template>
         <div class="app-logo">ME-Frp XL客户端</div>
         <p class="description"></p>
@@ -12,40 +12,58 @@
       <n-card :bordered="true" class="tech-stack">
         <template #header>关于ME-Frp XL客户端</template>
         <n-descriptions label-placement="left" bordered :column="2">
-          <n-descriptions-item label="版本">
-            v1.5.7
-          </n-descriptions-item>
+          <n-descriptions-item label="版本"> v1.5.7 </n-descriptions-item>
           <n-descriptions-item label="开发者">
             <div class="member-avatar-wrapper">
-              <img src="https://img.fastmirror.net/s/2025/08/26/68adce35907c1.jpg" :alt="`yealqp Avatar`"
-                class="member-avatar-img">
+              <img
+                src="https://img.fastmirror.net/s/2025/08/26/68adce35907c1.jpg"
+                :alt="`yealqp Avatar`"
+                class="member-avatar-img"
+              />
               <a>Yealqp/猫羽雫 @1592239257</a>
             </div>
           </n-descriptions-item>
           <n-descriptions-item label="技术栈">
             <n-space>
-              <n-tag :bordered="false" type="success">
-                Vue3
-              </n-tag>
-              <n-tag :bordered="false" type="info">
-                TypeScript
-              </n-tag>
-              <n-tag :bordered="false" type="warning">
-                Naive UI
-              </n-tag>
-              <n-tag :bordered="false" type="error">
-                Vite
-              </n-tag>
-              <n-tag :bordered="false" type="info">
-                Tauri 2
-              </n-tag>
-              <n-tag :bordered="false" type="error">
-                Rust
-              </n-tag>
+              <n-tag :bordered="false" type="success"> Vue3 </n-tag>
+              <n-tag :bordered="false" type="info"> TypeScript </n-tag>
+              <n-tag :bordered="false" type="warning"> Naive UI </n-tag>
+              <n-tag :bordered="false" type="error"> Vite </n-tag>
+              <n-tag :bordered="false" type="info"> Tauri 2 </n-tag>
+              <n-tag :bordered="false" type="error"> Rust </n-tag>
             </n-space>
           </n-descriptions-item>
-
         </n-descriptions>
+      </n-card>
+      <!-- 一言卡片 -->
+      <n-card :bordered="true" class="hitokoto-card">
+        <div class="hitokoto-content">
+          <div class="hitokoto-text">
+            <i class="fas fa-quote-left quote-icon"></i>
+            <span class="hitokoto-sentence">{{ hitokoto.sentence }}</span>
+          </div>
+          <div class="hitokoto-meta">
+            <span v-if="hitokoto.from" class="hitokoto-from">
+              —— {{ hitokoto.from }}
+              <span v-if="hitokoto.from_who" class="hitokoto-author"
+                >「{{ hitokoto.from_who }}」</span
+              >
+            </span>
+          </div>
+          <div class="hitokoto-actions">
+            <n-button
+              text
+              @click="refreshHitokoto"
+              :loading="hitokotoLoading"
+              size="small"
+            >
+              <template #icon>
+                <i class="fas fa-sync-alt"></i>
+              </template>
+              换一句
+            </n-button>
+          </div>
+        </div>
       </n-card>
 
       <!-- 检查更新卡片 -->
@@ -144,8 +162,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-import { useMessage, NCard, NDescriptions, NDescriptionsItem, NSpace, NTag, NButton, NModal } from "naive-ui";
+import { ref, onMounted } from "vue";
+import {
+  useMessage,
+  NCard,
+  NDescriptions,
+  NDescriptionsItem,
+  NSpace,
+  NTag,
+  NButton,
+  NModal,
+} from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 
 interface UpdateCheckResult {
@@ -155,12 +182,62 @@ interface UpdateCheckResult {
   update_info: string[];
 }
 
+interface Hitokoto {
+  sentence: string;
+  from: string;
+  from_who: string;
+  type: string;
+}
+
 const message = useMessage();
 const updateChecking = ref(false);
 const showUpdateModal = ref(false);
 const latestVersion = ref("");
 const currentVersion = ref("");
 const updateInfo = ref<string[]>([]);
+
+// 一言相关
+const hitokoto = ref<Hitokoto>({
+  sentence: "加载中...",
+  from: "",
+  from_who: "",
+  type: "",
+});
+const hitokotoLoading = ref(false);
+
+// 获取一言
+const getHitokoto = async () => {
+  try {
+    const response = await fetch("https://hitokoto.yealqp.cn/?encode=json");
+    const data = await response.json();
+    hitokoto.value = {
+      sentence: data.hitokoto || "获取一言失败",
+      from: data.from || "",
+      from_who: data.from_who || "",
+      type: data.type || "",
+    };
+  } catch (error) {
+    console.error("获取一言失败:", error);
+    hitokoto.value = {
+      sentence: "获取一言失败",
+      from: "获取失败",
+      from_who: "",
+      type: "",
+    };
+  }
+};
+
+// 刷新一言
+const refreshHitokoto = async () => {
+  hitokotoLoading.value = true;
+  await getHitokoto();
+  hitokotoLoading.value = false;
+};
+
+// 组件挂载时获取一言
+onMounted(() => {
+  getHitokoto();
+});
 
 // 检查更新
 const checkForUpdates = async () => {
@@ -190,7 +267,11 @@ const formatUpdateInfo = (info: string): string => {
 
 // 获取更新信息的CSS类
 const getUpdateInfoClass = (info: string): string => {
-  if (info.includes("优化:") || info.includes("新增:") || info.includes("其他:")) {
+  if (
+    info.includes("优化:") ||
+    info.includes("新增:") ||
+    info.includes("其他:")
+  ) {
     return "update-info-category";
   }
   return "update-info-item";
@@ -240,6 +321,81 @@ const handleCancelUpdate = () => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* 一言卡片样式 */
+.hitokoto-card {
+  border: none;
+}
+
+.hitokoto-card :deep(.n-card__content) {
+  padding: 24px;
+}
+
+.hitokoto-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hitokoto-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+}
+
+.quote-icon {
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.hitokoto-sentence {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #ffffff;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.hitokoto-meta {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.hitokoto-from {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+}
+
+.hitokoto-author {
+  margin-left: 4px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hitokoto-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hitokoto-actions .n-button {
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.3s ease;
+}
+
+.hitokoto-actions .n-button:hover {
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.hitokoto-actions .n-button :deep(.n-button__icon) {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .app-info {

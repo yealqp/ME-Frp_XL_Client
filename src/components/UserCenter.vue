@@ -110,15 +110,11 @@
         <template v-else>
           <div class="user-info-grid">
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >用户名</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">用户名</n-text>
               <div class="user-info-value">{{ userInfo?.username }}</div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >用户 ID</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">用户 ID</n-text>
               <div class="user-info-value">
                 <n-tag type="warning" :bordered="false" size="small">
                   #{{ userInfo?.userId }}
@@ -126,9 +122,7 @@
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >实名认证</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">实名认证</n-text>
               <div class="user-info-value">
                 <n-tag type="success" :bordered="false" size="small">
                   {{ userInfo?.isRealname ? "已实名" : "未实名" }}
@@ -136,9 +130,7 @@
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >用户组</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">用户组</n-text>
               <div class="user-info-value">
                 <n-tag type="info" :bordered="false" size="small">
                   {{ userInfo?.friendlyGroup }}
@@ -146,47 +138,35 @@
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >注册时间</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">注册时间</n-text>
               <div class="user-info-value">
                 {{ formatRegTime(userInfo?.regTime || 0) }}
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >注册邮箱</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">注册邮箱</n-text>
               <div class="user-info-value">{{ userInfo?.email }}</div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >隧道数量</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">隧道数量</n-text>
               <div class="user-info-value">
                 {{ userInfo?.usedProxies }}/{{ userInfo?.maxProxies }}
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >剩余流量</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">剩余流量</n-text>
               <div class="user-info-value">
                 {{ ((userInfo?.traffic || 0) / 1024).toFixed(2) }} GB
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >入站带宽</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">入站带宽</n-text>
               <div class="user-info-value">
                 {{ formatBandwidth(userInfo?.inBound || 0) }}
               </div>
             </div>
             <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3"
-                >出站带宽</n-text
-              >
+              <n-text :style="{ fontSize: '13px' }" depth="3">出站带宽</n-text>
               <div class="user-info-value">
                 {{ formatBandwidth(userInfo?.outBound || 0) }}
               </div>
@@ -210,6 +190,88 @@
           </n-button>
         </div>
       </template>
+    </n-card>
+    <!-- 流量统计卡片 -->
+    <n-card :bordered="true" class="traffic-stats-card">
+      <template #header>
+        <div class="section-header">
+          <i class="fas fa-chart-line"></i>
+          <span>流量历史记录</span>
+        </div>
+      </template>
+      <template #header-extra>
+        <n-space>
+          <n-button
+            size="small"
+            :type="datePeriod === 7 ? 'primary' : 'default'"
+            @click="changeDatePeriod(7)"
+          >
+            7天
+          </n-button>
+          <n-button
+            size="small"
+            :type="datePeriod === 14 ? 'primary' : 'default'"
+            @click="changeDatePeriod(14)"
+          >
+            14天
+          </n-button>
+          <n-button
+            size="small"
+            :type="datePeriod === 30 ? 'primary' : 'default'"
+            @click="changeDatePeriod(30)"
+          >
+            30天
+          </n-button>
+        </n-space>
+      </template>
+      <div class="chart-wrapper">
+        <div v-if="trafficStatsLoading" class="chart-loading">
+          <n-spin size="large" />
+        </div>
+        <div
+          ref="chartContainer"
+          class="chart-container"
+          :style="{ opacity: trafficStatsLoading ? 0 : 1 }"
+          @mouseenter="handleChartMouseEnter"
+          @mousemove="handleChartMouseMove"
+          @mouseleave="handleChartMouseLeave"
+        ></div>
+        
+        <!-- 加载时的遮罩层，阻止鼠标事件 -->
+        <div 
+          v-if="trafficStatsLoading" 
+          class="chart-loading-mask"
+          @mouseenter.stop
+          @mousemove.stop
+          @mouseleave.stop
+          @click.stop
+        ></div>
+        
+        <!-- 自定义 Tooltip - 使用 NCard -->
+        <n-card
+          v-if="showCustomTooltip && !trafficStatsLoading"
+          class="custom-tooltip"
+          :bordered="true"
+          size="small"
+          :style="{
+            left: customTooltipData.x + 'px',
+            top: customTooltipData.y + 'px',
+          }"
+        >
+          <div class="tooltip-date">{{ customTooltipData.date }}</div>
+          <div class="tooltip-content">
+            <div class="tooltip-item">
+              <span class="tooltip-label">上传流量: {{ customTooltipData.trafficOut }} {{ customTooltipData.unit }}</span>
+            </div>
+            <div class="tooltip-item">
+              <span class="tooltip-label">下载流量: {{ customTooltipData.trafficIn }} {{ customTooltipData.unit }}</span>
+            </div>
+            <div class="tooltip-item">
+              <span class="tooltip-label">总流量: {{ customTooltipData.totalTraffic }} {{ customTooltipData.unit }}</span>
+            </div>
+          </div>
+        </n-card>
+      </div>
     </n-card>
 
     <!-- CDK兑换卡片 -->
@@ -235,16 +297,10 @@
           </n-button>
         </div>
       </n-space>
-    </n-card>
-
-    <!-- CDK兑换历史卡片 -->
-    <n-card :bordered="true" class="cdk-section">
-      <template #header>
         <div class="section-header">
           <i class="fas fa-history"></i>
           <span>CDK兑换历史</span>
         </div>
-      </template>
 
       <div class="cdk-history-content">
         <div v-if="cdkHistoryLoading" class="loading-text">
@@ -273,7 +329,8 @@
               </div>
               <div class="cdk-card-info">
                 <div class="cdk-card-value">
-                  {{ getCdkValueLabel(log.type) }}: {{ formatCdkValue(log.type, log.value) }}
+                  {{ getCdkValueLabel(log.type) }}:
+                  {{ formatCdkValue(log.type, log.value) }}
                 </div>
                 <div class="cdk-card-time">
                   {{ formatTimestamp(log.useTime) }}
@@ -285,7 +342,7 @@
             </div>
           </div>
         </div>
-        
+
         <div v-if="cdkHistory.length > 0" class="cdk-history-footer">
           <n-button
             size="small"
@@ -294,9 +351,7 @@
           >
             刷新
           </n-button>
-          <div class="pagination-info">
-            共 {{ cdkHistoryTotal }} 条记录
-          </div>
+          <div class="pagination-info">共 {{ cdkHistoryTotal }} 条记录</div>
         </div>
       </div>
     </n-card>
@@ -309,13 +364,28 @@
       :style="{ width: '450px', maxWidth: '90vw' }"
       :bordered="true"
       :segmented="{ content: true }"
+      :closable="!isSigning"
+      :mask-closable="!isSigning"
     >
       <n-space vertical :size="16">
-        <div>
-          <p style="margin-bottom: 8px; color: #999; text-align: center; font-size: 13px">
-            请完成人机验证
+        <div v-if="!isSigning">
+          <p
+            style="
+              margin-bottom: 8px;
+              color: #999;
+              text-align: center;
+              font-size: 13px;
+            "
+          >
+            请完成人机验证后自动签到
           </p>
           <CaptchaVerify @solve="handleSignCaptchaSolve" />
+        </div>
+        <div v-else style="text-align: center; padding: 20px 0">
+          <n-spin size="large" />
+          <p style="margin-top: 16px; color: #999; font-size: 14px">
+            正在签到中...
+          </p>
         </div>
       </n-space>
 
@@ -323,13 +393,6 @@
         <n-space justify="end">
           <n-button @click="showSignModal = false" :disabled="isSigning">
             取消
-          </n-button>
-          <n-button
-            type="primary"
-            @click="performSign"
-            :loading="isSigning"
-          >
-            确认签到
           </n-button>
         </n-space>
       </template>
@@ -390,9 +453,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useMessage, NCard, NButton, NSpace, NTag, NInput, NModal, NSkeleton, NText } from "naive-ui";
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import {
+  useMessage,
+  NCard,
+  NButton,
+  NSpace,
+  NTag,
+  NInput,
+  NModal,
+  NSkeleton,
+  NText,
+  NSpin,
+} from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
+import * as echarts from "echarts";
+import type { ECharts } from "echarts";
 import CaptchaVerify from "./CaptchaVerify.vue";
 
 interface UserDetailInfo {
@@ -435,6 +511,17 @@ interface CdkHistoryResponse {
   message: string;
 }
 
+interface TrafficStatsResponse {
+  code: number;
+  data: {
+    dates: string[];
+    trafficIn: number[];
+    trafficOut: number[];
+    totalTraffic: number[];
+  };
+  message: string;
+}
+
 const message = useMessage();
 
 // 用户信息
@@ -456,6 +543,33 @@ const cdkCaptchaToken = ref("");
 const cdkHistory = ref<CdkHistoryLog[]>([]);
 const cdkHistoryLoading = ref(false);
 const cdkHistoryTotal = ref(0);
+
+// 流量统计相关
+const chartContainer = ref<HTMLElement | null>(null);
+const chartInstance = ref<ECharts | null>(null);
+const trafficStatsLoading = ref(false);
+const datePeriod = ref(7);
+
+// 自定义 tooltip 相关
+const showCustomTooltip = ref(false);
+const customTooltipData = ref({
+  date: "",
+  trafficIn: 0,
+  trafficOut: 0,
+  totalTraffic: 0,
+  unit: "KB",
+  x: 0,
+  y: 0,
+});
+
+// 存储当前图表数据，用于 tooltip 计算
+const currentChartData = ref<{
+  dates: string[];
+  trafficIn: number[];
+  trafficOut: number[];
+  totalTraffic: number[];
+  unit: string;
+} | null>(null);
 
 // 加载用户信息
 const loadUserInfo = async () => {
@@ -495,9 +609,11 @@ const showSignDialog = () => {
 };
 
 // 处理签到验证成功
-const handleSignCaptchaSolve = (token: string) => {
-  console.log("签到验证成功");
+const handleSignCaptchaSolve = async (token: string) => {
   signCaptchaToken.value = token;
+
+  // 自动执行签到
+  await performSign();
 };
 
 // 执行签到
@@ -521,11 +637,26 @@ const performSign = async () => {
     const result = JSON.parse(responseText as string);
 
     if (result.code === 200) {
-      message.success("签到成功！");
+      // API 返回格式: { code: 200, data: { extraTraffic: 7 }, message: "签到成功，获得 7 GB 流量" }
+      // extraTraffic 单位是 GB
+      const trafficGB = result.data?.extraTraffic || 0;
+
+      let successMessage = "签到成功！";
+      if (trafficGB > 0) {
+        successMessage = `签到成功，获得 ${trafficGB} GB 流量！`;
+      } else if (result.message) {
+        // 如果没有 extraTraffic 字段，使用 API 返回的 message
+        successMessage = result.message;
+      }
+
+      message.success(successMessage, {
+        duration: 5000,
+      });
+
       showSignModal.value = false;
       signCaptchaToken.value = "";
       // 刷新用户信息
-      loadUserInfo();
+      await loadUserInfo();
     } else {
       message.error(result.message || "签到失败");
     }
@@ -546,7 +677,6 @@ const showCdkDialog = () => {
 
 // 处理CDK验证成功
 const handleCdkCaptchaSolve = (token: string) => {
-  console.log("CDK兑换验证成功");
   cdkCaptchaToken.value = token;
 };
 
@@ -598,7 +728,7 @@ const performCdkRedeem = async () => {
       showCdkModal.value = false;
       cdkCode.value = "";
       cdkCaptchaToken.value = "";
-      
+
       // 兑换成功后刷新历史记录和用户信息
       loadCdkHistory();
       loadUserInfo();
@@ -621,7 +751,9 @@ const loadCdkHistory = async () => {
     const result: CdkHistoryResponse = JSON.parse(responseText as string);
 
     if (result.code === 200 && result.data) {
-      cdkHistory.value = Array.isArray(result.data.logs) ? result.data.logs : [];
+      cdkHistory.value = Array.isArray(result.data.logs)
+        ? result.data.logs
+        : [];
       cdkHistoryTotal.value = result.data.total || 0;
       console.log(`成功加载 ${cdkHistory.value.length} 条CDK兑换记录`);
     } else {
@@ -686,20 +818,627 @@ const formatTimestamp = (timestamp: number): string => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
+// 初始化图表
+const initChart = () => {
+  if (!chartContainer.value) {
+    console.error(
+      "图表容器未找到，chartContainer.value 为:",
+      chartContainer.value,
+    );
+    return false;
+  }
+
+  console.log("图表容器元素:", chartContainer.value);
+  console.log("容器尺寸:", {
+    width: chartContainer.value.offsetWidth,
+    height: chartContainer.value.offsetHeight,
+  });
+
+  if (chartInstance.value) {
+    console.log("销毁旧的图表实例");
+    chartInstance.value.dispose();
+  }
+
+  try {
+    // 使用 SVG 渲染器，在某些环境下 tooltip 支持更好
+    chartInstance.value = echarts.init(chartContainer.value, "dark", {
+      renderer: "svg",
+    });
+    
+    console.log("图表初始化成功，实例:", chartInstance.value);
+    return true;
+  } catch (error) {
+    console.error("图表初始化失败:", error);
+    return false;
+  }
+};
+
+// 加载流量统计数据
+const loadTrafficStats = async () => {
+  console.log("开始加载流量统计数据");
+  trafficStatsLoading.value = true;
+  
+  // 清除可能存在的 axisPointer
+  if (chartInstance.value) {
+    chartInstance.value.dispatchAction({
+      type: 'hideTip'
+    });
+  }
+  
+  // 隐藏自定义 tooltip
+  showCustomTooltip.value = false;
+
+  try {
+    const responseText = await invoke("api_get_traffic_stats", {
+      datePeriod: datePeriod.value,
+    });
+    const result: TrafficStatsResponse = JSON.parse(responseText as string)
+
+    if (result.code === 200 && result.data) {
+      // 确保图表已初始化
+      if (!chartInstance.value) {
+        console.log("图表未初始化，尝试初始化");
+        await nextTick();
+        const success = initChart();
+        if (!success) {
+          console.error("图表初始化失败，无法更新数据");
+          return;
+        }
+      }
+      updateChart(result.data);
+    } else {
+      console.error("获取流量统计失败:", result.message);
+      message.error(result.message || "获取流量统计失败");
+    }
+  } catch (error) {
+    console.error("加载流量统计失败:", error);
+    message.error("加载流量统计失败，请检查网络连接");
+  } finally {
+    trafficStatsLoading.value = false;
+    console.log("流量统计加载完成");
+    
+    // 加载完成后再次清除 axisPointer，防止残留
+    if (chartInstance.value) {
+      chartInstance.value.dispatchAction({
+        type: 'hideTip'
+      });
+    }
+  }
+};
+
+// 更新图表
+const updateChart = (data: TrafficStatsResponse["data"]) => {
+  if (!chartInstance.value) {
+    console.error("图表实例未初始化");
+    return;
+  }
+
+  // 将字节转换为 KB
+  const trafficInKB = data.trafficIn.map((v) => Number((v / 1024).toFixed(2)));
+  const trafficOutKB = data.trafficOut.map((v) =>
+    Number((v / 1024).toFixed(2)),
+  );
+  const totalTrafficKB = data.totalTraffic.map((v) =>
+    Number((v / 1024).toFixed(2)),
+  );
+
+  // 判断是否需要使用 MB 单位（如果最大值超过 1024 KB）
+  const maxValue = Math.max(...totalTrafficKB);
+  const useMB = maxValue > 1024;
+
+  let trafficData, unit;
+  if (useMB) {
+    // 使用 MB
+    trafficData = {
+      trafficIn: data.trafficIn.map((v) =>
+        Number((v / 1024 / 1024).toFixed(2)),
+      ),
+      trafficOut: data.trafficOut.map((v) =>
+        Number((v / 1024 / 1024).toFixed(2)),
+      ),
+      totalTraffic: data.totalTraffic.map((v) =>
+        Number((v / 1024 / 1024).toFixed(2)),
+      ),
+    };
+    unit = "MB";
+  } else {
+    // 使用 KB
+    trafficData = {
+      trafficIn: trafficInKB,
+      trafficOut: trafficOutKB,
+      totalTraffic: totalTrafficKB,
+    };
+    unit = "KB";
+  }
+
+  const option = {
+    backgroundColor: "transparent",
+    tooltip: {
+      show: false, // 禁用内置 tooltip，使用自定义的
+    },
+    // 启用 axisPointer 显示垂线
+    axisPointer: {
+      link: [{ xAxisIndex: "all" }],
+      label: {
+        show: false,
+      },
+      triggerOn: 'none', // 禁用自动触发，改为手动控制
+    },
+    legend: {
+      data: ["入站流量", "出站流量", "总流量"],
+      textStyle: {
+        color: "#ffffffd1",
+      },
+      top: 10,
+    },
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      top: "15%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: data.dates,
+      axisLine: {
+        lineStyle: {
+          color: "#3e3e42",
+        },
+      },
+      axisLabel: {
+        color: "#a0a0a0",
+        formatter: (value: string) => {
+          // 格式化日期，只显示月-日
+          const date = new Date(value);
+          return `${date.getMonth() + 1}-${date.getDate()}`;
+        },
+      },
+      axisPointer: {
+        show: true,
+        type: "line",
+        lineStyle: {
+          color: "#349ff4",
+          width: 2,
+          type: "solid",
+        },
+        label: {
+          show: false,
+        },
+        triggerOn: 'none', // 禁用自动触发
+      },
+    },
+    yAxis: {
+      type: "value",
+      name: `流量 (${unit})`,
+      nameTextStyle: {
+        color: "#a0a0a0",
+      },
+      axisLine: {
+        lineStyle: {
+          color: "#3e3e42",
+        },
+      },
+      axisLabel: {
+        color: "#a0a0a0",
+      },
+      splitLine: {
+        lineStyle: {
+          color: "#2a2a2e",
+        },
+      },
+    },
+    series: [
+      {
+        name: "入站流量",
+        type: "line",
+        smooth: true,
+        data: trafficData.trafficIn,
+        itemStyle: {
+          color: "#349ff4",
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(52, 159, 244, 0.3)" },
+            { offset: 1, color: "rgba(52, 159, 244, 0.05)" },
+          ]),
+        },
+      },
+      {
+        name: "出站流量",
+        type: "line",
+        smooth: true,
+        data: trafficData.trafficOut,
+        itemStyle: {
+          color: "#63e2b7",
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(99, 226, 183, 0.3)" },
+            { offset: 1, color: "rgba(99, 226, 183, 0.05)" },
+          ]),
+        },
+      },
+      {
+        name: "总流量",
+        type: "line",
+        smooth: true,
+        data: trafficData.totalTraffic,
+        itemStyle: {
+          color: "#f0a020",
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(240, 160, 32, 0.3)" },
+            { offset: 1, color: "rgba(240, 160, 32, 0.05)" },
+          ]),
+        },
+      },
+    ],
+  };
+
+  chartInstance.value.setOption(option, {
+    notMerge: true,
+    lazyUpdate: false,
+  });
+  
+  console.log("图表更新完成，使用单位:", unit);
+  
+  // 保存当前图表数据供 tooltip 使用
+  currentChartData.value = {
+    dates: data.dates,
+    trafficIn: trafficData.trafficIn,
+    trafficOut: trafficData.trafficOut,
+    totalTraffic: trafficData.totalTraffic,
+    unit: unit,
+  };
+  
+  // 立即清除可能存在的 axisPointer
+  chartInstance.value.dispatchAction({
+    type: 'hideTip'
+  });
+};
+
+// 处理图表鼠标进入事件
+const handleChartMouseEnter = () => {
+  // 如果正在加载，清除任何残留的 axisPointer
+  if (trafficStatsLoading.value && chartInstance.value) {
+    chartInstance.value.dispatchAction({
+      type: 'hideTip'
+    });
+    showCustomTooltip.value = false;
+  }
+};
+
+// 处理图表鼠标移动事件
+const handleChartMouseMove = (event: MouseEvent) => {
+  // 如果图表正在加载，不显示悬停提示
+  if (trafficStatsLoading.value) {
+    showCustomTooltip.value = false;
+    // 清除 axisPointer
+    if (chartInstance.value) {
+      chartInstance.value.dispatchAction({
+        type: 'hideTip'
+      });
+    }
+    return;
+  }
+  
+  if (!chartInstance.value || !currentChartData.value || !chartContainer.value) {
+    return;
+  }
+
+  // 获取图表的网格区域（实际绘图区域）
+  const option = chartInstance.value.getOption() as any;
+  const grid = option.grid?.[0] || {};
+  
+  // 获取容器的位置和尺寸
+  const rect = chartContainer.value.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+  
+  // 计算网格区域的实际像素位置
+  const containerWidth = rect.width;
+  const containerHeight = rect.height;
+  
+  // grid 的 left/right/top/bottom 可能是百分比或像素值
+  const parseValue = (value: any, total: number) => {
+    if (typeof value === 'string' && value.includes('%')) {
+      return (parseFloat(value) / 100) * total;
+    }
+    return parseFloat(value) || 0;
+  };
+  
+  const gridLeft = parseValue(grid.left || '3%', containerWidth);
+  const gridRight = parseValue(grid.right || '4%', containerWidth);
+  const gridTop = parseValue(grid.top || '15%', containerHeight);
+  const gridBottom = parseValue(grid.bottom || '3%', containerHeight);
+  
+  const gridWidth = containerWidth - gridLeft - gridRight;
+  // const gridHeight = containerHeight - gridTop - gridBottom;
+  
+  // 检查鼠标是否在网格区域内
+  if (mouseX < gridLeft || mouseX > containerWidth - gridRight ||
+      mouseY < gridTop || mouseY > containerHeight - gridBottom) {
+    showCustomTooltip.value = false;
+    // 清除 axisPointer
+    if (chartInstance.value) {
+      chartInstance.value.dispatchAction({
+        type: 'updateAxisPointer',
+        currTrigger: 'leave'
+      });
+    }
+    return;
+  }
+  
+  // 计算鼠标在网格中的相对位置（0-1）
+  const relativeX = (mouseX - gridLeft) / gridWidth;
+  
+  // 根据相对位置计算最近的数据点索引
+  const dataLength = currentChartData.value.dates.length;
+  const dataIndex = Math.round(relativeX * (dataLength - 1));
+  
+  // 确保索引在有效范围内
+  if (dataIndex < 0 || dataIndex >= dataLength) {
+    showCustomTooltip.value = false;
+    // 清除 axisPointer
+    if (chartInstance.value) {
+      chartInstance.value.dispatchAction({
+        type: 'updateAxisPointer',
+        currTrigger: 'leave'
+      });
+    }
+    return;
+  }
+  
+  // 格式化日期
+  const dateObj = new Date(currentChartData.value.dates[dataIndex]);
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
+  
+  // 计算 tooltip 位置，防止超出窗口
+  const tooltipWidth = 200; // 预估 tooltip 宽度
+  const tooltipHeight = 150; // 预估 tooltip 高度
+  const offset = 15;
+  
+  let tooltipX = event.clientX + offset;
+  let tooltipY = event.clientY + offset;
+  
+  // 检查右边界
+  if (tooltipX + tooltipWidth > window.innerWidth) {
+    tooltipX = event.clientX - tooltipWidth - offset;
+  }
+  
+  // 检查底部边界
+  if (tooltipY + tooltipHeight > window.innerHeight) {
+    tooltipY = event.clientY - tooltipHeight - offset;
+  }
+  
+  // 确保不超出左边界
+  if (tooltipX < 0) {
+    tooltipX = offset;
+  }
+  
+  // 确保不超出顶部边界
+  if (tooltipY < 0) {
+    tooltipY = offset;
+  }
+  
+  // 更新 tooltip 数据
+  customTooltipData.value = {
+    date: `${year}-${month}-${day}`,
+    trafficIn: currentChartData.value.trafficIn[dataIndex] || 0,
+    trafficOut: currentChartData.value.trafficOut[dataIndex] || 0,
+    totalTraffic: currentChartData.value.totalTraffic[dataIndex] || 0,
+    unit: currentChartData.value.unit,
+    x: tooltipX,
+    y: tooltipY,
+  };
+  
+  // 手动触发 axisPointer 显示
+  if (chartInstance.value) {
+    chartInstance.value.dispatchAction({
+      type: 'updateAxisPointer',
+      currTrigger: 'mousemove',
+      x: mouseX,
+      y: mouseY
+    });
+  }
+  
+  showCustomTooltip.value = true;
+};
+
+// 处理鼠标离开图表
+const handleChartMouseLeave = () => {
+  showCustomTooltip.value = false;
+  
+  // 清除 ECharts 的 axisPointer - 使用 updateAxisPointer 并传入空坐标
+  if (chartInstance.value) {
+    chartInstance.value.dispatchAction({
+      type: 'updateAxisPointer',
+      currTrigger: 'leave'
+    });
+  }
+};
+
+// 切换日期周期
+const changeDatePeriod = async (period: number) => {
+  datePeriod.value = period;
+  await loadTrafficStats();
+};
+
+// 监听加载状态变化，确保图表在加载完成后正确显示
+watch(trafficStatsLoading, (newVal, oldVal) => {
+  console.log("trafficStatsLoading 变化:", oldVal, "->", newVal);
+  
+  // 当加载完成时，清除可能残留的 axisPointer
+  if (oldVal === true && newVal === false && chartInstance.value) {
+    // 使用 nextTick 和 setTimeout 确保在渲染完成后清除
+    nextTick(() => {
+      setTimeout(() => {
+        if (chartInstance.value) {
+          chartInstance.value.dispatchAction({
+            type: 'hideTip'
+          });
+          console.log("加载完成后清除 axisPointer");
+        }
+      }, 100);
+    });
+  }
+});
+
 onMounted(() => {
+  console.log("UserCenter 组件已挂载");
   loadUserInfo();
   loadCdkHistory();
+
+  // 初始化图表 - 确保 DOM 完全渲染后再初始化
+  nextTick(() => {
+    console.log("nextTick 执行");
+    console.log("chartContainer.value:", chartContainer.value);
+
+    setTimeout(() => {
+      console.log("setTimeout 执行，准备初始化图表");
+      if (chartContainer.value) {
+        console.log("容器存在，开始初始化");
+        initChart();
+        loadTrafficStats();
+      } else {
+        console.error("容器不存在！");
+      }
+    }, 200);
+  });
+
+  // 监听窗口大小变化
+  const resizeHandler = () => {
+    chartInstance.value?.resize();
+  };
+  window.addEventListener("resize", resizeHandler);
+});
+
+onBeforeUnmount(() => {
+  // 清理图表实例
+  if (chartInstance.value) {
+    chartInstance.value.dispose();
+    chartInstance.value = null;
+  }
+
+  // 移除事件监听
+  window.removeEventListener("resize", () => {
+    chartInstance.value?.resize();
+  });
 });
 </script>
 
 <style scoped>
 .user-center {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 20px;
+}
+
+/* 流量统计卡片样式 */
+.traffic-stats-card {
+  background: #18181c;
+  border: 1px solid #29292c;
+  position: relative;
+  z-index: 1;
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  min-height: 400px;
+  z-index: 1;
+}
+
+.chart-container {
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.chart-loading-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  cursor: default;
+  pointer-events: all;
+}
+
+.chart-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(24, 24, 28, 0.8);
+  z-index: 10;
+  pointer-events: none;  /* 加载层不阻止鼠标事件 */
+}
+
+.chart-loading p {
+  color: #a0a0a0;
+  font-size: 14px;
+  margin: 0;
+}
+
+/* 自定义 Tooltip 样式 - 使用 NCard */
+.custom-tooltip {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  min-width: 140px;
+  max-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+  background: #18181c !important;
+  border-color: #29292c !important;
+}
+
+.custom-tooltip :deep(.n-card__content) {
+  padding: 8px 12px !important;
+}
+
+.tooltip-date {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff !important;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #29292c;
+}
+
+.tooltip-content {
+  font-size: 13px;
+  line-height: 2;
+}
+
+.tooltip-item {
+  margin-bottom: 4px;
+}
+
+.tooltip-item:last-child {
+  margin-bottom: 0;
+}
+
+.tooltip-label {
+  color: #ffffff !important;
 }
 
 /* 用户信息卡片样式 - 与Dashboard完全相同 */
@@ -928,6 +1667,16 @@ onMounted(() => {
   .cdk-card-code {
     width: 100%;
     text-align: center;
+  }
+
+  .chart-container {
+    height: 300px;
+    min-height: 300px;
+  }
+
+  .chart-wrapper {
+    height: 300px;
+    min-height: 300px;
   }
 }
 </style>

@@ -11,7 +11,7 @@
       <div class="nav-content">
         <n-menu 
           :options="menuOptions" 
-          :value="props.activeNav" 
+          :value="activeNav" 
           @update:value="handleMenuSelect"
           :collapsed="false"
           :collapsed-width="64"
@@ -31,9 +31,13 @@
 </template>
 
 <script setup lang="ts">
-import { h, onMounted } from 'vue'
+import { h, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { darkTheme } from 'naive-ui'
 import type { MenuOption } from 'naive-ui'
+
+const router = useRouter()
+const route = useRoute()
 
 // 自定义主题配置
 const customTheme = {
@@ -61,16 +65,24 @@ interface NavItem {
   icon: string;
 }
 
-interface Props {
-  activeNav: string;
-}
-
-const props = defineProps<Props>();
-
 const emit = defineEmits<{
-  'nav-change': [navId: string]
   'logout': []
 }>();
+
+// 从路由计算当前激活的导航项
+const activeNav = computed(() => {
+  const pathToNav: Record<string, string> = {
+    '/dashboard': 'dashboard',
+    '/create-tunnel': 'create-tunnel',
+    '/tunnel-config': 'create-tunnel',
+    '/tunnel-management': 'tunnel-management',
+    '/user-center': 'user-center',
+    '/settings': 'settings',
+    '/help-center': 'help-center',
+    '/about': 'about'
+  }
+  return pathToNav[route.path] || 'dashboard'
+})
 
 // 导航项配置
 const navItems: NavItem[] = [
@@ -91,14 +103,28 @@ const menuOptions: MenuOption[] = navItems.map(item => ({
 }))
 
 function handleMenuSelect(key: string) {
-  emit('nav-change', key)
+  // 路由映射
+  const navToPath: Record<string, string> = {
+    'dashboard': '/dashboard',
+    'create-tunnel': '/create-tunnel',
+    'tunnel-management': '/tunnel-management',
+    'user-center': '/user-center',
+    'settings': '/settings',
+    'help-center': '/help-center',
+    'about': '/about'
+  }
+  
+  const path = navToPath[key]
+  if (path) {
+    router.push(path)
+  }
 }
 
 function handleNavClick(navId: string) {
   if (navId === 'logout') {
     emit('logout');
   } else {
-    emit('nav-change', navId);
+    handleMenuSelect(navId);
   }
 }
 

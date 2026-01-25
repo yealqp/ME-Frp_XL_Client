@@ -1,34 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { darkTheme, NDialogProvider, createDiscreteApi } from 'naive-ui'
 import Sidebar from './components/Sidebar.vue'
-import Dashboard from './components/Dashboard.vue'
-import CreateTunnel from './components/CreateTunnel.vue'
-import TunnelConfig from './components/TunnelConfig.vue'
-import TunnelManagement from './components/TunnelManagement.vue'
-import Settings from './components/Settings.vue'
-import About from './components/About.vue'
-import HelpCenter from './components/HelpCenter.vue'
 import Login from './components/Login.vue'
-import UserCenter from './components/UserCenter.vue'
 import type { UnifiedConfig } from './types/config'
 
-interface Tunnel {
-  id: number;
-  name: string;
-  type: string;
-  status: string;
-  port: number;
-}
-
-interface TunnelForm {
-  name: string;
-  type: string;
-  localPort: number | null;
-  remotePort: number | null;
-}
+const router = useRouter()
+const route = useRoute()
 
 interface Node {
   nodeId: number;
@@ -54,6 +35,7 @@ interface Node {
 
 
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface Settings {
   autoStart: boolean;
   alwaysOnTop: boolean;
@@ -95,22 +77,9 @@ const { message } = createDiscreteApi(['message'], {
   }
 })
 
-// 当前激活的导航项
-const activeNav = ref('dashboard');
-
 // 页面状态管理
 const currentPage = ref('node-selection'); // 'node-selection' | 'tunnel-config'
 const selectedNode = ref<Node | null>(null);
-
-// 切换导航
-function handleNavChange(navId: string) {
-  activeNav.value = navId;
-  // 重置页面状态
-  if (navId === 'create-tunnel') {
-    currentPage.value = 'node-selection';
-    selectedNode.value = null;
-  }
-}
 
 // 节点选择完成，进入隧道配置页面
 function handleNodeSelected(node: Node) {
@@ -118,6 +87,7 @@ function handleNodeSelected(node: Node) {
   console.log('App.vue: 当前页面状态', currentPage.value);
   selectedNode.value = node;
   currentPage.value = 'tunnel-config';
+  router.push('/tunnel-config')
   console.log('App.vue: 切换到隧道配置页面', currentPage.value);
 }
 
@@ -125,62 +95,14 @@ function handleNodeSelected(node: Node) {
 function handleGoBackToNodeSelection() {
   currentPage.value = 'node-selection';
   selectedNode.value = null;
-}
-
-const tunnelData = ref<Tunnel[]>([])
-
-// 创建隧道
-function handleTunnelCreated(tunnel: TunnelForm) {
-  const newTunnel: Tunnel = {
-    id: Date.now(),
-    name: tunnel.name,
-    type: tunnel.type.toUpperCase(),
-    status: '已停止',
-    port: tunnel.localPort || 0
-  };
-  tunnelData.value.push(newTunnel);
-}
-
-// 启动隧道
-function handleTunnelStart(id: number) {
-  const tunnel = tunnelData.value.find(t => t.id === id);
-  if (tunnel) {
-    tunnel.status = '运行中';
-  }
-}
-
-// 停止隧道
-function handleTunnelStop(id: number) {
-  const tunnel = tunnelData.value.find(t => t.id === id);
-  if (tunnel) {
-    tunnel.status = '已停止';
-  }
-}
-
-// 编辑隧道
-function handleTunnelEdit(id: number) {
-  message.info(`编辑隧道 ID: ${id}`);
-}
-
-// 删除隧道
-function handleTunnelDelete(id: number) {
-  const index = tunnelData.value.findIndex(t => t.id === id);
-  if (index > -1) {
-    tunnelData.value.splice(index, 1);
-  }
-}
-
-// 刷新隧道列表
-function handleRefreshTunnels() {
-  // TODO: 实现从API获取隧道列表的逻辑
-  console.log('刷新隧道列表');
+  router.push('/create-tunnel')
 }
 
 // 跳转到创建隧道页面
 function handleGoToCreateTunnel() {
-  activeNav.value = 'create-tunnel';
   currentPage.value = 'node-selection';
   selectedNode.value = null;
+  router.push('/create-tunnel')
 }
 
 // 配置相关函数
@@ -194,10 +116,20 @@ const checkAuthStatus = async (): Promise<void> => {
       // 检查是否有API连接状态或有效的user_token
       if (config.apiStatus === 'connected' || config.userToken) {
         isLoggedIn.value = true
+        // 如果当前在登录页，跳转到首页
+        if (route.path === '/login' || route.path === '/') {
+          router.push('/dashboard')
+        }
+      } else {
+        // 未登录，跳转到登录页
+        router.push('/login')
       }
+    } else {
+      router.push('/login')
     }
   } catch (error) {
     console.error('检查登录状态失败:', error)
+    router.push('/login')
   } finally {
     isCheckingAuth.value = false
   }
@@ -207,6 +139,7 @@ const handleLoginSuccess = (): void => {
   console.log('收到登录成功事件，设置登录状态为true')
   isLoggedIn.value = true
   console.log('当前登录状态:', isLoggedIn.value)
+  router.push('/dashboard')
 }
 
 const handleLogout = async (): Promise<void> => {
@@ -235,6 +168,8 @@ const handleLogout = async (): Promise<void> => {
   } catch (error) {
     console.error('清除登录信息失败:', error)
   }
+  
+  router.push('/login')
 }
 
 
@@ -385,74 +320,33 @@ console.log(`     __  _________   ______                  ___          __  __   
         
         <!-- 登录页面 -->
         <div v-else-if="!isLoggedIn" class="login-fullscreen">
-          <Login 
-            @login-success="handleLoginSuccess" 
-          />
+          <Login @login-success="handleLoginSuccess" />
         </div>
         
         <!-- 主应用界面 -->
         <template v-else>
-      <!-- 左侧导航栏组件 -->
-      <Sidebar 
-        :active-nav="activeNav" 
-        @nav-change="handleNavChange"
-        @logout="handleLogout" 
-      />
-
           <!-- 左侧导航栏组件 -->
           <Sidebar 
-            :active-nav="activeNav" 
-            @nav-change="handleNavChange"
             @logout="handleLogout" 
           />
 
           <!-- 右侧内容区域 -->
           <main class="main-content">
             <div class="content-body">
-            <!-- 面板首页 -->
-            <Dashboard v-if="activeNav === 'dashboard'" :tunnel-data="tunnelData" :key="'dashboard'" />
-
-            <!-- 创建隧道 -->
-            <template v-else-if="activeNav === 'create-tunnel'">
-              <!-- 节点选择页面 -->
-              <CreateTunnel v-if="currentPage === 'node-selection'" 
-                @tunnel-created="handleTunnelCreated" 
-                @node-selected="handleNodeSelected"
-                :key="'create-tunnel-node'" />
-              
-              <!-- 隧道配置页面 -->
-              <TunnelConfig v-else-if="currentPage === 'tunnel-config' && selectedNode" 
+              <router-view 
+                v-slot="{ Component }"
                 :selected-node="selectedNode"
-                @go-back="handleGoBackToNodeSelection"
-                @tunnel-created="handleTunnelCreated"
-                :key="'create-tunnel-config'" />
-            </template>
-
-            <!-- 隧道管理 -->
-            <TunnelManagement v-else-if="activeNav === 'tunnel-management'" 
-                :tunnel-data="tunnelData"
-                @tunnel-start="handleTunnelStart"
-                @tunnel-stop="handleTunnelStop"
-                @tunnel-edit="handleTunnelEdit"
-                @tunnel-delete="handleTunnelDelete"
-                @refresh-tunnels="handleRefreshTunnels"
-                @go-to-create="handleGoToCreateTunnel"
-                :key="'tunnel-management'"
-              />
-
-
-
-            <!-- 用户中心 -->
-            <UserCenter v-else-if="activeNav === 'user-center'" :key="'user-center'" />
-
-            <!-- 设置 -->
-            <Settings v-else-if="activeNav === 'settings'" :key="'settings'" />
-
-            <!-- 帮助中心 -->
-            <HelpCenter v-else-if="activeNav === 'help-center'" :key="'help-center'" />
-
-            <!-- 关于面板 -->
-            <About v-else-if="activeNav === 'about'" :key="'about'" />
+                :current-page="currentPage"
+              >
+                <component 
+                  :is="Component"
+                  :selected-node="selectedNode"
+                  :current-page="currentPage"
+                  @node-selected="handleNodeSelected"
+                  @go-back="handleGoBackToNodeSelection"
+                  @go-to-create="handleGoToCreateTunnel"
+                />
+              </router-view>
             </div>
           </main>
         </template>
