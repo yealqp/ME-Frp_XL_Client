@@ -191,6 +191,7 @@
         </div>
       </template>
     </n-card>
+
     <!-- 流量统计卡片 -->
     <n-card :bordered="true" class="traffic-stats-card">
       <template #header>
@@ -236,17 +237,17 @@
           @mousemove="handleChartMouseMove"
           @mouseleave="handleChartMouseLeave"
         ></div>
-        
+
         <!-- 加载时的遮罩层，阻止鼠标事件 -->
-        <div 
-          v-if="trafficStatsLoading" 
+        <div
+          v-if="trafficStatsLoading"
           class="chart-loading-mask"
           @mouseenter.stop
           @mousemove.stop
           @mouseleave.stop
           @click.stop
         ></div>
-        
+
         <!-- 自定义 Tooltip - 使用 NCard -->
         <n-card
           v-if="showCustomTooltip && !trafficStatsLoading"
@@ -261,13 +262,22 @@
           <div class="tooltip-date">{{ customTooltipData.date }}</div>
           <div class="tooltip-content">
             <div class="tooltip-item">
-              <span class="tooltip-label">上传流量: {{ customTooltipData.trafficOut }} {{ customTooltipData.unit }}</span>
+              <span class="tooltip-label"
+                >上传流量: {{ customTooltipData.trafficOut }}
+                {{ customTooltipData.unit }}</span
+              >
             </div>
             <div class="tooltip-item">
-              <span class="tooltip-label">下载流量: {{ customTooltipData.trafficIn }} {{ customTooltipData.unit }}</span>
+              <span class="tooltip-label"
+                >下载流量: {{ customTooltipData.trafficIn }}
+                {{ customTooltipData.unit }}</span
+              >
             </div>
             <div class="tooltip-item">
-              <span class="tooltip-label">总流量: {{ customTooltipData.totalTraffic }} {{ customTooltipData.unit }}</span>
+              <span class="tooltip-label"
+                >总流量: {{ customTooltipData.totalTraffic }}
+                {{ customTooltipData.unit }}</span
+              >
             </div>
           </div>
         </n-card>
@@ -297,10 +307,10 @@
           </n-button>
         </div>
       </n-space>
-        <div class="section-header">
-          <i class="fas fa-history"></i>
-          <span>CDK兑换历史</span>
-        </div>
+      <div class="section-header">
+        <i class="fas fa-history"></i>
+        <span>CDK兑换历史</span>
+      </div>
 
       <div class="cdk-history-content">
         <div v-if="cdkHistoryLoading" class="loading-text">
@@ -356,6 +366,28 @@
       </div>
     </n-card>
 
+    <!-- 账户与安全卡片 -->
+    <n-card title="账户与安全" :bordered="true" class="security-card">
+      <n-space vertical :size="24">
+        <div class="cdk-redeem-item">
+          <div class="cdk-info">
+            <i class="fas fa-power-off"></i>
+            下线所有隧道
+            <p>
+              执行此操作后，您的在线隧道都将被踢出服务器，若您仍有正在运行的服务，请提前做好容灾措施。
+            </p>
+          </div>
+          <n-button
+            type="error"
+            :loading="kickingAllProxies"
+            @click="showKickAllProxiesDialog"
+          >
+            下线所有隧道
+          </n-button>
+        </div>
+      </n-space>
+    </n-card>
+
     <!-- 签到模态框 -->
     <n-modal
       v-model:show="showSignModal"
@@ -396,6 +428,36 @@
           </n-button>
         </n-space>
       </template>
+    </n-modal>
+
+    <!-- 下线所有隧道确认对话框 -->
+    <n-modal
+      v-model:show="showKickAllProxiesModal"
+      preset="dialog"
+      title="确认下线所有隧道"
+      :positive-text="kickingAllProxies ? '下线中...' : '确认下线'"
+      negative-text="取消"
+      :positive-button-props="{ type: 'error', loading: kickingAllProxies }"
+      :closable="!kickingAllProxies"
+      :mask-closable="!kickingAllProxies"
+      @positive-click="handleKickAllProxies"
+    >
+      <n-space vertical :size="12">
+        <n-alert type="warning" :bordered="false">
+          <template #icon>
+            <i class="fas fa-exclamation-triangle"></i>
+          </template>
+          此操作将强制下线您账户下的所有在线隧道
+        </n-alert>
+        <div style="color: #ffffffd1; font-size: 14px; line-height: 1.6">
+          <p style="margin: 8px 0">下线后：</p>
+          <ul style="margin: 8px 0; padding-left: 20px">
+            <li>执行此操作后，您的所有在线隧道都将被踢出服务器。</li>
+            <li>若您仍有正在运行的服务，请提前做好容灾措施。</li>
+            <li>确定要继续执行此操作吗？</li>
+          </ul>
+        </div>
+      </n-space>
     </n-modal>
 
     <!-- CDK兑换模态框 -->
@@ -533,6 +595,10 @@ const isSigning = ref(false);
 const showSignModal = ref(false);
 const signCaptchaToken = ref("");
 
+// 下线所有隧道相关
+const kickingAllProxies = ref(false);
+const showKickAllProxiesModal = ref(false);
+
 // CDK兑换相关
 const cdkCode = ref("");
 const isRedeeming = ref(false);
@@ -666,6 +732,41 @@ const performSign = async () => {
   } finally {
     isSigning.value = false;
   }
+};
+
+// 显示下线所有隧道对话框
+const showKickAllProxiesDialog = () => {
+  showKickAllProxiesModal.value = true;
+};
+
+// 执行下线所有隧道
+const handleKickAllProxies = async () => {
+  if (kickingAllProxies.value) {
+    return false;
+  }
+
+  kickingAllProxies.value = true;
+
+  try {
+    const responseText = await invoke("api_kick_all_proxies");
+    const result = JSON.parse(responseText as string);
+
+    if (result.code === 200) {
+      message.success(result.message || "强制下线隧道成功");
+      showKickAllProxiesModal.value = false;
+    } else {
+      message.error(result.message || "下线隧道失败");
+      return false;
+    }
+  } catch (error) {
+    console.error("下线隧道失败:", error);
+    message.error(`下线隧道失败: ${error}`);
+    return false;
+  } finally {
+    kickingAllProxies.value = false;
+  }
+
+  return true;
 };
 
 // 显示CDK兑换对话框
@@ -844,7 +945,7 @@ const initChart = () => {
     chartInstance.value = echarts.init(chartContainer.value, "dark", {
       renderer: "svg",
     });
-    
+
     console.log("图表初始化成功，实例:", chartInstance.value);
     return true;
   } catch (error) {
@@ -857,14 +958,14 @@ const initChart = () => {
 const loadTrafficStats = async () => {
   console.log("开始加载流量统计数据");
   trafficStatsLoading.value = true;
-  
+
   // 清除可能存在的 axisPointer
   if (chartInstance.value) {
     chartInstance.value.dispatchAction({
-      type: 'hideTip'
+      type: "hideTip",
     });
   }
-  
+
   // 隐藏自定义 tooltip
   showCustomTooltip.value = false;
 
@@ -872,7 +973,7 @@ const loadTrafficStats = async () => {
     const responseText = await invoke("api_get_traffic_stats", {
       datePeriod: datePeriod.value,
     });
-    const result: TrafficStatsResponse = JSON.parse(responseText as string)
+    const result: TrafficStatsResponse = JSON.parse(responseText as string);
 
     if (result.code === 200 && result.data) {
       // 确保图表已初始化
@@ -896,11 +997,11 @@ const loadTrafficStats = async () => {
   } finally {
     trafficStatsLoading.value = false;
     console.log("流量统计加载完成");
-    
+
     // 加载完成后再次清除 axisPointer，防止残留
     if (chartInstance.value) {
       chartInstance.value.dispatchAction({
-        type: 'hideTip'
+        type: "hideTip",
       });
     }
   }
@@ -962,7 +1063,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
       label: {
         show: false,
       },
-      triggerOn: 'none', // 禁用自动触发，改为手动控制
+      triggerOn: "none", // 禁用自动触发，改为手动控制
     },
     legend: {
       data: ["入站流量", "出站流量", "总流量"],
@@ -1006,7 +1107,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
         label: {
           show: false,
         },
-        triggerOn: 'none', // 禁用自动触发
+        triggerOn: "none", // 禁用自动触发
       },
     },
     yAxis: {
@@ -1082,9 +1183,9 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
     notMerge: true,
     lazyUpdate: false,
   });
-  
+
   console.log("图表更新完成，使用单位:", unit);
-  
+
   // 保存当前图表数据供 tooltip 使用
   currentChartData.value = {
     dates: data.dates,
@@ -1093,10 +1194,10 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
     totalTraffic: trafficData.totalTraffic,
     unit: unit,
   };
-  
+
   // 立即清除可能存在的 axisPointer
   chartInstance.value.dispatchAction({
-    type: 'hideTip'
+    type: "hideTip",
   });
 };
 
@@ -1105,7 +1206,7 @@ const handleChartMouseEnter = () => {
   // 如果正在加载，清除任何残留的 axisPointer
   if (trafficStatsLoading.value && chartInstance.value) {
     chartInstance.value.dispatchAction({
-      type: 'hideTip'
+      type: "hideTip",
     });
     showCustomTooltip.value = false;
   }
@@ -1119,113 +1220,121 @@ const handleChartMouseMove = (event: MouseEvent) => {
     // 清除 axisPointer
     if (chartInstance.value) {
       chartInstance.value.dispatchAction({
-        type: 'hideTip'
+        type: "hideTip",
       });
     }
     return;
   }
-  
-  if (!chartInstance.value || !currentChartData.value || !chartContainer.value) {
+
+  if (
+    !chartInstance.value ||
+    !currentChartData.value ||
+    !chartContainer.value
+  ) {
     return;
   }
 
   // 获取图表的网格区域（实际绘图区域）
   const option = chartInstance.value.getOption() as any;
   const grid = option.grid?.[0] || {};
-  
+
   // 获取容器的位置和尺寸
   const rect = chartContainer.value.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
-  
+
   // 计算网格区域的实际像素位置
   const containerWidth = rect.width;
   const containerHeight = rect.height;
-  
+
   // grid 的 left/right/top/bottom 可能是百分比或像素值
   const parseValue = (value: any, total: number) => {
-    if (typeof value === 'string' && value.includes('%')) {
+    if (typeof value === "string" && value.includes("%")) {
       return (parseFloat(value) / 100) * total;
     }
     return parseFloat(value) || 0;
   };
-  
-  const gridLeft = parseValue(grid.left || '3%', containerWidth);
-  const gridRight = parseValue(grid.right || '4%', containerWidth);
-  const gridTop = parseValue(grid.top || '15%', containerHeight);
-  const gridBottom = parseValue(grid.bottom || '3%', containerHeight);
-  
+
+  const gridLeft = parseValue(grid.left || "3%", containerWidth);
+  const gridRight = parseValue(grid.right || "4%", containerWidth);
+  const gridTop = parseValue(grid.top || "15%", containerHeight);
+  const gridBottom = parseValue(grid.bottom || "3%", containerHeight);
+
   const gridWidth = containerWidth - gridLeft - gridRight;
   // const gridHeight = containerHeight - gridTop - gridBottom;
-  
+
   // 检查鼠标是否在网格区域内
-  if (mouseX < gridLeft || mouseX > containerWidth - gridRight ||
-      mouseY < gridTop || mouseY > containerHeight - gridBottom) {
+  if (
+    mouseX < gridLeft ||
+    mouseX > containerWidth - gridRight ||
+    mouseY < gridTop ||
+    mouseY > containerHeight - gridBottom
+  ) {
     showCustomTooltip.value = false;
     // 清除 axisPointer
     if (chartInstance.value) {
       chartInstance.value.dispatchAction({
-        type: 'updateAxisPointer',
-        currTrigger: 'leave'
+        type: "updateAxisPointer",
+        currTrigger: "leave",
       });
     }
     return;
   }
-  
+
   // 计算鼠标在网格中的相对位置（0-1）
   const relativeX = (mouseX - gridLeft) / gridWidth;
-  
+
   // 根据相对位置计算最近的数据点索引
   const dataLength = currentChartData.value.dates.length;
   const dataIndex = Math.round(relativeX * (dataLength - 1));
-  
+
   // 确保索引在有效范围内
   if (dataIndex < 0 || dataIndex >= dataLength) {
     showCustomTooltip.value = false;
     // 清除 axisPointer
     if (chartInstance.value) {
       chartInstance.value.dispatchAction({
-        type: 'updateAxisPointer',
-        currTrigger: 'leave'
+        type: "updateAxisPointer",
+        currTrigger: "leave",
       });
     }
     return;
   }
-  
+
   // 格式化日期
   const dateObj = new Date(currentChartData.value.dates[dataIndex]);
   const year = dateObj.getFullYear();
   const month = String(dateObj.getMonth() + 1).padStart(2, "0");
   const day = String(dateObj.getDate()).padStart(2, "0");
-  
+
   // 计算 tooltip 位置，防止超出窗口
   const tooltipWidth = 200; // 预估 tooltip 宽度
   const tooltipHeight = 150; // 预估 tooltip 高度
   const offset = 15;
-  
+
   let tooltipX = event.clientX + offset;
   let tooltipY = event.clientY + offset;
-  
+
   // 检查右边界
   if (tooltipX + tooltipWidth > window.innerWidth) {
     tooltipX = event.clientX - tooltipWidth - offset;
   }
-  
+
   // 检查底部边界
   if (tooltipY + tooltipHeight > window.innerHeight) {
     tooltipY = event.clientY - tooltipHeight - offset;
   }
-  
+
   // 确保不超出左边界
   if (tooltipX < 0) {
     tooltipX = offset;
   }
-  
+
   // 确保不超出顶部边界
   if (tooltipY < 0) {
     tooltipY = offset;
   }
-  
+
   // 更新 tooltip 数据
   customTooltipData.value = {
     date: `${year}-${month}-${day}`,
@@ -1236,29 +1345,29 @@ const handleChartMouseMove = (event: MouseEvent) => {
     x: tooltipX,
     y: tooltipY,
   };
-  
+
   // 手动触发 axisPointer 显示
   if (chartInstance.value) {
     chartInstance.value.dispatchAction({
-      type: 'updateAxisPointer',
-      currTrigger: 'mousemove',
+      type: "updateAxisPointer",
+      currTrigger: "mousemove",
       x: mouseX,
-      y: mouseY
+      y: mouseY,
     });
   }
-  
+
   showCustomTooltip.value = true;
 };
 
 // 处理鼠标离开图表
 const handleChartMouseLeave = () => {
   showCustomTooltip.value = false;
-  
+
   // 清除 ECharts 的 axisPointer - 使用 updateAxisPointer 并传入空坐标
   if (chartInstance.value) {
     chartInstance.value.dispatchAction({
-      type: 'updateAxisPointer',
-      currTrigger: 'leave'
+      type: "updateAxisPointer",
+      currTrigger: "leave",
     });
   }
 };
@@ -1272,7 +1381,7 @@ const changeDatePeriod = async (period: number) => {
 // 监听加载状态变化，确保图表在加载完成后正确显示
 watch(trafficStatsLoading, (newVal, oldVal) => {
   console.log("trafficStatsLoading 变化:", oldVal, "->", newVal);
-  
+
   // 当加载完成时，清除可能残留的 axisPointer
   if (oldVal === true && newVal === false && chartInstance.value) {
     // 使用 nextTick 和 setTimeout 确保在渲染完成后清除
@@ -1280,7 +1389,7 @@ watch(trafficStatsLoading, (newVal, oldVal) => {
       setTimeout(() => {
         if (chartInstance.value) {
           chartInstance.value.dispatchAction({
-            type: 'hideTip'
+            type: "hideTip",
           });
           console.log("加载完成后清除 axisPointer");
         }
@@ -1341,7 +1450,6 @@ onBeforeUnmount(() => {
   gap: 20px;
   padding: 20px;
 }
-
 /* 流量统计卡片样式 */
 .traffic-stats-card {
   background: #18181c;
@@ -1390,7 +1498,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   background: rgba(24, 24, 28, 0.8);
   z-index: 10;
-  pointer-events: none;  /* 加载层不阻止鼠标事件 */
+  pointer-events: none; /* 加载层不阻止鼠标事件 */
 }
 
 .chart-loading p {

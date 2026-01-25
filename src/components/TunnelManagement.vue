@@ -136,8 +136,14 @@
 
 
 
-              <n-dropdown trigger="click" :options="getMoreOptions(tunnel.proxyId)"
-                @select="(key: string) => handleMoreAction(key, tunnel.proxyId)">
+              <n-dropdown 
+                trigger="click" 
+                :options="getMoreOptions(tunnel.proxyId)"
+                placement="top-start"
+                :show-arrow="false"
+                to="body"
+                @select="(key: string) => handleMoreAction(key, tunnel.proxyId)"
+              >
                 <n-button type="default" size="small">
                   <template #icon>
                     <i class="fas fa-cog"></i>
@@ -275,11 +281,15 @@
         </n-form-item>
 
         <n-form-item label="Proxy Protocol">
-          <n-select v-model:value="editForm.proxyProtocolVersion" placeholder="请选择 Proxy Protocol 版本">
-            <n-option value="" label="不启用" />
-            <n-option value="v1" label="v1" />
-            <n-option value="v2" label="v2" />
-          </n-select>
+          <n-select 
+            v-model:value="editForm.proxyProtocolVersion" 
+            placeholder="请选择 Proxy Protocol 版本"
+            :options="[
+              { value: '', label: '不启用' },
+              { value: 'v1', label: 'v1' },
+              { value: 'v2', label: 'v2' }
+            ]"
+          />
         </n-form-item>
 
         <n-form-item label="其他选项">
@@ -1030,6 +1040,18 @@ function goToCreateTunnel() {
 
 function getMoreOptions(tunnelId: number) {
   const tunnel = tunnels.value.find(t => t.proxyId === tunnelId);
+  
+  // 如果找不到隧道，返回基本选项
+  if (!tunnel) {
+    return [
+      {
+        label: '刷新',
+        key: 'refresh',
+        icon: () => h('i', { class: 'fas fa-sync-alt' })
+      }
+    ];
+  }
+  
   const isUsingConfig = usingConfigFile.value.has(tunnelId);
 
   const options = [
@@ -1072,9 +1094,9 @@ function getMoreOptions(tunnelId: number) {
       key: 'd2'
     },
     {
-      label: tunnel?.isDisabled ? '启用隧道' : '禁用隧道',
-      key: tunnel?.isDisabled ? 'enable' : 'disable',
-      icon: () => h('i', { class: tunnel?.isDisabled ? 'fas fa-play-circle' : 'fas fa-pause-circle' })
+      label: tunnel.isDisabled ? '启用隧道' : '禁用隧道',
+      key: tunnel.isDisabled ? 'enable' : 'disable',
+      icon: () => h('i', { class: tunnel.isDisabled ? 'fas fa-play-circle' : 'fas fa-pause-circle' })
     },
     {
       label: '强制下线',
@@ -1232,6 +1254,19 @@ defineExpose({
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+}
+
+/* 确保下拉框不被裁剪 */
+.tunnel-card {
+  overflow: visible !important;
+}
+
+.tunnel-card :deep(.n-card__content) {
+  overflow: visible !important;
+}
+
+.tunnel-card :deep(.n-card__action) {
+  overflow: visible !important;
 }
 
 .error-container {
@@ -1532,5 +1567,12 @@ defineExpose({
 .config-content .n-code {
   height: 100%;
   max-height: none;
+}
+</style>
+
+<style>
+/* 全局样式 - 确保下拉框正确显示 */
+.n-dropdown-menu {
+  z-index: 9999 !important;
 }
 </style>

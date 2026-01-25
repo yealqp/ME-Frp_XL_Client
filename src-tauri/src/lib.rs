@@ -15,7 +15,7 @@ use tauri::{Manager, Emitter, tray::{TrayIconBuilder, TrayIconEvent, MouseButton
 use reqwest;
 
 // 当前应用版本
-const CURRENT_VERSION: &str = "1.5.7";
+const CURRENT_VERSION: &str = "1.5.8";
 
 // User-Agent 常量
 const USER_AGENT: &str = "MeFrp-XL/1.5.7";
@@ -963,6 +963,37 @@ async fn api_kick_tunnel(app_handle: tauri::AppHandle, proxy_id: i32) -> Result<
         .text()
         .await
         .map_err(|e| format!("解析强制下线隧道响应失败: {}", e))?;
+
+    Ok(response_text)
+}
+
+// 强制下线所有隧道API命令
+#[tauri::command]
+async fn api_kick_all_proxies(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    let client = create_http_client();
+    let response = client
+        .get("https://api.mefrp.com/api/auth/user/kickAllProxies")
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("强制下线所有隧道请求失败: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("强制下线所有隧道失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析强制下线所有隧道响应失败: {}", e))?;
 
     Ok(response_text)
 }
@@ -2011,6 +2042,7 @@ pub fn run() {
             api_delete_tunnel,
             api_update_tunnel,
             api_kick_tunnel,
+            api_kick_all_proxies,
             api_toggle_tunnel,
             api_get_node_name_list,
             api_get_tunnel_logs,

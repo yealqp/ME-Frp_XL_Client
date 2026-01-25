@@ -33,19 +33,6 @@ interface Node {
   version: string;
 }
 
-
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface Settings {
-  autoStart: boolean;
-  alwaysOnTop: boolean;
-  autoUpdate: boolean;
-  autoStartTunnels: number[];
-  startupDelay: number;
-  theme: string;
-  minimizeToTray: boolean;
-}
-
 // 自定义主题配置
 const customTheme = {
   ...darkTheme,
@@ -103,6 +90,52 @@ function handleGoToCreateTunnel() {
   currentPage.value = 'node-selection';
   selectedNode.value = null;
   router.push('/create-tunnel')
+}
+
+// 根据组件类型返回相应的 props
+function getComponentProps(component: any) {
+  if (!component) return {}
+  
+  const componentName = component.__name || component.name
+  
+  // 只为需要这些 props 的组件传递
+  if (componentName === 'CreateTunnel' || componentName === 'TunnelConfig') {
+    return {
+      selectedNode: selectedNode.value,
+      currentPage: currentPage.value
+    }
+  }
+  
+  return {}
+}
+
+// 根据组件类型返回相应的事件监听器
+function getComponentListeners(component: any) {
+  if (!component) return {}
+  
+  const componentName = component.__name || component.name
+  
+  // 只为需要这些事件的组件传递
+  if (componentName === 'CreateTunnel') {
+    return {
+      onNodeSelected: handleNodeSelected,
+      onGoToCreate: handleGoToCreateTunnel
+    }
+  }
+  
+  if (componentName === 'TunnelConfig') {
+    return {
+      onGoBack: handleGoBackToNodeSelection
+    }
+  }
+  
+  if (componentName === 'TunnelManagement') {
+    return {
+      onGoToCreate: handleGoToCreateTunnel
+    }
+  }
+  
+  return {}
 }
 
 // 配置相关函数
@@ -333,18 +366,10 @@ console.log(`     __  _________   ______                  ___          __  __   
           <!-- 右侧内容区域 -->
           <main class="main-content">
             <div class="content-body">
-              <router-view 
-                v-slot="{ Component }"
-                :selected-node="selectedNode"
-                :current-page="currentPage"
-              >
+              <router-view v-slot="{ Component }">
                 <component 
                   :is="Component"
-                  :selected-node="selectedNode"
-                  :current-page="currentPage"
-                  @node-selected="handleNodeSelected"
-                  @go-back="handleGoBackToNodeSelection"
-                  @go-to-create="handleGoToCreateTunnel"
+                  v-bind="{ ...getComponentProps(Component), ...getComponentListeners(Component) }"
                 />
               </router-view>
             </div>
