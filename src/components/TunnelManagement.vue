@@ -186,8 +186,7 @@
           暂无日志
         </div>
         <div v-else class="log-lines">
-          <div v-for="(log, index) in currentLogs" :key="index" class="log-line">
-            {{ log }}
+          <div v-for="(log, index) in currentLogs" :key="index" class="log-line" v-html="colorizeLog(log)">
           </div>
         </div>
       </div>
@@ -598,6 +597,50 @@ const viewLogs = async (tunnelId: number) => {
   } catch (error) {
     message.error(`获取日志失败: ${error}`);
   }
+};
+
+// 为日志添加颜色
+const colorizeLog = (log: string): string => {
+  // 清理 ANSI 转义序列
+  let cleanLog = log.replace(/\x1b\[[0-9;]*m/g, '').replace(/▣/g, '');
+  
+  // 时间戳 - 灰色
+  cleanLog = cleanLog.replace(
+    /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)/g,
+    '<span style="color: #888;">$1</span>'
+  );
+  
+  // 日志级别 [I] - 蓝色
+  cleanLog = cleanLog.replace(
+    /\[I\]/g,
+    '<span style="color: #42a5f5;">[I]</span>'
+  );
+  
+  // 日志级别 [W] - 黄色
+  cleanLog = cleanLog.replace(
+    /\[W\]/g,
+    '<span style="color: #ffc107;">[W]</span>'
+  );
+  
+  // 日志级别 [E] - 红色
+  cleanLog = cleanLog.replace(
+    /\[E\]/g,
+    '<span style="color: #ff6b6b;">[E]</span>'
+  );
+  
+  // 日志级别 [D] - 紫色
+  cleanLog = cleanLog.replace(
+    /\[D\]/g,
+    '<span style="color: #ab47bc;">[D]</span>'
+  );
+  
+  // 文件路径 [xxx.go:123] - 绿色
+  cleanLog = cleanLog.replace(
+    /(\[[^\]]+\.go:\d+\])/g,
+    '<span style="color: #7cb342;">$1</span>'
+  );
+  
+  return cleanLog;
 };
 
 // 查看隧道详情
@@ -1457,7 +1500,7 @@ defineExpose({
   padding: 12px;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
 .log-line {

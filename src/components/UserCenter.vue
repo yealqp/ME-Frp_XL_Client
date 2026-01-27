@@ -371,6 +371,21 @@
       <n-space vertical :size="24">
         <div class="cdk-redeem-item">
           <div class="cdk-info">
+            <i class="fas fa-history"></i>
+            查看我的操作审计日志
+            <p>
+              此操作仅用于查阅本账号历史操作记录，不会对当前运行的服务或网络连接造成任何影响。
+            </p>
+          </div>
+          <n-button
+            type="primary"
+            @click="goToOperationLog"
+          >
+            立即查看操作日志
+          </n-button>
+        </div>
+        <div class="cdk-redeem-item">
+          <div class="cdk-info">
             <i class="fas fa-power-off"></i>
             下线所有隧道
             <p>
@@ -516,6 +531,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import { useRouter } from "vue-router";
 import {
   useMessage,
   NCard,
@@ -532,6 +548,8 @@ import { invoke } from "@tauri-apps/api/core";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts";
 import CaptchaVerify from "./CaptchaVerify.vue";
+
+const router = useRouter();
 
 interface UserDetailInfo {
   email: string;
@@ -732,6 +750,11 @@ const performSign = async () => {
   } finally {
     isSigning.value = false;
   }
+};
+
+// 跳转到操作日志页面
+const goToOperationLog = () => {
+  router.push('/operation-log');
 };
 
 // 显示下线所有隧道对话框

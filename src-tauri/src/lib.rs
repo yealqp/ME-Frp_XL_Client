@@ -1222,6 +1222,64 @@ async fn api_get_tunnel_list(app_handle: tauri::AppHandle) -> Result<String, Str
     Ok(response_text)
 }
 
+// 获取操作日志API命令
+#[tauri::command]
+async fn api_get_operation_logs(app_handle: tauri::AppHandle, params: String) -> Result<String, String> {
+    let config = load_unified_config(app_handle).await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    // 解析参数
+    let params_json: serde_json::Value = serde_json::from_str(&params)
+        .map_err(|e| format!("解析参数失败: {}", e))?;
+
+    // 构建查询参数
+    let mut query_params = vec![
+        format!("page={}", params_json["page"].as_i64().unwrap_or(1)),
+        format!("pageSize={}", params_json["pageSize"].as_i64().unwrap_or(20)),
+    ];
+
+    // 添加可选参数
+    if let Some(category) = params_json["category"].as_str() {
+        query_params.push(format!("category={}", category));
+    }
+    if let Some(status) = params_json["status"].as_str() {
+        query_params.push(format!("status={}", status));
+    }
+    if let Some(start_time) = params_json["startTime"].as_str() {
+        query_params.push(format!("startTime={}", start_time));
+    }
+    if let Some(end_time) = params_json["endTime"].as_str() {
+        query_params.push(format!("endTime={}", end_time));
+    }
+
+    let query_string = query_params.join("&");
+    let url = format!("https://api.mefrp.com/api/auth/operationLog/list?{}", query_string);
+
+    let client = create_http_client();
+    let response = client
+        .get(&url)
+        .header("authorization", format!("Bearer {}", config.user_token))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取操作日志请求失败: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("获取操作日志失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析操作日志响应失败: {}", e))?;
+
+    Ok(response_text)
+}
+
 // 启动隧道命令（使用mefrpc.exe）
 #[tauri::command]
 async fn api_start_tunnel(app_handle: tauri::AppHandle, proxy_id: i32, process_manager: tauri::State<'_, ProcessManager>) -> Result<String, String> {
@@ -1308,7 +1366,7 @@ async fn api_start_tunnel(app_handle: tauri::AppHandle, proxy_id: i32, process_m
         for line in reader.lines() {
             if let Ok(line) = line {
                 if let Ok(mut logs) = logs_stdout.lock() {
-                    logs.push(format!("[OUT] {}", line));
+                    logs.push(format!("{}", line));
                     // 限制日志数量，避免内存溢出
                     if logs.len() > 1000 {
                         logs.remove(0);
@@ -2103,6 +2161,7 @@ pub fn run() {
             api_get_free_port,
             api_create_tunnel,
             api_get_tunnel_list,
+            api_get_operation_logs,
             api_start_tunnel,
             api_stop_tunnel,
             api_delete_tunnel,

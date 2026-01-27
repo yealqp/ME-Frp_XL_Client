@@ -77,11 +77,13 @@ const activeNav = computed(() => {
     '/tunnel-config': 'create-tunnel',
     '/tunnel-management': 'tunnel-management',
     '/user-center': 'user-center',
+    '/operation-log': '', // 操作日志页面不高亮任何菜单项
     '/settings': 'settings',
     '/help-center': 'help-center',
     '/about': 'about'
   }
-  return pathToNav[route.path] || 'dashboard'
+  // 如果路径在映射中，返回对应的值；否则返回 null（不高亮任何项）
+  return pathToNav.hasOwnProperty(route.path) ? pathToNav[route.path] : null
 })
 
 // 导航项配置

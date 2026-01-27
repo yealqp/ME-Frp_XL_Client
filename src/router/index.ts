@@ -8,6 +8,7 @@ import Settings from '../components/Settings.vue'
 import HelpCenter from '../components/HelpCenter.vue'
 import About from '../components/About.vue'
 import Login from '../components/Login.vue'
+import OperationLog from '../components/OperationLog.vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { UnifiedConfig } from '../types/config'
 
@@ -50,6 +51,12 @@ const routes: RouteRecordRaw[] = [
     path: '/user-center',
     name: 'UserCenter',
     component: UserCenter,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/operation-log',
+    name: 'OperationLog',
+    component: OperationLog,
     meta: { requiresAuth: true }
   },
   {
