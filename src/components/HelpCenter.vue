@@ -146,18 +146,21 @@
 
 <script setup lang="ts">
 import { useMessage, NCard, NButton, NTag } from "naive-ui";
+import { openUrl } from '@tauri-apps/plugin-opener';
 
 const message = useMessage();
 
 // QQ群相关
-const joinQQGroup1 = () => {
-  // 打开QQ群链接
-  window.open("https://qm.qq.com/q/XX6tpcvNo4", "_blank");
-  message.success("正在跳转到QQ群");
+const joinQQGroup1 = async () => {
+  try {
+    await openUrl("https://qm.qq.com/q/XX6tpcvNo4");
+    message.success("正在跳转到QQ群");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
 
 const copyQQGroup1 = () => {
-  // 复制QQ群号
   navigator.clipboard
     .writeText("1019501085")
     .then(() => {
@@ -169,14 +172,16 @@ const copyQQGroup1 = () => {
 };
 
 // QQ群相关
-const joinQQGroup2 = () => {
-  // 打开QQ群链接
-  window.open("https://qm.qq.com/q/fBtW7lJ1Xa", "_blank");
-  message.success("正在跳转到QQ群");
+const joinQQGroup2 = async () => {
+  try {
+    await openUrl("https://qm.qq.com/q/fBtW7lJ1Xa");
+    message.success("正在跳转到QQ群");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
 
 const copyQQGroup2 = () => {
-  // 复制QQ群号
   navigator.clipboard
     .writeText("708797546")
     .then(() => {
@@ -188,56 +193,73 @@ const copyQQGroup2 = () => {
 };
 
 // 邮箱支持
-const sendEmail = () => {
-  // 打开邮件客户端
-  window.open("mailto:support@mefrp.com?subject=ME-Frp XL用户支持", "_blank");
-  message.success("正在打开邮件客户端");
-};
-const OpenDownloadpage = () => {
-  // 打开下载页面
-  window.open("https://alist.yealqp.cn/", "_blank");
-  message.success("正在打开下载页面");
+const sendEmail = async () => {
+  try {
+    await openUrl("mailto:support@mefrp.com");
+    message.success("正在打开邮件客户端");
+  } catch (error) {
+    message.error("打开邮件客户端失败");
+  }
 };
 
-const xlwy = () => {
-  // 打开邮件客户端
-  window.open("https://www.idcxl.cn/", "_blank");
-  message.success("正在跳转到仙林云计算");
+const OpenDownloadpage = async () => {
+  try {
+    await openUrl("https://alist.yealqp.cn/");
+    message.success("正在打开下载页面");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
 
-const xlqq = () => {
-  // 打开邮件客户端
-  window.open(
-    "https://qm.qq.com/cgi-bin/qm/qr?k=S5tzhFVCoN28LIyPA5BJEZ0EFayLz4zh&jump_from=webapi&authKey=/FxL2ZT41DaqB5gyb8f9jauks1L6b/143XAXv5z0MhYkET0OeVdyT+umItJVlzrL",
-    "_blank",
-  );
-  message.success("正在跳转到仙林云计算QQ群");
+const xlwy = async () => {
+  try {
+    await openUrl("https://www.idcxl.cn/");
+    message.success("正在跳转到仙林云计算");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
 
-const sendyEmail = () => {
-  // 打开邮件客户端
-  window.open("mailto:yealqp@163.com", "_blank");
-  message.success("正在打开邮件客户端");
+const xlqq = async () => {
+  try {
+    await openUrl("https://qm.qq.com/cgi-bin/qm/qr?k=S5tzhFVCoN28LIyPA5BJEZ0EFayLz4zh&jump_from=webapi&authKey=/FxL2ZT41DaqB5gyb8f9jauks1L6b/143XAXv5z0MhYkET0OeVdyT+umItJVlzrL");
+    message.success("正在跳转到仙林云计算QQ群");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
+
+const sendyEmail = async () => {
+  try {
+    await openUrl("mailto:yealqp@163.com?subject=ME-Frp XL用户支持");
+    message.success("正在打开邮件客户端");
+  } catch (error) {
+    message.error("打开邮件客户端失败");
+  }
+};
+
 // 飞书群
-const joinFeishu = () => {
-  // 打开飞书群链接
-  window.open(
-    "https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=874l3500-4e85-4a04-a4b4-cbc02945de90",
-    "_blank",
-  );
-  message.success("正在跳转到飞书群");
+const joinFeishu = async () => {
+  try {
+    await openUrl("https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=874l3500-4e85-4a04-a4b4-cbc02945de90");
+    message.success("正在跳转到飞书群");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
 
 // 官方文档
-const openDocs = () => {
-  // 打开官方文档
-  window.open("https://www.mefrp.com/docs", "_blank");
-  message.success("正在打开官方文档");
+const openDocs = async () => {
+  try {
+    await openUrl("https://www.mefrp.com/docs");
+    message.success("正在打开官方文档");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
 };
 
 // 打开政策页面
-const openPolicy = (tab: string) => {
+const openPolicy = async (tab: string) => {
   const policyUrls: Record<string, string> = {
     content: "https://www.mefrp.com/policy?tab=content",
     terms: "https://www.mefrp.com/policy?tab=terms",
@@ -246,8 +268,12 @@ const openPolicy = (tab: string) => {
 
   const url = policyUrls[tab];
   if (url) {
-    window.open(url, "_blank");
-    message.success("正在打开政策页面");
+    try {
+      await openUrl(url);
+      message.success("正在打开政策页面");
+    } catch (error) {
+      message.error("打开链接失败");
+    }
   }
 };
 </script>

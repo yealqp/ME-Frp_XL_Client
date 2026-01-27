@@ -9,3 +9,4 @@ src-tauri/*.toml
 src-tauri/config.yaml
 !src-tauri/Cargo.toml
 version.txt
+version.json

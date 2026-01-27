@@ -12,7 +12,7 @@
       <n-card :bordered="true" class="tech-stack">
         <template #header>关于ME-Frp XL客户端</template>
         <n-descriptions label-placement="left" bordered :column="2">
-          <n-descriptions-item label="版本"> v1.5.7 </n-descriptions-item>
+          <n-descriptions-item label="版本"> v{{ appVersion }} </n-descriptions-item>
           <n-descriptions-item label="开发者">
             <div class="member-avatar-wrapper">
               <img
@@ -95,67 +95,42 @@
     <n-modal
       v-model:show="showUpdateModal"
       preset="card"
-      :style="{ width: '600px', maxHeight: '80vh' }"
+      :style="{ width: '500px' }"
       title="发现新版本"
-      :bordered="false"
-      :segmented="{ content: true, footer: 'soft' }"
     >
       <div class="update-modal-content">
         <div class="version-info">
-          <div class="version-item">
-            <span class="version-label">当前版本:</span>
-            <n-tag type="info" :bordered="false" size="medium">
+          <n-space align="center" :size="16">
+            <n-tag type="info" :bordered="false" size="large">
               v{{ currentVersion }}
             </n-tag>
-          </div>
-          <i class="fas fa-arrow-right version-arrow"></i>
-          <div class="version-item">
-            <span class="version-label">最新版本:</span>
-            <n-tag type="success" :bordered="false" size="medium">
+            <i class="fas fa-arrow-right"></i>
+            <n-tag type="success" :bordered="false" size="large">
               v{{ latestVersion }}
             </n-tag>
-          </div>
+          </n-space>
         </div>
 
-        <n-divider style="margin: 16px 0" />
-
-        <div class="update-info-section">
-          <div class="update-info-header">
-            <i class="fas fa-list-ul"></i>
-            <span>更新内容</span>
-          </div>
-          <div class="update-info-list">
-            <div
-              v-for="(info, index) in updateInfo"
-              :key="index"
-              :class="getUpdateInfoClass(info)"
-            >
-              <i :class="getUpdateInfoIcon(info)"></i>
-              <span>{{ formatUpdateInfo(info) }}</span>
-            </div>
-          </div>
+        <div v-if="updateInfo.length > 0" class="update-info">
+          <p class="update-info-title">更新内容：</p>
+          <ul class="update-list">
+            <li v-for="(info, index) in updateInfo" :key="index">
+              {{ info }}
+            </li>
+          </ul>
         </div>
-
-        <n-alert type="warning" :bordered="false" style="margin-top: 16px">
-          <template #icon>
-            <i class="fas fa-exclamation-triangle"></i>
-          </template>
-          更新前请关闭所有正在运行的隧道
-        </n-alert>
       </div>
 
       <template #footer>
-        <div class="modal-footer">
-          <n-button @click="handleCancelUpdate" size="large">
-            稍后提醒
-          </n-button>
-          <n-button type="primary" @click="handleUpdate" size="large">
+        <n-space justify="end">
+          <n-button @click="handleCancelUpdate">稍后提醒</n-button>
+          <n-button type="primary" @click="handleUpdate">
             <template #icon>
               <i class="fas fa-download"></i>
             </template>
             立即更新
           </n-button>
-        </div>
+        </n-space>
       </template>
     </n-modal>
   </div>
@@ -195,6 +170,7 @@ const showUpdateModal = ref(false);
 const latestVersion = ref("");
 const currentVersion = ref("");
 const updateInfo = ref<string[]>([]);
+const appVersion = ref("加载中...");
 
 // 一言相关
 const hitokoto = ref<Hitokoto>({
@@ -234,9 +210,21 @@ const refreshHitokoto = async () => {
   hitokotoLoading.value = false;
 };
 
-// 组件挂载时获取一言
+// 获取应用版本号
+const getAppVersion = async () => {
+  try {
+    const version = await invoke<string>("get_app_version");
+    appVersion.value = version;
+  } catch (error) {
+    console.error("获取版本号失败:", error);
+    appVersion.value = "未知";
+  }
+};
+
+// 组件挂载时获取一言和版本号
 onMounted(() => {
   getHitokoto();
+  getAppVersion();
 });
 
 // 检查更新
@@ -259,54 +247,32 @@ const checkForUpdates = async () => {
   }
 };
 
-// 格式化更新信息
-const formatUpdateInfo = (info: string): string => {
-  // 移除版本号前缀，如 (v1.5.6)
-  return info.replace(/^\(v[\d.]+\)\s*/, "");
-};
-
-// 获取更新信息的CSS类
-const getUpdateInfoClass = (info: string): string => {
-  if (
-    info.includes("优化:") ||
-    info.includes("新增:") ||
-    info.includes("其他:")
-  ) {
-    return "update-info-category";
-  }
-  return "update-info-item";
-};
-
-// 获取更新信息的图标
-const getUpdateInfoIcon = (info: string): string => {
-  if (info.includes("优化:")) {
-    return "fas fa-wrench";
-  } else if (info.includes("新增:")) {
-    return "fas fa-plus-circle";
-  } else if (info.includes("其他:")) {
-    return "fas fa-info-circle";
-  } else if (info.includes("修复")) {
-    return "fas fa-bug";
-  } else if (info.includes("优化")) {
-    return "fas fa-cog";
-  } else if (info.includes("新增") || info.includes("功能")) {
-    return "fas fa-star";
-  } else {
-    return "fas fa-chevron-right";
-  }
-};
-
 // 处理更新
-const handleUpdate = () => {
-  message.info("正在准备更新...");
-  window.open(
-    "https://alist.yealqp.cn/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF",
-    "_blank",
-  );
+const handleUpdate = async () => {
+  try {
+    showUpdateModal.value = false;
+    message.loading("正在下载更新...", { duration: 0 });
+    
+    await invoke("download_and_install_update", { 
+      version: latestVersion.value 
+    });
+    
+    message.destroyAll();
+    message.success("安装程序已启动，应用即将关闭");
+    
+    // 等待一下让用户看到消息，然后退出应用
+    setTimeout(() => {
+      invoke("quit_app");
+    }, 2000);
+  } catch (error) {
+    message.destroyAll();
+    message.error(`更新失败: ${error}`);
+  }
 };
 
 // 处理取消更新
 const handleCancelUpdate = () => {
+  showUpdateModal.value = false;
   message.info("已取消更新，下次启动时会再次检查");
 };
 </script>
@@ -584,121 +550,48 @@ const handleCancelUpdate = () => {
 
 /* 更新模态框样式 */
 .update-modal-content {
-  padding: 8px 0;
+  padding: 16px 0;
 }
 
 .version-info {
   display: flex;
-  align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 16px;
+  padding: 20px;
   background: #18181c;
   border-radius: 8px;
 }
 
-.version-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.version-label {
-  font-size: 13px;
-  color: #a0a0a0;
-}
-
-.version-arrow {
-  font-size: 20px;
+.version-info i {
   color: #349ff4;
+  font-size: 18px;
 }
 
-.update-info-section {
-  margin-top: 16px;
+.update-info {
+  margin-top: 20px;
 }
 
-.update-info-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
+.update-info-title {
+  font-size: 14px;
   font-weight: 600;
   color: #ffffffd1;
   margin-bottom: 12px;
 }
 
-.update-info-header i {
-  color: #349ff4;
+.update-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.update-info-list {
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 12px;
-  background: #18181c;
-  border-radius: 8px;
-}
-
-.update-info-category {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.update-list li {
   padding: 8px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #349ff4;
-  margin-top: 12px;
-}
-
-.update-info-category:first-child {
-  margin-top: 0;
-}
-
-.update-info-category i {
-  font-size: 14px;
-}
-
-.update-info-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 6px 0 6px 16px;
-  font-size: 13px;
   color: #a0a0a0;
+  font-size: 14px;
   line-height: 1.6;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.update-info-item i {
-  font-size: 10px;
-  color: #63e2b7;
-  margin-top: 5px;
-  flex-shrink: 0;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding-top: 8px;
-}
-
-/* 滚动条样式 */
-.update-info-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.update-info-list::-webkit-scrollbar-track {
-  background: #242428;
-  border-radius: 3px;
-}
-
-.update-info-list::-webkit-scrollbar-thumb {
-  background: #3e3e42;
-  border-radius: 3px;
-}
-
-.update-info-list::-webkit-scrollbar-thumb:hover {
-  background: #4e4e52;
+.update-list li:last-child {
+  border-bottom: none;
 }
 </style>

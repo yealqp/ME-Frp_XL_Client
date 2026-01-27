@@ -14,16 +14,14 @@ use std::io::{BufRead, BufReader};
 use tauri::{Manager, Emitter, tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState}, menu::{Menu, MenuItem}};
 use reqwest;
 
-// 当前应用版本
-const CURRENT_VERSION: &str = "1.5.8";
-
-// User-Agent 常量
-const USER_AGENT: &str = "MeFrp-XL/1.5.7";
+// 当前应用版本 - 从 Cargo.toml 读取
+const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // 创建带有统一 User-Agent 的 HTTP 客户端
 fn create_http_client() -> reqwest::Client {
+    let user_agent = format!("MeFrp-XL/{}", CURRENT_VERSION);
     reqwest::Client::builder()
-        .user_agent(USER_AGENT)
+        .user_agent(user_agent)
         .build()
         .expect("Failed to create HTTP client")
 }
@@ -1623,6 +1621,12 @@ async fn quit_app(app_handle: tauri::AppHandle, process_manager: tauri::State<'_
     Ok("应用已退出".to_string())
 }
 
+// 获取应用版本号
+#[tauri::command]
+fn get_app_version() -> String {
+    CURRENT_VERSION.to_string()
+}
+
 // 检查版本更新
 #[tauri::command]
 async fn check_for_updates() -> Result<VersionCheckResult, String> {
@@ -1693,6 +1697,68 @@ fn compare_versions(current: &str, latest: &str) -> bool {
     
     // 比较修订版本号
     latest_parts[2] > current_parts[2]
+}
+
+// 下载并安装更新
+#[tauri::command]
+async fn download_and_install_update(version: String) -> Result<String, String> {
+    use std::io::Write;
+    
+    let client = create_http_client();
+    
+    // 构建下载URL
+    let download_url = format!(
+        "https://alist.yealqp.cn/download/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF/ME-Frp%20XL%E5%AE%A2%E6%88%B7%E7%AB%AF_{}_x64-setup.exe",
+        version
+    );
+    
+    // 获取临时目录
+    let temp_dir = env::temp_dir();
+    let installer_path = temp_dir.join(format!("ME-Frp_XL_{}_setup.exe", version));
+    
+    // 下载文件
+    let response = client
+        .get(&download_url)
+        .send()
+        .await
+        .map_err(|e| format!("下载失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("下载失败，状态码: {}", response.status()));
+    }
+    
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("读取下载内容失败: {}", e))?;
+    
+    // 保存到临时文件，使用作用域确保文件句柄被关闭
+    {
+        let mut file = fs::File::create(&installer_path)
+            .map_err(|e| format!("创建安装文件失败: {}", e))?;
+        
+        file.write_all(&bytes)
+            .map_err(|e| format!("写入安装文件失败: {}", e))?;
+        
+        // 显式刷新并关闭文件
+        file.sync_all()
+            .map_err(|e| format!("同步文件失败: {}", e))?;
+    } // file 在这里被 drop，确保文件句柄关闭
+    
+    // 执行安装程序
+    #[cfg(windows)]
+    {
+        Command::new(&installer_path)
+            .spawn()
+            .map_err(|e| format!("启动安装程序失败: {}", e))?;
+    }
+    
+    #[cfg(not(windows))]
+    {
+        return Err("当前仅支持 Windows 平台自动更新".to_string());
+    }
+    
+    Ok(format!("安装程序已启动: {}", installer_path.display()))
 }
 
 // 统一配置管理函数
@@ -2063,7 +2129,9 @@ pub fn run() {
             hide_window,
             set_minimize_to_tray,
             quit_app,
-            check_for_updates
+            get_app_version,
+            check_for_updates,
+            download_and_install_update
          ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

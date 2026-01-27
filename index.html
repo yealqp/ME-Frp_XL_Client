@@ -2,10 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </head>
-
+    <!-- Microsoft Clarity -->
+    <script type="text/javascript">
+      (function(c,l,a,r,i,t,y){
+        try {
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          t.onerror = function() {
+            console.warn('Microsoft Clarity failed to load');
+          };
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        } catch (e) {
+          console.warn('Microsoft Clarity initialization failed:', e);
+        }
+      })(window, document, "clarity", "script", "v60u1elg7d");
+    </script>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>

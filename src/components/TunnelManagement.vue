@@ -139,7 +139,7 @@
               <n-dropdown 
                 trigger="click" 
                 :options="getMoreOptions(tunnel.proxyId)"
-                placement="top-start"
+                placement="bottom"
                 :show-arrow="false"
                 to="body"
                 @select="(key: string) => handleMoreAction(key, tunnel.proxyId)"
