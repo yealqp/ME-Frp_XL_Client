@@ -377,10 +377,7 @@
               此操作仅用于查阅本账号历史操作记录，不会对当前运行的服务或网络连接造成任何影响。
             </p>
           </div>
-          <n-button
-            type="primary"
-            @click="goToOperationLog"
-          >
+          <n-button type="primary" @click="goToOperationLog">
             立即查看操作日志
           </n-button>
         </div>
@@ -754,7 +751,7 @@ const performSign = async () => {
 
 // 跳转到操作日志页面
 const goToOperationLog = () => {
-  router.push('/operation-log');
+  router.push("/operation-log");
 };
 
 // 显示下线所有隧道对话框

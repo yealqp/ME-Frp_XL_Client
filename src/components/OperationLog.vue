@@ -70,10 +70,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted, reactive } from 'vue';
-import { useMessage, NTag } from 'naive-ui';
-import { invoke } from '@tauri-apps/api/core';
-import type { DataTableColumns } from 'naive-ui';
+import { ref, h, onMounted, reactive } from "vue";
+import { useMessage, NTag } from "naive-ui";
+import { invoke } from "@tauri-apps/api/core";
+import type { DataTableColumns } from "naive-ui";
 
 interface OperationLog {
   logId: number;
@@ -135,99 +135,104 @@ const paginationConfig = reactive({
 
 // 操作分类选项
 const categoryOptions = [
-  { label: '认证相关', value: 'auth' },
-  { label: '隧道相关', value: 'proxy' },
-  { label: '节点相关', value: 'node' },
-  { label: '用户相关', value: 'user' },
-  { label: '财务相关', value: 'finance' },
+  { label: "认证相关", value: "auth" },
+  { label: "隧道相关", value: "proxy" },
+  { label: "节点相关", value: "node" },
+  { label: "用户相关", value: "user" },
+  { label: "财务相关", value: "finance" },
 ];
 
 // 操作状态选项
 const statusOptions = [
-  { label: '成功', value: 'success' },
-  { label: '失败', value: 'failed' },
+  { label: "成功", value: "success" },
+  { label: "失败", value: "failed" },
 ];
 
 // 获取分类标签
 const getCategoryLabel = (category: string): string => {
   const map: Record<string, string> = {
-    auth: '认证相关',
-    proxy: '隧道相关',
-    node: '节点相关',
-    user: '用户相关',
-    finance: '财务相关',
+    auth: "认证相关",
+    proxy: "隧道相关",
+    node: "节点相关",
+    user: "用户相关",
+    finance: "财务相关",
   };
   return map[category] || category;
 };
 
 // 获取分类标签类型
-const getCategoryType = (category: string): 'info' | 'success' | 'warning' | 'error' | 'default' => {
-  const map: Record<string, 'info' | 'success' | 'warning' | 'error' | 'default'> = {
-    auth: 'info',
-    proxy: 'success',
-    node: 'warning',
-    user: 'default',
-    finance: 'error',
+const getCategoryType = (
+  category: string,
+): "info" | "success" | "warning" | "error" | "default" => {
+  const map: Record<
+    string,
+    "info" | "success" | "warning" | "error" | "default"
+  > = {
+    auth: "info",
+    proxy: "success",
+    node: "warning",
+    user: "default",
+    finance: "error",
   };
-  return map[category] || 'default';
+  return map[category] || "default";
 };
 
 // 表格列定义
 const columns: DataTableColumns<OperationLog> = [
   {
-    title: '日志ID',
-    key: 'logId',
+    title: "日志ID",
+    key: "logId",
     width: 100,
-    align: 'center',
+    align: "center",
   },
   {
-    title: '操作分类',
-    key: 'category',
+    title: "操作分类",
+    key: "category",
     width: 120,
-    align: 'center',
+    align: "center",
     render: (row) => {
       return h(
         NTag,
         {
           type: getCategoryType(row.category),
           bordered: false,
-          size: 'small',
+          size: "small",
         },
-        { default: () => getCategoryLabel(row.category) }
+        { default: () => getCategoryLabel(row.category) },
       );
     },
   },
   {
-    title: '操作详情',
-    key: 'details',
+    title: "操作详情",
+    key: "details",
     // 移除 ellipsis，让内容自动换行
   },
   {
-    title: '请求 IP',
-    key: 'ipAddress',
+    title: "请求 IP",
+    key: "ipAddress",
     width: 180,
     // 移除 ellipsis，让内容自动换行
   },
   {
-    title: '操作状态',
-    key: 'status',
+    title: "操作状态",
+    key: "status",
     width: 100,
-    align: 'center',
+    align: "center",
     render: (row) => {
       return h(
         NTag,
         {
-          type: row.status === 'success' ? 'success' : 'error',
+          type: row.status === "success" ? "success" : "error",
           bordered: false,
-          size: 'small',
+          size: "small",
         },
-        { default: () => (row.status === 'success' ? '成功' : '失败') }
+        { default: () => (row.status === "success" ? "成功" : "失败") },
       );
     },
   },
   {
-    title: '操作时间',
-    key: 'createdAt',
+    title: "操作时间",
+    key: "createdAt",
     width: 180,
     render: (row) => {
       return formatDateTime(row.createdAt);
@@ -238,13 +243,13 @@ const columns: DataTableColumns<OperationLog> = [
 // 格式化日期时间
 const formatDateTime = (dateStr: string): string => {
   const date = new Date(dateStr);
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 };
 
@@ -252,11 +257,11 @@ const formatDateTime = (dateStr: string): string => {
 const formatDateForApi = (timestamp: number): string => {
   const date = new Date(timestamp);
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
@@ -286,7 +291,7 @@ const loadLogs = async () => {
       params.endTime = formatDateForApi(filters.dateRange[1]);
     }
 
-    const responseText = await invoke<string>('api_get_operation_logs', {
+    const responseText = await invoke<string>("api_get_operation_logs", {
       params: JSON.stringify(params),
     });
 
@@ -295,31 +300,36 @@ const loadLogs = async () => {
     if (result.code === 200) {
       logs.value = result.data.data;
       pagination.itemCount = result.data.total;
-      
+
       // 设置一个足够大的页数，确保可以一直翻页
       // 如果当前页有数据，设置页数为当前页+10，否则使用计算的页数
-      const calculatedPageCount = Math.ceil(result.data.total / pagination.pageSize);
+      const calculatedPageCount = Math.ceil(
+        result.data.total / pagination.pageSize,
+      );
       if (result.data.data.length > 0) {
         // 如果当前页有数据，允许继续翻页，设置页数为当前页+10
-        pagination.pageCount = Math.max(calculatedPageCount, pagination.page + 10);
+        pagination.pageCount = Math.max(
+          calculatedPageCount,
+          pagination.page + 10,
+        );
       } else {
         // 如果当前页没有数据，使用计算的页数
         pagination.pageCount = calculatedPageCount;
       }
-      
+
       // 同步到 paginationConfig
       paginationConfig.page = pagination.page;
       paginationConfig.pageSize = pagination.pageSize;
       paginationConfig.pageCount = pagination.pageCount;
       paginationConfig.itemCount = pagination.itemCount;
-      
+
       message.success(`成功加载 ${result.data.data.length} 条日志`);
     } else {
-      throw new Error(result.message || '获取操作日志失败');
+      throw new Error(result.message || "获取操作日志失败");
     }
   } catch (err) {
-    console.error('加载操作日志失败:', err);
-    message.error(err instanceof Error ? err.message : '加载操作日志失败');
+    console.error("加载操作日志失败:", err);
+    message.error(err instanceof Error ? err.message : "加载操作日志失败");
   } finally {
     loading.value = false;
   }
@@ -370,7 +380,7 @@ onMounted(() => {
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
   filters.dateRange = [sevenDaysAgo, now];
-  
+
   loadLogs();
 });
 </script>

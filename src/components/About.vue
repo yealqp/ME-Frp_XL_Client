@@ -12,7 +12,9 @@
       <n-card :bordered="true" class="tech-stack">
         <template #header>关于ME-Frp XL客户端</template>
         <n-descriptions label-placement="left" bordered :column="2">
-          <n-descriptions-item label="版本"> v{{ appVersion }} </n-descriptions-item>
+          <n-descriptions-item label="版本">
+            v{{ appVersion }}
+          </n-descriptions-item>
           <n-descriptions-item label="开发者">
             <div class="member-avatar-wrapper">
               <img
@@ -252,14 +254,14 @@ const handleUpdate = async () => {
   try {
     showUpdateModal.value = false;
     message.loading("正在下载更新...", { duration: 0 });
-    
-    await invoke("download_and_install_update", { 
-      version: latestVersion.value 
+
+    await invoke("download_and_install_update", {
+      version: latestVersion.value,
     });
-    
+
     message.destroyAll();
     message.success("安装程序已启动，应用即将关闭");
-    
+
     // 等待一下让用户看到消息，然后退出应用
     setTimeout(() => {
       invoke("quit_app");

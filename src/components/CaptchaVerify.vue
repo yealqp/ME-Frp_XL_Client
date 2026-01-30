@@ -3,24 +3,65 @@
     <!-- 加载状态 -->
     <div v-show="isLoading && !error" class="captcha-loading">
       <div class="loading-spinner">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48px" height="60px" viewBox="0 0 24 30">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="48px"
+          height="60px"
+          viewBox="0 0 24 30"
+        >
           <rect x="0" y="9.22656" width="4" height="12.5469" fill="#349ff4">
-            <animate attributeName="height" attributeType="XML" values="5;21;5" begin="0s" dur="0.6s"
-              repeatCount="indefinite"></animate>
-            <animate attributeName="y" attributeType="XML" values="13; 5; 13" begin="0s" dur="0.6s"
-              repeatCount="indefinite"></animate>
+            <animate
+              attributeName="height"
+              attributeType="XML"
+              values="5;21;5"
+              begin="0s"
+              dur="0.6s"
+              repeatCount="indefinite"
+            ></animate>
+            <animate
+              attributeName="y"
+              attributeType="XML"
+              values="13; 5; 13"
+              begin="0s"
+              dur="0.6s"
+              repeatCount="indefinite"
+            ></animate>
           </rect>
           <rect x="10" y="5.22656" width="4" height="20.5469" fill="#349ff4">
-            <animate attributeName="height" attributeType="XML" values="5;21;5" begin="0.15s" dur="0.6s"
-              repeatCount="indefinite"></animate>
-            <animate attributeName="y" attributeType="XML" values="13; 5; 13" begin="0.15s" dur="0.6s"
-              repeatCount="indefinite"></animate>
+            <animate
+              attributeName="height"
+              attributeType="XML"
+              values="5;21;5"
+              begin="0.15s"
+              dur="0.6s"
+              repeatCount="indefinite"
+            ></animate>
+            <animate
+              attributeName="y"
+              attributeType="XML"
+              values="13; 5; 13"
+              begin="0.15s"
+              dur="0.6s"
+              repeatCount="indefinite"
+            ></animate>
           </rect>
           <rect x="20" y="8.77344" width="4" height="13.4531" fill="#349ff4">
-            <animate attributeName="height" attributeType="XML" values="5;21;5" begin="0.3s" dur="0.6s"
-              repeatCount="indefinite"></animate>
-            <animate attributeName="y" attributeType="XML" values="13; 5; 13" begin="0.3s" dur="0.6s"
-              repeatCount="indefinite"></animate>
+            <animate
+              attributeName="height"
+              attributeType="XML"
+              values="5;21;5"
+              begin="0.3s"
+              dur="0.6s"
+              repeatCount="indefinite"
+            ></animate>
+            <animate
+              attributeName="y"
+              attributeType="XML"
+              values="13; 5; 13"
+              begin="0.3s"
+              dur="0.6s"
+              repeatCount="indefinite"
+            ></animate>
           </rect>
         </svg>
         <span class="loading-text">验证码加载中...</span>
@@ -34,59 +75,67 @@
     </div>
 
     <!-- Cap.js 容器 -->
-    <div v-show="!isLoading && !error" :id="containerId" class="captcha-container"></div>
+    <div
+      v-show="!isLoading && !error"
+      :id="containerId"
+      class="captcha-container"
+    ></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
-import { useCap } from '../types/useCap'
+import { onMounted, computed } from "vue";
+import { useCap } from "../types/useCap";
 
 interface Props {
-  siteId?: string
-  workerCount?: number
+  siteId?: string;
+  workerCount?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  siteId: '2bf50e050d',
-  workerCount: 2
-})
+  siteId: "2bf50e050d",
+  workerCount: 2,
+});
 
 const emit = defineEmits<{
-  solve: [token: string]
-  error: [error: string]
-  ready: []
-}>()
+  solve: [token: string];
+  error: [error: string];
+  ready: [];
+}>();
 
-const containerId = `captcha-${Math.random().toString(36).substring(2, 9)}`
+const containerId = `captcha-${Math.random().toString(36).substring(2, 9)}`;
 
 const capConfig = computed(() => ({
   apiEndpoint: `https://captcha.mefrp.com/${props.siteId}/`,
   siteId: props.siteId,
   workerCount: props.workerCount,
-  hiddenFieldName: 'cap-token',
+  hiddenFieldName: "cap-token",
   i18n: {
-    verifyingLabel: '正在验证...',
-    initialState: '请完成验证',
-    solvedLabel: '验证通过',
-    errorLabel: '验证失败'
-  }
-}))
+    verifyingLabel: "正在验证...",
+    initialState: "请完成验证",
+    solvedLabel: "验证通过",
+    errorLabel: "验证失败",
+  },
+}));
 
-const { isLoading, isVerified, token, error, initCap, reset } = useCap(capConfig.value)
+const { isLoading, isVerified, token, error, initCap, reset } = useCap(
+  capConfig.value,
+);
 
 // 注入暗色主题样式到 shadow DOM
 const injectShadowStyles = () => {
-  const capWidget = document.querySelector(`#${containerId} cap-widget`)
+  const capWidget = document.querySelector(`#${containerId} cap-widget`);
   if (capWidget && capWidget.shadowRoot) {
     // 检查是否已经注入过样式
-    const existingStyle = capWidget.shadowRoot.querySelector('style[data-custom-theme]')
+    const existingStyle = capWidget.shadowRoot.querySelector(
+      "style[data-custom-theme]",
+    );
     if (existingStyle) {
-      return // 已经注入过，不重复注入
+      return; // 已经注入过，不重复注入
     }
-    
-    const style = document.createElement('style')
-    style.setAttribute('data-custom-theme', 'dark')
+
+    const style = document.createElement("style");
+    style.setAttribute("data-custom-theme", "dark");
     style.textContent = `
       /* 全局样式 - 移除圆角 */
       * {
@@ -229,94 +278,94 @@ const injectShadowStyles = () => {
         opacity: 0.5 !important;
         cursor: not-allowed !important;
       }
-    `
-    capWidget.shadowRoot.appendChild(style)
-    console.log('暗色主题样式已注入到 shadow DOM')
+    `;
+    capWidget.shadowRoot.appendChild(style);
+    console.log("暗色主题样式已注入到 shadow DOM");
   }
-}
+};
 
 // 使用 MutationObserver 监听 shadow DOM 的变化，立即注入样式
 const observeShadowDOM = () => {
-  const container = document.querySelector(`#${containerId}`)
-  if (!container) return
-  
+  const container = document.querySelector(`#${containerId}`);
+  if (!container) return;
+
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement && node.tagName === 'CAP-WIDGET') {
+        if (node instanceof HTMLElement && node.tagName === "CAP-WIDGET") {
           // 发现 cap-widget 元素，立即注入样式
-          setTimeout(() => injectShadowStyles(), 50)
-          setTimeout(() => injectShadowStyles(), 200)
+          setTimeout(() => injectShadowStyles(), 50);
+          setTimeout(() => injectShadowStyles(), 200);
         }
-      })
-    })
-  })
-  
+      });
+    });
+  });
+
   observer.observe(container, {
     childList: true,
-    subtree: true
-  })
-  
-  return observer
-}
+    subtree: true,
+  });
+
+  return observer;
+};
 
 // 监听验证状态变化
-let lastToken = ''
-let shadowObserver: MutationObserver | null | undefined = null
+let lastToken = "";
+let shadowObserver: MutationObserver | null | undefined = null;
 
 const checkVerification = setInterval(() => {
   if (isVerified.value && token.value && token.value !== lastToken) {
-    lastToken = token.value
-    emit('solve', token.value)
+    lastToken = token.value;
+    emit("solve", token.value);
   }
-  
+
   if (error.value) {
-    emit('error', error.value)
+    emit("error", error.value);
   }
-  
+
   if (!isLoading.value && !error.value && !isVerified.value) {
-    emit('ready')
+    emit("ready");
     // 尝试注入样式
-    injectShadowStyles()
+    injectShadowStyles();
   }
-}, 100)
+}, 100);
 
 onMounted(async () => {
   // 立即开始监听 shadow DOM
-  shadowObserver = observeShadowDOM()
-  
+  shadowObserver = observeShadowDOM();
+
   // 延迟初始化，确保 DOM 准备好
   setTimeout(async () => {
-    await initCap(`#${containerId}`)
+    await initCap(`#${containerId}`);
     // 初始化后立即尝试注入样式
-    setTimeout(() => injectShadowStyles(), 100)
-    setTimeout(() => injectShadowStyles(), 300)
-    setTimeout(() => injectShadowStyles(), 600)
-  }, 200)
-})
+    setTimeout(() => injectShadowStyles(), 100);
+    setTimeout(() => injectShadowStyles(), 300);
+    setTimeout(() => injectShadowStyles(), 600);
+  }, 200);
+});
 
 // 重试
 const retry = async () => {
-  await initCap(`#${containerId}`)
+  await initCap(`#${containerId}`);
   // 重试后也注入样式
-  setTimeout(() => injectShadowStyles(), 100)
-  setTimeout(() => injectShadowStyles(), 300)
-  setTimeout(() => injectShadowStyles(), 600)
-}
+  setTimeout(() => injectShadowStyles(), 100);
+  setTimeout(() => injectShadowStyles(), 300);
+  setTimeout(() => injectShadowStyles(), 600);
+};
 
 // 清理定时器和观察器
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount } from "vue";
 onBeforeUnmount(() => {
-  clearInterval(checkVerification)
+  clearInterval(checkVerification);
   if (shadowObserver) {
-    shadowObserver.disconnect()
+    shadowObserver.disconnect();
   }
-})
+});
 
 // 暴露方法
 defineExpose({
-  reset
-})
+  reset,
+});
 </script>
 
 <style scoped>

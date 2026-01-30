@@ -13,7 +13,7 @@ export interface UnifiedConfig {
   frpToken: string;
   username: string;
   userInfo: UserInfo;
-  
+
   // 应用设置
   autoStart: boolean;
   alwaysOnTop: boolean;

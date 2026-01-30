@@ -1,115 +1,109 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import Dashboard from '../components/Dashboard.vue'
-import CreateTunnel from '../components/CreateTunnel.vue'
-import TunnelConfig from '../components/TunnelConfig.vue'
-import TunnelManagement from '../components/TunnelManagement.vue'
-import UserCenter from '../components/UserCenter.vue'
-import Settings from '../components/Settings.vue'
-import HelpCenter from '../components/HelpCenter.vue'
-import About from '../components/About.vue'
-import Login from '../components/Login.vue'
-import OperationLog from '../components/OperationLog.vue'
-import { invoke } from '@tauri-apps/api/core'
-import type { UnifiedConfig } from '../types/config'
+import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
+import Dashboard from "../components/Dashboard.vue";
+import CreateTunnel from "../components/CreateTunnel.vue";
+import TunnelManagement from "../components/TunnelManagement.vue";
+import UserCenter from "../components/UserCenter.vue";
+import Settings from "../components/Settings.vue";
+import HelpCenter from "../components/HelpCenter.vue";
+import About from "../components/About.vue";
+import Login from "../components/Login.vue";
+import OperationLog from "../components/OperationLog.vue";
+import { invoke } from "@tauri-apps/api/core";
+import type { UnifiedConfig } from "../types/config";
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    redirect: '/dashboard'
+    path: "/",
+    redirect: "/dashboard",
   },
   {
-    path: '/login',
-    name: 'Login',
+    path: "/login",
+    name: "Login",
     component: Login,
-    meta: { requiresAuth: false }
+    meta: { requiresAuth: false },
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
+    path: "/dashboard",
+    name: "Dashboard",
     component: Dashboard,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/create-tunnel',
-    name: 'CreateTunnel',
+    path: "/create-tunnel",
+    name: "CreateTunnel",
     component: CreateTunnel,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/tunnel-config',
-    name: 'TunnelConfig',
-    component: TunnelConfig,
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/tunnel-management',
-    name: 'TunnelManagement',
+    path: "/tunnel-management",
+    name: "TunnelManagement",
     component: TunnelManagement,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/user-center',
-    name: 'UserCenter',
+    path: "/user-center",
+    name: "UserCenter",
     component: UserCenter,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/operation-log',
-    name: 'OperationLog',
+    path: "/operation-log",
+    name: "OperationLog",
     component: OperationLog,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/settings',
-    name: 'Settings',
+    path: "/settings",
+    name: "Settings",
     component: Settings,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/help-center',
-    name: 'HelpCenter',
+    path: "/help-center",
+    name: "HelpCenter",
     component: HelpCenter,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
   },
   {
-    path: '/about',
-    name: 'About',
+    path: "/about",
+    name: "About",
     component: About,
-    meta: { requiresAuth: true }
-  }
-]
+    meta: { requiresAuth: true },
+  },
+];
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
-})
+  routes,
+});
 
 // 路由守卫 - 检查登录状态
 router.beforeEach(async (to, _from, next) => {
   // 登录页面直接放行
-  if (to.path === '/login') {
-    next()
-    return
+  if (to.path === "/login") {
+    next();
+    return;
   }
 
   // 检查是否需要登录
   if (to.meta.requiresAuth) {
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config')
-      const isLoggedIn = config && (config.apiStatus === 'connected' || config.userToken)
-      
+      const config = await invoke<UnifiedConfig>("load_unified_config");
+      const isLoggedIn =
+        config && (config.apiStatus === "connected" || config.userToken);
+
       if (isLoggedIn) {
-        next()
+        next();
       } else {
-        next('/login')
+        next("/login");
       }
     } catch (error) {
-      console.error('路由守卫检查登录状态失败:', error)
-      next('/login')
+      console.error("路由守卫检查登录状态失败:", error);
+      next("/login");
     }
   } else {
-    next()
+    next();
   }
-})
+});
 
-export default router
+export default router;

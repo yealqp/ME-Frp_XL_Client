@@ -146,7 +146,7 @@
 
 <script setup lang="ts">
 import { useMessage, NCard, NButton, NTag } from "naive-ui";
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 const message = useMessage();
 
@@ -222,7 +222,9 @@ const xlwy = async () => {
 
 const xlqq = async () => {
   try {
-    await openUrl("https://qm.qq.com/cgi-bin/qm/qr?k=S5tzhFVCoN28LIyPA5BJEZ0EFayLz4zh&jump_from=webapi&authKey=/FxL2ZT41DaqB5gyb8f9jauks1L6b/143XAXv5z0MhYkET0OeVdyT+umItJVlzrL");
+    await openUrl(
+      "https://qm.qq.com/cgi-bin/qm/qr?k=S5tzhFVCoN28LIyPA5BJEZ0EFayLz4zh&jump_from=webapi&authKey=/FxL2ZT41DaqB5gyb8f9jauks1L6b/143XAXv5z0MhYkET0OeVdyT+umItJVlzrL",
+    );
     message.success("正在跳转到仙林云计算QQ群");
   } catch (error) {
     message.error("打开链接失败");
@@ -241,7 +243,9 @@ const sendyEmail = async () => {
 // 飞书群
 const joinFeishu = async () => {
   try {
-    await openUrl("https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=874l3500-4e85-4a04-a4b4-cbc02945de90");
+    await openUrl(
+      "https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=874l3500-4e85-4a04-a4b4-cbc02945de90",
+    );
     message.success("正在跳转到飞书群");
   } catch (error) {
     message.error("打开链接失败");

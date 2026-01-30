@@ -9,7 +9,7 @@
       size="large"
       :closable="true"
       :mask-closable="false"
-      style="max-width: 700px;"
+      style="max-width: 700px"
       @after-leave="closePopupNotice"
     >
       <div class="popup-notice-content">
@@ -21,7 +21,7 @@
         </div>
       </div>
       <template #footer>
-        <div style="display: flex; justify-content: flex-end;">
+        <div style="display: flex; justify-content: flex-end">
           <n-button type="primary" @click="closePopupNotice">
             我已知晓
           </n-button>
@@ -40,7 +40,11 @@
       <!-- 左侧列 -->
       <div class="left-column">
         <!-- 系统状态卡片 -->
-        <div v-if="systemStatusLoaded" class="system-status-card" :class="getStatusClass()">
+        <div
+          v-if="systemStatusLoaded"
+          class="system-status-card"
+          :class="getStatusClass()"
+        >
           <div class="status-content">
             <div class="status-dot"></div>
             <div class="status-text">
@@ -652,7 +656,13 @@ const defaultRender =
     return self.renderToken(tokens, idx, options);
   };
 
-md.renderer.rules.link_open = function (tokens: any, idx: any, options: any, _env: any, self: any) {
+md.renderer.rules.link_open = function (
+  tokens: any,
+  idx: any,
+  options: any,
+  _env: any,
+  self: any,
+) {
   const aIndex = tokens[idx].attrIndex("target");
   if (aIndex < 0) {
     tokens[idx].attrPush(["target", "_blank"]);
@@ -720,30 +730,30 @@ const getAnnouncementCardClass = (announcement: any): string => {
 // 获取弹窗公告
 const fetchPopupNotice = async () => {
   // 检查是否已经显示过（使用 localStorage 记录）
-  const lastShownTime = localStorage.getItem('popup_notice_last_shown');
+  const lastShownTime = localStorage.getItem("popup_notice_last_shown");
   const now = Date.now();
-  
+
   // 如果距离上次显示不到 24 小时，则不再显示
   if (lastShownTime && now - parseInt(lastShownTime) < 24 * 60 * 60 * 1000) {
-    console.log('弹窗公告今日已显示过，跳过');
+    console.log("弹窗公告今日已显示过，跳过");
     return;
   }
 
   popupNoticeLoading.value = true;
-  
+
   try {
     const responseText = await invoke("api_get_popup_notice");
-    
+
     // 尝试解析 JSON
     try {
       const result: PopupNoticeResponse = JSON.parse(responseText as string);
-      
+
       if (result.code === 200 && result.data) {
         popupNoticeContent.value = result.data;
         showPopupNotice.value = true;
-        
+
         // 记录显示时间
-        localStorage.setItem('popup_notice_last_shown', now.toString());
+        localStorage.setItem("popup_notice_last_shown", now.toString());
       } else {
         console.log("弹窗公告:", result.message || "无公告内容");
       }
