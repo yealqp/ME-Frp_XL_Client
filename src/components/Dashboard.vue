@@ -733,19 +733,27 @@ const fetchPopupNotice = async () => {
   
   try {
     const responseText = await invoke("api_get_popup_notice");
-    const result: PopupNoticeResponse = JSON.parse(responseText as string);
     
-    if (result.code === 200 && result.data) {
-      popupNoticeContent.value = result.data;
-      showPopupNotice.value = true;
+    // 尝试解析 JSON
+    try {
+      const result: PopupNoticeResponse = JSON.parse(responseText as string);
       
-      // 记录显示时间
-      localStorage.setItem('popup_notice_last_shown', now.toString());
-    } else {
-      console.error("获取弹窗公告失败:", result.message);
+      if (result.code === 200 && result.data) {
+        popupNoticeContent.value = result.data;
+        showPopupNotice.value = true;
+        
+        // 记录显示时间
+        localStorage.setItem('popup_notice_last_shown', now.toString());
+      } else {
+        console.log("弹窗公告:", result.message || "无公告内容");
+      }
+    } catch (parseError) {
+      // 如果解析失败，可能是纯文本响应
+      console.log("弹窗公告响应格式异常，跳过显示");
     }
   } catch (error) {
-    console.error("获取弹窗公告失败:", error);
+    // 静默处理错误，不影响用户体验
+    console.log("获取弹窗公告:", error);
   } finally {
     popupNoticeLoading.value = false;
   }

@@ -1,5 +1,5 @@
 <template>
-  <div class="tunnel-config">
+  <div class="tunnel-config" v-if="selectedNode">
     <h2 class="page-title">创建隧道</h2>
 
     <!-- 顶部节点信息卡片 -->
@@ -26,7 +26,7 @@
             <n-tag :bordered="false" type="warning" size="small" class="port-range-tag">
               {{ selectedNode.allowPort }}
             </n-tag>
-            <a href="https://www.mefrp.com/dashboard/create-proxy" target="_blank"><n-tag :bordered="false" type="error" size="small" link>仅支持创建TCP/UDP隧道 HTTP/S隧道还请前往官网创建 点击跳转</n-tag></a>
+            <a href="https://www.mefrp.com/dashboard/create-proxy" target="_blank"><n-tag :bordered="false" type="error" size="small" link>仅支持创建TCP/UDP隧道 HTTP/S隧道还请前往官网创建 点击跳转 敬请谅解</n-tag></a>
           </div>
         </div>
 
@@ -122,6 +122,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
 import { useMessage } from 'naive-ui';
 
@@ -175,10 +176,72 @@ interface TunnelForm {
   useCompression: boolean;
 }
 
-// Props
+// 从路由获取选中的节点
+const router = useRouter();
+const route = useRoute();
+
+// 尝试从路由获取节点数据
+const selectedNode = ref<Node | null>(null);
+
+// Props（保持兼容性）
 const props = defineProps<{
-  selectedNode: Node;
+  selectedNode?: Node;
 }>();
+
+// 获取节点列表（用于根据 nodeId 查找节点）
+async function fetchNodeById(nodeId: number): Promise<Node | null> {
+  try {
+    const responseText = await invoke<string>('api_get_node_list');
+    const response = JSON.parse(responseText);
+    
+    if (response.code === 200) {
+      const nodes: Node[] = response.data;
+      return nodes.find(n => n.nodeId === nodeId) || null;
+    }
+  } catch (error) {
+    console.error('获取节点列表失败:', error);
+  }
+  return null;
+}
+
+// 初始化
+onMounted(async () => {
+  // 优先从路由 query 获取 nodeId
+  if (route.query.nodeId) {
+    const nodeId = parseInt(route.query.nodeId as string);
+    console.log('从路由 query 获取节点 ID:', nodeId);
+    selectedNode.value = await fetchNodeById(nodeId);
+    if (selectedNode.value) {
+      console.log('成功获取节点:', selectedNode.value);
+    }
+  }
+  // 其次从路由 state 获取
+  else if (history.state.selectedNode) {
+    selectedNode.value = history.state.selectedNode;
+    console.log('从路由 state 获取节点:', selectedNode.value);
+  } 
+  // 最后从 props 获取
+  else if (props.selectedNode) {
+    selectedNode.value = props.selectedNode;
+    console.log('从 props 获取节点:', selectedNode.value);
+  }
+  
+  // 如果都没有，返回节点选择页面
+  if (!selectedNode.value) {
+    console.warn('未找到选中的节点，返回节点选择页面');
+    message.warning('请先选择一个节点');
+    router.push('/create-tunnel');
+    return;
+  }
+  
+  // 获取节点状态
+  fetchNodeStatus();
+  
+  // 设置协议类型默认值为第一个选项
+  if (tunnelTypeOptions.value.length > 0) {
+    tunnelForm.value.type = tunnelTypeOptions.value[0].value;
+  }
+});
 
 // Emits
 const emit = defineEmits<{
@@ -228,7 +291,8 @@ const formRules = {
 
 // 隧道类型选项
 const tunnelTypeOptions = computed(() => {
-  const allowedTypes = props.selectedNode.allowType.toLowerCase().split(';');
+  if (!selectedNode.value) return [];
+  const allowedTypes = selectedNode.value.allowType.toLowerCase().split(';');
   const allTypes = [
     { label: 'TCP', value: 'tcp' },
     { label: 'UDP', value: 'udp' }
@@ -272,7 +336,7 @@ async function getFreePort() {
     gettingPort.value = true;
 
     const requestData = {
-      nodeId: props.selectedNode.nodeId,
+      nodeId: selectedNode.value?.nodeId,
       protocol: tunnelForm.value.type
     };
 
@@ -306,7 +370,7 @@ async function createTunnel() {
     creating.value = true;
 
     const requestData = {
-      nodeId: props.selectedNode.nodeId,
+      nodeId: selectedNode.value?.nodeId,
       proxyName: tunnelForm.value.name,
       proxyType: tunnelForm.value.type,
       localIp: tunnelForm.value.localIp,
@@ -378,15 +442,7 @@ async function fetchNodeStatus() {
   }
 }
 
-// 组件挂载时获取节点状态并设置默认值
-onMounted(() => {
-  fetchNodeStatus();
 
-  // 设置协议类型默认值为第一个选项
-  if (tunnelTypeOptions.value.length > 0) {
-    tunnelForm.value.type = tunnelTypeOptions.value[0].value;
-  }
-});
 </script>
 
 <style scoped>

@@ -296,8 +296,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { invoke } from '@tauri-apps/api/core';
 import { useMessage } from 'naive-ui';
+
+const router = useRouter();
+const message = useMessage();
 
 interface Node {
   nodeId: number;
@@ -353,7 +357,6 @@ const nodeStatus = ref<NodeStatus[]>([]);
 const loading = ref(true);
 const error = ref('');
 const selectedNode = ref<Node | null>(null);
-const message = useMessage();
 
 // 用户组（用于VIP判断）
 const userGroup = ref<string>('default');
@@ -612,10 +615,23 @@ function selectNode(node: Node) {
 
 // 进入下一步
 function nextStep() {
-  if (selectedNode.value) {
-    console.log('选中的节点:', selectedNode.value);
-    emit('node-selected', selectedNode.value);
+  console.log('nextStep 被调用');
+  console.log('selectedNode:', selectedNode.value);
+  
+  if (!selectedNode.value) {
+    console.warn('没有选中的节点');
+    message.warning('请先选择一个节点');
+    return;
   }
+  
+  console.log('准备跳转到隧道配置页面');
+  // 使用 query 参数传递节点 ID，然后在目标页面重新获取节点数据
+  router.push({
+    name: 'TunnelConfig',
+    query: {
+      nodeId: selectedNode.value.nodeId.toString()
+    }
+  });
 }
 
 // 重新加载数据（增加用户组获取）

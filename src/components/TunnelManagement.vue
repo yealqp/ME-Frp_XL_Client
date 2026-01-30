@@ -173,19 +173,22 @@
   </div>
 
   <!-- 日志模态框 -->
-  <n-modal v-model:show="showLogs" preset="card" title="隧道日志" style="width: 80%; max-width: 800px;">
+  <n-modal v-model:show="showLogs" preset="card" title="隧道日志" style="width: 80%; max-width: 800px;" @after-leave="stopAutoRefreshLogs">
     <div class="log-container">
       <div class="log-header">
         <span>隧道 ID: {{ currentTunnelId }}</span>
-        <n-button size="small" @click="viewLogs(currentTunnelId!)" :loading="loading">
-          刷新日志
-        </n-button>
+        <n-space :size="8">
+          <n-tag type="error">如果您截图分享此页面请打码红色字体内容</n-tag>
+          <n-button size="small" @click="viewLogs(currentTunnelId!)" :loading="loadingLogs">
+            刷新日志
+          </n-button>
+        </n-space>
       </div>
       <div class="log-content">
         <div v-if="currentLogs.length === 0" class="no-logs">
           暂无日志
         </div>
-        <div v-else class="log-lines">
+        <div v-else class="log-lines" ref="logLinesRef">
           <div v-for="(log, index) in currentLogs" :key="index" class="log-line" v-html="colorizeLog(log)">
           </div>
         </div>
@@ -381,7 +384,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted } from 'vue';
+import { h, ref, onMounted, watch, nextTick } from 'vue';
 import { useMessage } from 'naive-ui';
 import { invoke } from '@tauri-apps/api/core';
 
@@ -562,6 +565,10 @@ async function stopTunnel(id: number) {
 const showLogs = ref(false);
 const currentLogs = ref<string[]>([]);
 const currentTunnelId = ref<number | null>(null);
+const loadingLogs = ref(false);
+const autoRefreshLogs = ref(true); // 默认开启自动刷新
+const logRefreshTimer = ref<number | null>(null);
+const logLinesRef = ref<HTMLElement | null>(null);
 
 // 查看隧道详情
 const showDetails = ref(false);
@@ -590,14 +597,92 @@ const editForm = ref({
 
 const viewLogs = async (tunnelId: number) => {
   try {
+    loadingLogs.value = true;
     currentTunnelId.value = tunnelId;
     const logs = await invoke('api_get_tunnel_logs', { proxyId: tunnelId });
+    
+    // 检查是否在底部
+    const wasAtBottom = isScrolledToBottom();
+    
     currentLogs.value = logs as string[];
     showLogs.value = true;
+    
+    // 如果之前在底部，刷新后自动滚动到底部
+    if (wasAtBottom) {
+      nextTick(() => {
+        scrollToBottom();
+      });
+    }
+    
+    // 启动自动刷新
+    startAutoRefreshLogs();
   } catch (error) {
     message.error(`获取日志失败: ${error}`);
+  } finally {
+    loadingLogs.value = false;
   }
 };
+
+// 检查是否滚动到底部
+const isScrolledToBottom = (): boolean => {
+  if (!logLinesRef.value) return true;
+  const element = logLinesRef.value;
+  return element.scrollHeight - element.scrollTop - element.clientHeight < 50;
+};
+
+// 滚动到底部
+const scrollToBottom = () => {
+  if (logLinesRef.value) {
+    logLinesRef.value.scrollTop = logLinesRef.value.scrollHeight;
+  }
+};
+
+// 启动自动刷新日志
+const startAutoRefreshLogs = () => {
+  // 清除已存在的定时器
+  stopAutoRefreshLogs();
+  
+  if (autoRefreshLogs.value && currentTunnelId.value) {
+    logRefreshTimer.value = window.setInterval(async () => {
+      if (currentTunnelId.value && showLogs.value && autoRefreshLogs.value) {
+        try {
+          const logs = await invoke('api_get_tunnel_logs', { proxyId: currentTunnelId.value });
+          
+          // 检查是否在底部
+          const wasAtBottom = isScrolledToBottom();
+          
+          currentLogs.value = logs as string[];
+          
+          // 如果之前在底部，自动滚动到底部
+          if (wasAtBottom) {
+            nextTick(() => {
+              scrollToBottom();
+            });
+          }
+        } catch (error) {
+          console.error('自动刷新日志失败:', error);
+        }
+      }
+    }, 300); // 每2秒刷新一次
+  }
+};
+
+// 停止自动刷新日志
+const stopAutoRefreshLogs = () => {
+  if (logRefreshTimer.value) {
+    clearInterval(logRefreshTimer.value);
+    logRefreshTimer.value = null;
+  }
+};
+
+// 监听自动刷新开关变化
+watch(autoRefreshLogs, (newValue) => {
+  if (newValue && showLogs.value && currentTunnelId.value) {
+    startAutoRefreshLogs();
+  } else {
+    stopAutoRefreshLogs();
+  }
+});
 
 // 为日志添加颜色
 const colorizeLog = (log: string): string => {
@@ -640,6 +725,24 @@ const colorizeLog = (log: string): string => {
     '<span style="color: #7cb342;">$1</span>'
   );
   
+  // IP地址:端口 - 红色加粗
+  cleanLog = cleanLog.replace(
+    /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+)\b/g,
+    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>'
+  );
+  
+  // 域名:端口 - 红色加粗
+  cleanLog = cleanLog.replace(
+    /\b([a-zA-Z0-9][-a-zA-Z0-9]*(\.[a-zA-Z0-9][-a-zA-Z0-9]*)+:\d+)\b/g,
+    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>'
+  );
+  
+  // 访问密钥（32位十六进制字符串）- 红色加粗 
+  cleanLog = cleanLog.replace(
+    /\b([0-9a-f]{32})\b/gi,
+    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>'
+  );
+  
   return cleanLog;
 };
 
@@ -664,13 +767,6 @@ const formatTimestamp = (timestamp: number) => {
     minute: '2-digit',
     second: '2-digit'
   });
-};
-
-// 获取节点名称
-const getNodeName = (): string => {
-  // 这里需要根据proxyId从节点简要信息中匹配
-  // 暂时返回未知，后续需要实现节点信息获取逻辑
-  return '未知';
 };
 
 // 获取节点地址
@@ -1252,7 +1348,6 @@ defineExpose({
   saveEdit,
   cancelEdit,
   formatTimestamp,
-  getNodeName,
   getNodeAddress,
   getFreePortForEdit,
   getTunnelConfig,

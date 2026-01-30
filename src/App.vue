@@ -345,10 +345,6 @@ console.log(`     __  _________   ______                  ___          __  __   
         <n-dialog-provider>
         <!-- 加载状态 -->
         <div v-if="isCheckingAuth" class="loading-container">
-          <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>正在检查登录状态...</p>
-          </div>
         </div>
         
         <!-- 登录页面 -->
