@@ -1894,10 +1894,13 @@ async fn api_request(app_handle: tauri::AppHandle, method: String, url: String, 
 // 保存配置文件到本地
 #[tauri::command]
 async fn save_config_file(_app_handle: tauri::AppHandle, file_name: String, content: String) -> Result<String, String> {
-    let current_dir = env::current_dir()
-        .map_err(|e| format!("获取当前目录失败: {}", e))?;
+    // 使用可执行文件所在目录，与启动隧道时的路径保持一致
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("获取当前可执行文件路径失败: {}", e))?;
+    let exe_dir = exe_path.parent()
+        .ok_or("无法获取可执行文件目录")?;
     
-    let config_file_path = current_dir.join(&file_name);
+    let config_file_path = exe_dir.join(&file_name);
     
     fs::write(&config_file_path, content)
         .map_err(|e| format!("保存配置文件失败: {}", e))?;
@@ -1908,10 +1911,13 @@ async fn save_config_file(_app_handle: tauri::AppHandle, file_name: String, cont
 // 删除配置文件
 #[tauri::command]
 async fn delete_config_file(_app_handle: tauri::AppHandle, file_name: String) -> Result<String, String> {
-    let current_dir = env::current_dir()
-        .map_err(|e| format!("获取当前目录失败: {}", e))?;
+    // 使用可执行文件所在目录，与启动隧道时的路径保持一致
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("获取当前可执行文件路径失败: {}", e))?;
+    let exe_dir = exe_path.parent()
+        .ok_or("无法获取可执行文件目录")?;
     
-    let config_file_path = current_dir.join(&file_name);
+    let config_file_path = exe_dir.join(&file_name);
     
     if config_file_path.exists() {
         fs::remove_file(&config_file_path)
@@ -1925,14 +1931,17 @@ async fn delete_config_file(_app_handle: tauri::AppHandle, file_name: String) ->
 // 检查隧道是否有配置文件
 #[tauri::command]
 async fn check_tunnel_config_files(_app_handle: tauri::AppHandle) -> Result<Vec<i32>, String> {
-    let current_dir = env::current_dir()
-        .map_err(|e| format!("获取当前目录失败: {}", e))?;
+    // 使用可执行文件所在目录，与启动隧道时的路径保持一致
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("获取当前可执行文件路径失败: {}", e))?;
+    let exe_dir = exe_path.parent()
+        .ok_or("无法获取可执行文件目录")?;
     
     let config_formats = ["toml", "json", "yml", "ini"];
     let mut tunnels_with_config = Vec::new();
     
     // 读取目录中的所有文件
-    let entries = fs::read_dir(&current_dir)
+    let entries = fs::read_dir(&exe_dir)
         .map_err(|e| format!("读取目录失败: {}", e))?;
     
     for entry in entries {

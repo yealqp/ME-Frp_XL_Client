@@ -193,8 +193,8 @@
                 详情
               </n-button>
 
-              <n-button 
-                type="default" 
+              <n-button
+                type="default"
                 size="small"
                 @click="(e: MouseEvent) => toggleMoreMenu(tunnel.proxyId, e)"
               >
@@ -203,7 +203,7 @@
                 </template>
                 更多
               </n-button>
-              
+
               <n-dropdown
                 :show="showMoreMenu[tunnel.proxyId] || false"
                 :options="getMoreOptions(tunnel.proxyId)"
@@ -211,7 +211,9 @@
                 :x="dropdownPosition[tunnel.proxyId]?.x || 0"
                 :y="dropdownPosition[tunnel.proxyId]?.y || 0"
                 @clickoutside="showMoreMenu[tunnel.proxyId] = false"
-                @select="(key: string) => handleMoreActionClick(key, tunnel.proxyId)"
+                @select="
+                  (key: string) => handleMoreActionClick(key, tunnel.proxyId)
+                "
               />
             </div>
           </template>
@@ -257,17 +259,10 @@
         </n-space>
       </div>
       <div class="log-content">
-        <div v-if="currentLogs.length === 0" class="no-logs">暂无日志</div>
-        <div v-else class="log-lines" ref="logLinesRef">
-          <!-- 启动提示 -->
-          <div
-            v-if="currentTunnelId && actionLoading[currentTunnelId]"
-            class="log-line starting-hint"
-          >
-            <n-spin size="small" style="vertical-align: middle" />
-            <span style="margin-left: 8px; color: #42a5f5; font-weight: 600"
-              >正在尝试启动隧道...</span
-            >
+        <div class="log-lines" ref="logLinesRef">
+          <!-- 启动提示 - 永久显示在日志内容顶部 -->
+          <div>
+            <span>正在尝试启动隧道...</span>
           </div>
           <!-- 日志内容 -->
           <div
@@ -336,10 +331,16 @@
             currentTunnelDetails.remotePort || "未分配"
           }}
         </span>
-        <span class="detail-value" v-else-if="currentTunnelDetails.proxyType === 'http'">
+        <span
+          class="detail-value"
+          v-else-if="currentTunnelDetails.proxyType === 'http'"
+        >
           http://{{ currentTunnelDetails.domain || "未配置域名" }}
         </span>
-        <span class="detail-value" v-else-if="currentTunnelDetails.proxyType === 'https'">
+        <span
+          class="detail-value"
+          v-else-if="currentTunnelDetails.proxyType === 'https'"
+        >
           https://{{ currentTunnelDetails.domain || "未配置域名" }}
         </span>
         <span class="detail-value" v-else>
@@ -565,7 +566,12 @@
                   :rows="20"
                   :autosize="{ minRows: 20, maxRows: 30 }"
                   placeholder="请输入配置内容"
-                  style="font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 12px;"
+                  style="
+                    font-family:
+                      &quot;Consolas&quot;, &quot;Monaco&quot;,
+                      &quot;Courier New&quot;, monospace;
+                    font-size: 12px;
+                  "
                 />
                 <n-code
                   v-else
@@ -643,47 +649,47 @@ const nodeNameMap = ref<Record<number, string>>({});
 const nodeHostnameMap = ref<Record<number, string>>({});
 const showMoreMenu = ref<Record<number, boolean>>({});
 const dropdownPosition = ref<Record<number, { x: number; y: number }>>({});
-const dropdownPlacement = ref<Record<number, 'top-start' | 'bottom-start'>>({});
+const dropdownPlacement = ref<Record<number, "top-start" | "bottom-start">>({});
 
 // 切换更多菜单
 function toggleMoreMenu(tunnelId: number, event: MouseEvent) {
   // 关闭所有其他菜单
-  Object.keys(showMoreMenu.value).forEach(key => {
+  Object.keys(showMoreMenu.value).forEach((key) => {
     if (Number(key) !== tunnelId) {
       showMoreMenu.value[Number(key)] = false;
     }
   });
-  
+
   // 切换当前菜单
   const willShow = !showMoreMenu.value[tunnelId];
   showMoreMenu.value[tunnelId] = willShow;
-  
+
   // 如果要显示菜单，设置下拉菜单位置
   if (willShow && event) {
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-    
+
     // 估算菜单高度（大约每项40px，加上分隔线和内边距）
     const estimatedMenuHeight = 400; // 保守估计
     const windowHeight = window.innerHeight;
     const spaceBelow = windowHeight - rect.bottom;
     const spaceAbove = rect.top;
-    
+
     // 如果下方空间不足，且上方空间更多，则显示在上方
     let x = rect.left;
     let y: number;
-    let placement: 'top-start' | 'bottom-start';
-    
+    let placement: "top-start" | "bottom-start";
+
     if (spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow) {
       // 显示在按钮上方
       y = rect.top - 4;
-      placement = 'top-start';
+      placement = "top-start";
     } else {
       // 显示在按钮下方
       y = rect.bottom + 4;
-      placement = 'bottom-start';
+      placement = "bottom-start";
     }
-    
+
     dropdownPosition.value[tunnelId] = { x, y };
     dropdownPlacement.value[tunnelId] = placement;
   }
@@ -714,7 +720,10 @@ async function loadNodeNames() {
 async function loadConfigFileStatus() {
   try {
     const tunnelsWithConfig = await invoke("check_tunnel_config_files");
-    usingConfigFile.value = new Set(tunnelsWithConfig as number[]);
+    console.log("加载配置文件状态:", tunnelsWithConfig);
+    // 使用数组以触发响应式更新
+    usingConfigFile.value = tunnelsWithConfig as number[];
+    console.log("更新后的usingConfigFile:", usingConfigFile.value);
   } catch (err) {
     console.error("加载配置文件状态失败:", err);
   }
@@ -1167,7 +1176,7 @@ const activeConfigType = ref("toml");
 const configContents = ref<Record<string, string>>({});
 const editableConfigContents = ref<Record<string, string>>({});
 const loadingConfig = ref(false);
-const usingConfigFile = ref<Set<number>>(new Set());
+const usingConfigFile = ref<number[]>([]);
 const isEditingConfig = ref(false);
 
 // 获取隧道配置文件
@@ -1209,8 +1218,8 @@ async function saveConfigFile(
     });
     message.success(`配置文件已保存: ${fileName}，下次启动将使用配置文件模式`);
 
-    // 立即更新本地状态
-    usingConfigFile.value.add(tunnelId);
+    // 添加短暂延迟确保文件系统操作完成
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // 立即刷新配置文件状态以确保与文件系统同步
     await loadConfigFileStatus();
@@ -1229,6 +1238,7 @@ async function useConfigFile(tunnelId: number) {
   configContents.value = {};
   editableConfigContents.value = {};
   isEditingConfig.value = false;
+  message.success("正在尝试获取配置文件内容,请等待", { duration: 8000 });
 
   // 获取所有格式的配置文件
   for (const format of configTypes) {
@@ -1330,8 +1340,8 @@ async function switchToQuickStart(tunnelId: number) {
 
     await Promise.all(deletePromises);
 
-    // 更新状态
-    usingConfigFile.value.delete(tunnelId);
+    // 重新加载配置文件状态以触发响应式更新
+    await loadConfigFileStatus();
     message.success("已切换到快速启动模式");
   } catch (err) {
     console.error("切换到快速启动失败:", err);
@@ -1473,18 +1483,23 @@ function getMoreOptions(tunnelId: number) {
       {
         label: "刷新",
         key: "refresh",
-        icon: () => h(NIcon, null, { default: () => h("i", { class: "fas fa-sync-alt" }) }),
+        icon: () =>
+          h(NIcon, null, {
+            default: () => h("i", { class: "fas fa-sync-alt" }),
+          }),
       },
     ];
   }
 
-  const isUsingConfig = usingConfigFile.value.has(tunnelId);
+  const isUsingConfig = usingConfigFile.value.includes(tunnelId);
+  console.log(`隧道 ${tunnelId} 配置文件状态:`, isUsingConfig, "当前数组:", usingConfigFile.value);
 
   const options: any[] = [
     {
       label: "编辑",
       key: "edit",
-      icon: () => h(NIcon, null, { default: () => h("i", { class: "fas fa-edit" }) }),
+      icon: () =>
+        h(NIcon, null, { default: () => h("i", { class: "fas fa-edit" }) }),
     },
     {
       type: "divider",
@@ -1497,19 +1512,26 @@ function getMoreOptions(tunnelId: number) {
       {
         label: "配置文件",
         key: "view-config",
-        icon: () => h(NIcon, null, { default: () => h("i", { class: "fas fa-file-code" }) }),
+        icon: () =>
+          h(NIcon, null, {
+            default: () => h("i", { class: "fas fa-file-code" }),
+          }),
       },
       {
         label: "改用快速启动",
         key: "use-quick-start",
-        icon: () => h(NIcon, null, { default: () => h("i", { class: "fas fa-rocket" }) }),
+        icon: () =>
+          h(NIcon, null, { default: () => h("i", { class: "fas fa-rocket" }) }),
       },
     );
   } else {
     options.push({
       label: "改用配置文件",
       key: "use-config",
-      icon: () => h(NIcon, null, { default: () => h("i", { class: "fas fa-file-export" }) }),
+      icon: () =>
+        h(NIcon, null, {
+          default: () => h("i", { class: "fas fa-file-export" }),
+        }),
     });
   }
 
@@ -1534,7 +1556,10 @@ function getMoreOptions(tunnelId: number) {
     {
       label: "强制下线",
       key: "kick",
-      icon: () => h(NIcon, null, { default: () => h("i", { class: "fas fa-sign-out-alt" }) }),
+      icon: () =>
+        h(NIcon, null, {
+          default: () => h("i", { class: "fas fa-sign-out-alt" }),
+        }),
     },
     {
       type: "divider",
@@ -1544,7 +1569,11 @@ function getMoreOptions(tunnelId: number) {
       label: "删除隧道",
       key: "delete",
       icon: () =>
-        h(NIcon, { style: { color: "#d03050" } }, { default: () => h("i", { class: "fas fa-trash" }) }),
+        h(
+          NIcon,
+          { style: { color: "#d03050" } },
+          { default: () => h("i", { class: "fas fa-trash" }) },
+        ),
     },
   );
 
