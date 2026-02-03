@@ -25,6 +25,28 @@
           <i class="logout-icon fas fa-sign-out-alt"></i>
           <span class="logout-text">退出登录</span>
         </div>
+
+        <!-- 仙林云计算广告 -->
+        <a
+          href="https://www.idcxl.cn"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="ad-banner"
+        >
+          <div class="ad-content">
+            <div class="ad-icon">
+              <img
+                src="../assets/xly.ico"
+                alt="仙林云计算"
+                class="ad-logo"
+              />
+            </div>
+            <div class="ad-text">
+              <div class="ad-title">仙林云计算</div>
+              <div class="ad-subtitle">推荐服务商 价格低廉</div>
+            </div>
+          </div>
+        </a>
       </div>
     </n-config-provider>
   </div>
@@ -206,6 +228,65 @@ onMounted(() => {
   padding: 20px;
   border-top: 1px solid #29292c;
   background-color: #18181c;
+}
+
+/* 广告横幅样式 */
+.ad-banner {
+  display: block;
+  margin-top: 16px;
+  padding: 16px;
+  background: #1e3a8a;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+}
+
+.ad-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.4);
+  background: #1e40af;
+}
+
+.ad-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ad-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.ad-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.ad-text {
+  flex: 1;
+  color: #ffffff;
+}
+
+.ad-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #ffffff;
+}
+
+.ad-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+  color: #ffffff;
 }
 
 .logo {
