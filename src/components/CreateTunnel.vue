@@ -346,12 +346,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
 
-const router = useRouter();
-const route = useRoute();
 const message = useMessage();
 
 interface Node {
