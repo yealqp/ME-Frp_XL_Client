@@ -974,12 +974,6 @@ const colorizeLog = (log: string): string => {
     '<span style="color: #ff6b6b;">[E]</span>',
   );
 
-  // 日志级别 [D] - 紫色
-  cleanLog = cleanLog.replace(
-    /\[D\]/g,
-    '<span style="color: #ab47bc;">[D]</span>',
-  );
-
   // 文件路径 [xxx.go:123] - 绿色（先处理，避免被后续规则匹配）
   cleanLog = cleanLog.replace(
     /(\[[^\]]+\.go:\d+\])/g,
