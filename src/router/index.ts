@@ -89,8 +89,7 @@ router.beforeEach(async (to, _from, next) => {
   if (to.meta.requiresAuth) {
     try {
       const config = await invoke<UnifiedConfig>("load_unified_config");
-      const isLoggedIn =
-        config && (config.apiStatus === "connected" || config.userToken);
+      const isLoggedIn = config && config.userToken;
 
       if (isLoggedIn) {
         next();

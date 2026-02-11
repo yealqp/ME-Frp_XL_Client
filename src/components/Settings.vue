@@ -390,7 +390,7 @@ const saveSettings = async () => {
     // 首先加载当前的统一配置
     const currentConfig = await invoke<UnifiedConfig>("load_unified_config");
 
-    // 更新设置部分
+    // 更新设置部分（不包含 theme，theme 由前端管理）
     const updatedConfig: UnifiedConfig = {
       ...currentConfig,
       autoStart: settings.value.autoStart,
@@ -398,11 +398,13 @@ const saveSettings = async () => {
       autoUpdate: settings.value.autoUpdate,
       autoStartTunnels: settings.value.autoStartTunnels,
       startupDelay: settings.value.startupDelay,
-      theme: settings.value.theme,
       minimizeToTray: settings.value.minimizeToTray,
     };
 
     await invoke("save_unified_config", { config: updatedConfig });
+    
+    // theme 保存到 localStorage
+    localStorage.setItem("mefrp_theme", settings.value.theme);
   } catch (error) {
     console.error("保存设置失败:", error);
   }
@@ -422,7 +424,7 @@ const loadSettings = async () => {
             : true,
         autoStartTunnels: unifiedConfig.autoStartTunnels || [],
         startupDelay: unifiedConfig.startupDelay || 5,
-        theme: unifiedConfig.theme || "dark",
+        theme: localStorage.getItem("mefrp_theme") || "dark",
         minimizeToTray:
           unifiedConfig.minimizeToTray !== undefined
             ? unifiedConfig.minimizeToTray

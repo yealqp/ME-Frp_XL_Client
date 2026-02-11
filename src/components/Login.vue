@@ -328,24 +328,15 @@ async function handleTokenLogin() {
 
     console.log("步骤8: 使用用户信息更新配置文件...");
     // 使用获取到的用户信息更新配置，保留已保存的 frpToken
-    const currentTime = new Date().toISOString();
     const completeConfig: UnifiedConfig = {
       ...latestConfig, // 使用最新配置，包含已保存的 frpToken
-      apiStatus: "success",
-      loginTime: currentTime,
       username: userInfo.username || "",
-      userInfo: {
-        group: userInfo.group || "",
-        token: loginForm.value.userToken.trim(),
-        username: userInfo.username || "",
-      },
+      group: userInfo.group || "",
     };
 
     console.log("准备保存完整配置:", {
-      apiStatus: completeConfig.apiStatus,
-      loginTime: completeConfig.loginTime,
       username: completeConfig.username,
-      userInfo: completeConfig.userInfo,
+      group: completeConfig.group,
       hasUserToken: !!completeConfig.userToken,
       hasFrpToken: !!completeConfig.frpToken,
       frpTokenLength: completeConfig.frpToken?.length || 0,

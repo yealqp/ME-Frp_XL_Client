@@ -149,8 +149,8 @@ const checkAuthStatus = async (retryCount = 0): Promise<void> => {
     console.log("从统一配置读取:", config);
 
     if (config) {
-      // 检查是否有API连接状态或有效的user_token
-      if (config.apiStatus === "connected" || config.userToken) {
+      // 检查是否有有效的 userToken
+      if (config.userToken) {
         isLoggedIn.value = true;
         // 如果当前在登录页，跳转到首页
         if (route.path === "/login" || route.path === "/") {
@@ -200,16 +200,10 @@ const handleLogout = async (): Promise<void> => {
     const config = await invoke<UnifiedConfig>("load_unified_config");
     const clearedConfig: UnifiedConfig = {
       ...config,
-      apiStatus: "",
-      loginTime: "",
       userToken: "",
       frpToken: "",
       username: "",
-      userInfo: {
-        group: null,
-        token: null,
-        username: null,
-      },
+      group: "",
     };
     await invoke("save_unified_config", { config: clearedConfig });
     console.log("已清除登录信息，保留应用设置");

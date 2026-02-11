@@ -1,18 +1,12 @@
-// 统一配置类型定义
-export interface UserInfo {
-  group: string | null;
-  token: string | null;
-  username: string | null;
-}
-
+// 统一配置类型定义（优化后）
+// 移除了冗余字段：apiStatus, theme, loginTime, userInfo
+// 将 userInfo.group 提升到顶层作为 group 字段
 export interface UnifiedConfig {
   // 登录相关配置
-  apiStatus: string;
-  loginTime: string;
   userToken: string;
   frpToken: string;
   username: string;
-  userInfo: UserInfo;
+  group: string;
 
   // 应用设置
   autoStart: boolean;
@@ -20,8 +14,14 @@ export interface UnifiedConfig {
   autoUpdate: boolean;
   autoStartTunnels: number[];
   startupDelay: number;
-  theme: string;
   minimizeToTray: boolean;
+}
+
+// 旧的用户信息类型（保留用于向后兼容）
+export interface UserInfo {
+  group: string | null;
+  token: string | null;
+  username: string | null;
 }
 
 // 兼容性配置类型（用于旧API）

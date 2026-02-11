@@ -487,7 +487,7 @@ const tunnelTypeOptions = computed(() => {
 async function fetchUserGroup(): Promise<void> {
   try {
     const config = await invoke<any>("load_unified_config");
-    const group = config?.userInfo?.group ?? "default";
+    const group = config?.group ?? "default";
     userGroup.value = String(group).toLowerCase();
   } catch (err) {
     console.error("获取用户组失败:", err);
