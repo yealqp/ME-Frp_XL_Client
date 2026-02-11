@@ -2026,11 +2026,23 @@ pub fn run() {
             }
         }))
         .setup(|app| {
-            // 在应用启动时检查并加载配置（如果需要则迁移旧配置）
+            // 在应用启动时同步加载配置（如果需要则迁移旧配置）
+            // 使用 block_on 确保配置在应用启动前加载完成
             let app_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = load_unified_config(app_handle).await {
-                    eprintln!("配置加载失败: {}", e);
+            tauri::async_runtime::block_on(async move {
+                match load_unified_config(app_handle).await {
+                    Ok(config) => {
+                        println!("配置加载成功");
+                        // 打印登录状态以便调试
+                        if !config.user_token.is_empty() {
+                            println!("检测到已登录用户: {}", config.username);
+                        } else {
+                            println!("未检测到登录信息");
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("配置加载失败: {}", e);
+                    }
                 }
             });
             

@@ -233,7 +233,7 @@ const xlqq = async () => {
 
 const sendyEmail = async () => {
   try {
-    await openUrl("mailto:yealqp@163.com?subject=ME-Frp XL用户支持");
+    await openUrl("mailto:im@yealqp.cn?subject=ME-Frp XL用户支持");
     message.success("正在打开邮件客户端");
   } catch (error) {
     message.error("打开邮件客户端失败");

@@ -16,9 +16,7 @@
         <div v-if="popupNoticeLoading" class="loading-container">
           <n-spin size="large" />
         </div>
-        <div v-else class="notice-text">
-          {{ popupNoticeContent }}
-        </div>
+        <div v-else class="notice-text" v-html="parseMarkdownContent(popupNoticeContent)"></div>
       </div>
       <template #footer>
         <div style="display: flex; justify-content: flex-end">
@@ -1327,10 +1325,201 @@ onMounted(() => {
 }
 
 .popup-notice-content .notice-text {
-  white-space: pre-wrap;
   line-height: 1.8;
   color: #ffffffd1;
   font-size: 14px;
   padding: 10px 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 弹窗公告 Markdown 样式 */
+.popup-notice-content .notice-text h1,
+.popup-notice-content .notice-text h2,
+.popup-notice-content .notice-text h3,
+.popup-notice-content .notice-text h4,
+.popup-notice-content .notice-text h5,
+.popup-notice-content .notice-text h6 {
+  margin: 16px 0 8px 0;
+  color: #ffffffd1;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.popup-notice-content .notice-text h1 {
+  font-size: 24px;
+  border-bottom: 2px solid #3e3e42;
+  padding-bottom: 8px;
+}
+
+.popup-notice-content .notice-text h2 {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.popup-notice-content .notice-text h3 {
+  font-size: 18px;
+}
+
+.popup-notice-content .notice-text h4 {
+  font-size: 16px;
+}
+
+.popup-notice-content .notice-text .h2-divider {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 8px 0 16px 0;
+}
+
+.popup-notice-content .notice-text p {
+  margin: 8px 0;
+  color: #a0a0a0;
+  line-height: 1.7;
+}
+
+.popup-notice-content .notice-text code.inline-code {
+  background: #303033;
+  color: #e8e8ea;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  border: 1px solid #3e3e42;
+}
+
+.popup-notice-content .notice-text pre {
+  background: #1a1a1e;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid #3e3e42;
+}
+
+.popup-notice-content .notice-text pre code {
+  background: transparent;
+  color: #e8e8ea;
+  padding: 0;
+  border: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.popup-notice-content .notice-text blockquote.custom-blockquote {
+  border-left: 4px solid #349ff4;
+  margin: 12px 0;
+  padding: 8px 12px;
+  background: #242428;
+  color: #a0a0a0;
+  border-radius: 0 4px 4px 0;
+}
+
+.popup-notice-content .notice-text blockquote.custom-blockquote p {
+  margin: 4px 0;
+}
+
+.popup-notice-content .notice-text ul,
+.popup-notice-content .notice-text ol {
+  margin: 12px 0;
+  padding-left: 28px;
+  color: #a0a0a0;
+}
+
+.popup-notice-content .notice-text li {
+  margin: 6px 0;
+  line-height: 1.7;
+  padding-left: 8px;
+}
+
+.popup-notice-content .notice-text ul li {
+  list-style-type: disc;
+}
+
+.popup-notice-content .notice-text ul li::marker {
+  color: #349ff4;
+  font-size: 0.8em;
+}
+
+.popup-notice-content .notice-text ol li {
+  list-style-type: decimal;
+}
+
+.popup-notice-content .notice-text ol li::marker {
+  color: #349ff4;
+  font-weight: 600;
+}
+
+.popup-notice-content .notice-text ul ul,
+.popup-notice-content .notice-text ol ol,
+.popup-notice-content .notice-text ul ol,
+.popup-notice-content .notice-text ol ul {
+  margin: 4px 0;
+  padding-left: 24px;
+}
+
+.popup-notice-content .notice-text li p {
+  margin: 2px 0;
+}
+
+.popup-notice-content .notice-text a {
+  color: #349ff4;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.popup-notice-content .notice-text a:hover {
+  color: #4da8f5;
+  text-decoration: underline;
+}
+
+.popup-notice-content .notice-text hr {
+  border: none;
+  border-top: 1px solid #3e3e42;
+  margin: 16px 0;
+}
+
+.popup-notice-content .notice-text table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  background: #1a1a1e;
+  border: 1px solid #3e3e42;
+}
+
+.popup-notice-content .notice-text table th,
+.popup-notice-content .notice-text table td {
+  padding: 8px 12px;
+  border: 1px solid #3e3e42;
+  text-align: left;
+}
+
+.popup-notice-content .notice-text table th {
+  background: #242428;
+  color: #ffffffd1;
+  font-weight: 600;
+}
+
+.popup-notice-content .notice-text table td {
+  color: #a0a0a0;
+}
+
+.popup-notice-content .notice-text table tr:hover {
+  background: #242428;
+}
+
+.popup-notice-content .notice-text strong {
+  color: #ffffffd1;
+  font-weight: 600;
+}
+
+.popup-notice-content .notice-text em {
+  color: #b0b0b0;
+  font-style: italic;
+}
+
+.popup-notice-content .notice-text del {
+  color: #707070;
+  text-decoration: line-through;
 }
 </style>

@@ -139,7 +139,10 @@ function getComponentListeners(component: any) {
 }
 
 // 配置相关函数
-const checkAuthStatus = async (): Promise<void> => {
+const checkAuthStatus = async (retryCount = 0): Promise<void> => {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 500; // 500ms
+
   try {
     // 从统一配置读取
     const config = await invoke<UnifiedConfig>("load_unified_config");
@@ -160,10 +163,22 @@ const checkAuthStatus = async (): Promise<void> => {
     } else {
       router.push("/login");
     }
+    
+    // 成功加载配置，结束检查状态
+    isCheckingAuth.value = false;
   } catch (error) {
-    console.error("检查登录状态失败:", error);
+    console.error(`检查登录状态失败 (尝试 ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+    
+    // 如果还有重试次数，延迟后重试
+    if (retryCount < MAX_RETRIES) {
+      console.log(`将在 ${RETRY_DELAY}ms 后重试...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return checkAuthStatus(retryCount + 1);
+    }
+    
+    // 重试次数用尽，跳转到登录页
+    console.error("配置加载失败，已达到最大重试次数");
     router.push("/login");
-  } finally {
     isCheckingAuth.value = false;
   }
 };
