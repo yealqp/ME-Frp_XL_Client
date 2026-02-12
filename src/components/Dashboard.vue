@@ -39,7 +39,7 @@
               </div>
             </div>
             <div class="status-check-icon">
-              <i :class="getStatusIcon()"></i>
+              <component :is="getStatusIcon()" :size="18" />
             </div>
           </div>
         </div>
@@ -279,6 +279,7 @@ import MarkdownIt from "markdown-it";
 import { useMessage } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
+import { CheckCircle, AlertTriangle, XCircle, HelpCircle } from "lucide-vue-next";
 
 // Initialize User Store
 const userStore = useUserStore();
@@ -481,17 +482,17 @@ const getStatusClass = (): string => {
   }
 };
 
-// 获取系统状态图标
-const getStatusIcon = (): string => {
+// 获取系统状态图标组件
+const getStatusIcon = () => {
   switch (systemStatus.value.status) {
     case 0:
-      return "fas fa-check-circle";
+      return CheckCircle;
     case 1:
-      return "fas fa-exclamation-triangle";
+      return AlertTriangle;
     case 2:
-      return "fas fa-times-circle";
+      return XCircle;
     default:
-      return "fas fa-question-circle";
+      return HelpCircle;
   }
 };
 
@@ -632,15 +633,6 @@ const getAnnouncementCardClass = (announcement: any): string => {
 
 // 获取弹窗公告（改为获取重要公告）
 const fetchPopupNotice = async () => {
-  // 检查是否已经关闭过（使用 localStorage 记录）
-  const noticeClosed = localStorage.getItem("important_notice_closed");
-  
-  // 如果用户已关闭，则不再显示
-  if (noticeClosed === "true") {
-    console.log("重要公告已被用户关闭，跳过");
-    return;
-  }
-
   popupNoticeLoading.value = true;
 
   try {
@@ -671,8 +663,7 @@ const fetchPopupNotice = async () => {
 // 关闭重要公告警告框
 const closeImportantNotice = () => {
   showImportantNotice.value = false;
-  // 记录用户已关闭，下次不再显示
-  localStorage.setItem("important_notice_closed", "true");
+  // 不再记录到 localStorage，每次进入页面都会显示
 };
 
 // 组件挂载时获取用户信息和系统公告
@@ -872,12 +863,29 @@ onMounted(() => {
   text-decoration: none;
   transition: color 0.2s;
   font-weight: 500;
+  position: relative;
+}
+
+.important-notice-alert :deep(a::after),
+.announcement-card :deep(a::after) {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 1px;
+  background-color: #6bb8f7;
+  transition: width 0.3s ease;
 }
 
 .important-notice-alert :deep(a:hover),
 .announcement-card :deep(a:hover) {
   color: #6bb8f7;
-  text-decoration: underline;
+}
+
+.important-notice-alert :deep(a:hover::after),
+.announcement-card :deep(a:hover::after) {
+  width: 100%;
 }
 
 /* 强调文本 */
@@ -1087,7 +1095,6 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 18px;
   border: 2px solid;
 }
 

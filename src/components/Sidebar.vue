@@ -22,7 +22,7 @@
 
       <div class="sidebar-footer">
         <div class="logout-item" @click="handleNavClick('logout')">
-          <i class="logout-icon fas fa-sign-out-alt"></i>
+          <LogOut :size="18" class="logout-icon" />
           <span class="logout-text">退出登录</span>
         </div>
 
@@ -61,6 +61,15 @@ import type { MenuOption } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig } from "../types/config";
 import { showAdGlobal } from "../utils/eventBus";
+import {
+  Home,
+  PlusCircle,
+  Settings as SettingsIcon,
+  User,
+  HelpCircle,
+  Info,
+  LogOut,
+} from "lucide-vue-next";
 
 const router = useRouter();
 const route = useRoute();
@@ -100,12 +109,6 @@ const customTheme = {
   },
 };
 
-interface NavItem {
-  id: string;
-  name: string;
-  icon: string;
-}
-
 const emit = defineEmits<{
   logout: [];
 }>();
@@ -128,21 +131,21 @@ const activeNav = computed(() => {
 });
 
 // 导航项配置
-const navItems: NavItem[] = [
-  { id: "dashboard", name: "面板首页", icon: "fas fa-home" },
-  { id: "create-tunnel", name: "创建隧道", icon: "fas fa-plus-circle" },
-  { id: "tunnel-management", name: "隧道管理", icon: "fas fa-cogs" },
-  { id: "user-center", name: "用户中心", icon: "fas fa-user" },
-  { id: "help-center", name: "帮助中心", icon: "fas fa-question-circle" },
-  { id: "settings", name: "选项设置", icon: "fas fa-cog" },
-  { id: "about", name: "关于面板", icon: "fas fa-info-circle" },
+const navItems = [
+  { id: "dashboard", name: "面板首页", icon: Home },
+  { id: "create-tunnel", name: "创建隧道", icon: PlusCircle },
+  { id: "tunnel-management", name: "隧道管理", icon: SettingsIcon },
+  { id: "user-center", name: "用户中心", icon: User },
+  { id: "help-center", name: "帮助中心", icon: HelpCircle },
+  { id: "settings", name: "选项设置", icon: SettingsIcon },
+  { id: "about", name: "关于面板", icon: Info },
 ];
 
 // 创建菜单选项
 const menuOptions: MenuOption[] = navItems.map((item) => ({
   label: item.name,
   key: item.id,
-  icon: () => h("i", { class: item.icon }),
+  icon: () => h(item.icon, { size: 18 }),
 }));
 
 function handleMenuSelect(key: string) {
@@ -224,12 +227,15 @@ onMounted(() => {
   top: 0;
   left: 0;
   z-index: 1000;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar-header {
   padding: 20px;
   border-bottom: 1px solid #29292c;
   background-color: #18181c;
+  flex-shrink: 0;
 }
 
 .app-title {
@@ -237,12 +243,17 @@ onMounted(() => {
   font-weight: 600;
   margin: 0;
   color: #349ff4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .nav-content {
   flex: 1;
   padding: 10px 0;
   background-color: #18181c;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .sidebar-footer {
@@ -250,6 +261,7 @@ onMounted(() => {
   padding: 20px;
   border-top: 1px solid #29292c;
   background-color: #18181c;
+  flex-shrink: 0;
 }
 
 /* 广告横幅样式 */
@@ -312,17 +324,20 @@ onMounted(() => {
 }
 
 .logo {
-  width: 25px;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .logout-item {
   display: flex;
   align-items: center;
-  padding: 12px 20px;
+  padding: 12px 16px;
   cursor: pointer;
   transition: all 0.3s ease;
   border-radius: 6px;
   color: #e74c3c;
+  margin: 0 12px;
 }
 
 .logout-item:hover {
@@ -330,10 +345,8 @@ onMounted(() => {
 }
 
 .logout-icon {
-  font-size: 16px;
+  flex-shrink: 0;
   margin-right: 12px;
-  width: 20px;
-  text-align: center;
 }
 
 .logout-text {
@@ -349,6 +362,7 @@ onMounted(() => {
 :deep(.n-menu .n-menu-item) {
   margin: 4px 12px;
   border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 :deep(.n-menu .n-menu-item--selected) {
@@ -356,17 +370,34 @@ onMounted(() => {
   color: white !important;
 }
 
-:deep(.n-menu .n-menu-item:hover) {
+:deep(.n-menu .n-menu-item--selected .n-menu-item-content-header) {
+  color: white !important;
+}
+
+:deep(.n-menu .n-menu-item:hover:not(.n-menu-item--selected)) {
   background-color: rgba(52, 159, 244, 0.1) !important;
 }
 
 :deep(.n-menu .n-menu-item-content) {
   padding: 12px 16px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 :deep(.n-menu .n-menu-item-content__icon) {
   margin-right: 12px !important;
-  font-size: 16px !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+:deep(.n-menu .n-menu-item-content-header) {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 /* 隐藏菜单项的 tooltip，避免显示两个悬浮框 */

@@ -4,7 +4,7 @@
       <n-card :bordered="true" class="settings-section">
         <template #header>
           <div class="section-header">
-            <i class="fas fa-cog"></i>
+            <SettingsIcon :size="18" />
             <span>应用设置</span>
           </div>
         </template>
@@ -63,7 +63,7 @@
       <n-card :bordered="true" class="settings-section">
         <template #header>
           <div class="section-header">
-            <i class="fas fa-rocket"></i>
+            <Rocket :size="18" />
             <span>隧道设置</span>
           </div>
         </template>
@@ -178,7 +178,7 @@
                           @click.stop="moveTunnelUp(tunnel.proxyId)"
                           title="向上移动"
                         >
-                          <i class="fas fa-arrow-up"></i>
+                          <ArrowUp :size="14" />
                         </n-button>
                         <n-button
                           v-if="
@@ -190,7 +190,7 @@
                           @click.stop="moveTunnelDown(tunnel.proxyId)"
                           title="向下移动"
                         >
-                          <i class="fas fa-arrow-down"></i>
+                          <ArrowDown :size="14" />
                         </n-button>
                       </div>
                     </div>
@@ -266,6 +266,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
 import { showAdGlobal } from "../utils/eventBus";
+import { Settings as SettingsIcon, Rocket, ArrowUp, ArrowDown } from "lucide-vue-next";
 
 // 使用导入的AppSettings类型
 type Settings = AppSettings;
@@ -296,8 +297,8 @@ const settings = ref<Settings>({
   autoStartTunnels: [],
   startupDelay: 5,
   theme: "dark",
-  minimizeToTray: true,
-  showAd: true,
+  minimizeToTray: false, // 改为 false，等待从配置加载
+  showAd: false, // 改为 false，等待从配置加载
 });
 
 // 隧道数据
@@ -623,7 +624,7 @@ onMounted(() => {
   color: #ffffff;
 }
 
-.section-header i {
+.section-header :deep(svg) {
   color: #349ff4;
 }
 
@@ -810,10 +811,9 @@ onMounted(() => {
   height: 20px;
   padding: 0;
   min-width: unset;
-}
-
-.order-buttons-vertical .n-button i {
-  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (max-width: 768px) {

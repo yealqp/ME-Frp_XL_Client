@@ -4,7 +4,7 @@
       <h2 class="page-title">隧道管理</h2>
       <n-button type="primary" @click="refreshTunnels" :loading="loading">
         <template #icon>
-          <i class="fas fa-sync-alt"></i>
+          <RefreshCw :size="16" />
         </template>
         刷新
       </n-button>
@@ -144,7 +144,7 @@
                 :loading="actionLoading[tunnel.proxyId]"
               >
                 <template #icon>
-                  <i class="fas fa-play"></i>
+                  <Play :size="14" />
                 </template>
                 启动
               </n-button>
@@ -156,7 +156,7 @@
                 :loading="actionLoading[tunnel.proxyId]"
               >
                 <template #icon>
-                  <i class="fas fa-stop"></i>
+                  <Square :size="14" />
                 </template>
                 停止
               </n-button>
@@ -168,7 +168,7 @@
                 @click="viewLogs(tunnel.proxyId)"
               >
                 <template #icon>
-                  <i class="fas fa-file-alt"></i>
+                  <FileText :size="14" />
                 </template>
                 日志
               </n-button>
@@ -178,7 +178,7 @@
                 @click="copyRemoteAddress(tunnel.proxyId)"
               >
                 <template #icon>
-                  <i class="fas fa-copy"></i>
+                  <Copy :size="14" />
                 </template>
                 复制地址
               </n-button>
@@ -188,7 +188,7 @@
                 @click="viewTunnelDetails(tunnel.proxyId)"
               >
                 <template #icon>
-                  <i class="fas fa-info-circle"></i>
+                  <Info :size="14" />
                 </template>
                 详情
               </n-button>
@@ -199,7 +199,7 @@
                 @click="(e: MouseEvent) => toggleMoreMenu(tunnel.proxyId, e)"
               >
                 <template #icon>
-                  <i class="fas fa-cog"></i>
+                  <SettingsIcon :size="14" />
                 </template>
                 更多
               </n-button>
@@ -225,7 +225,7 @@
     <div v-else class="empty-state">
       <n-empty description="暂无隧道数据">
         <template #icon>
-          <i class="fas fa-inbox"></i>
+          <Inbox :size="48" />
         </template>
         <template #extra>
           <n-button type="primary" @click="goToCreateTunnel">
@@ -502,7 +502,7 @@
               :disabled="!configContents[activeConfigType]"
             >
               <template #icon>
-                <i class="fas fa-edit"></i>
+                <Edit :size="14" />
               </template>
               编辑配置
             </n-button>
@@ -519,7 +519,7 @@
               :disabled="!configContents[activeConfigType]"
             >
               <template #icon>
-                <i class="fas fa-save"></i>
+                <Save :size="14" />
               </template>
               保存到本地
             </n-button>
@@ -528,13 +528,13 @@
           <template v-else>
             <n-button type="success" size="small" @click="saveEditedConfig">
               <template #icon>
-                <i class="fas fa-check"></i>
+                <Check :size="14" />
               </template>
               保存修改
             </n-button>
             <n-button type="default" size="small" @click="cancelEditConfig">
               <template #icon>
-                <i class="fas fa-times"></i>
+                <X :size="14" />
               </template>
               取消
             </n-button>
@@ -594,6 +594,27 @@
 import { h, ref, onMounted, watch, nextTick } from "vue";
 import { useMessage, useDialog, NIcon } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  RefreshCw,
+  Play,
+  Square,
+  FileText,
+  Copy,
+  Info,
+  Settings as SettingsIcon,
+  Edit,
+  Save,
+  Check,
+  X,
+  Inbox,
+  FileCode,
+  Rocket,
+  FileOutput,
+  PlayCircle,
+  PauseCircle,
+  LogOut,
+  Trash2,
+} from "lucide-vue-next";
 
 interface Tunnel {
   proxyId: number;
@@ -1503,7 +1524,7 @@ function getMoreOptions(tunnelId: number) {
         key: "refresh",
         icon: () =>
           h(NIcon, null, {
-            default: () => h("i", { class: "fas fa-sync-alt" }),
+            default: () => h(RefreshCw, { size: 16 }),
           }),
       },
     ];
@@ -1517,7 +1538,7 @@ function getMoreOptions(tunnelId: number) {
       label: "编辑",
       key: "edit",
       icon: () =>
-        h(NIcon, null, { default: () => h("i", { class: "fas fa-edit" }) }),
+        h(NIcon, null, { default: () => h(Edit, { size: 16 }) }),
     },
     {
       type: "divider",
@@ -1532,14 +1553,14 @@ function getMoreOptions(tunnelId: number) {
         key: "view-config",
         icon: () =>
           h(NIcon, null, {
-            default: () => h("i", { class: "fas fa-file-code" }),
+            default: () => h(FileCode, { size: 16 }),
           }),
       },
       {
         label: "改用快速启动",
         key: "use-quick-start",
         icon: () =>
-          h(NIcon, null, { default: () => h("i", { class: "fas fa-rocket" }) }),
+          h(NIcon, null, { default: () => h(Rocket, { size: 16 }) }),
       },
     );
   } else {
@@ -1548,7 +1569,7 @@ function getMoreOptions(tunnelId: number) {
       key: "use-config",
       icon: () =>
         h(NIcon, null, {
-          default: () => h("i", { class: "fas fa-file-export" }),
+          default: () => h(FileOutput, { size: 16 }),
         }),
     });
   }
@@ -1564,11 +1585,7 @@ function getMoreOptions(tunnelId: number) {
       icon: () =>
         h(NIcon, null, {
           default: () =>
-            h("i", {
-              class: tunnel.isDisabled
-                ? "fas fa-play-circle"
-                : "fas fa-pause-circle",
-            }),
+            h(tunnel.isDisabled ? PlayCircle : PauseCircle, { size: 16 }),
         }),
     },
     {
@@ -1576,7 +1593,7 @@ function getMoreOptions(tunnelId: number) {
       key: "kick",
       icon: () =>
         h(NIcon, null, {
-          default: () => h("i", { class: "fas fa-sign-out-alt" }),
+          default: () => h(LogOut, { size: 16 }),
         }),
     },
     {
@@ -1590,7 +1607,7 @@ function getMoreOptions(tunnelId: number) {
         h(
           NIcon,
           { style: { color: "#d03050" } },
-          { default: () => h("i", { class: "fas fa-trash" }) },
+          { default: () => h(Trash2, { size: 16 }) },
         ),
     },
   );
@@ -1867,11 +1884,26 @@ defineExpose({
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .tunnel-actions .n-button {
   flex: 1;
   min-width: 80px;
+}
+
+.tunnel-actions :deep(.n-button__content) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.tunnel-actions :deep(.n-button__icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
 }
 
 .empty-state {

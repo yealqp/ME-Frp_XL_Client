@@ -4,7 +4,7 @@
       <h2 class="page-title">操作日志</h2>
       <n-button type="primary" @click="refreshLogs" :loading="loading">
         <template #icon>
-          <i class="fas fa-sync-alt"></i>
+          <RefreshCw :size="16" />
         </template>
         刷新
       </n-button>
@@ -39,13 +39,13 @@
           />
           <n-button type="primary" @click="applyFilters">
             <template #icon>
-              <i class="fas fa-filter"></i>
+              <Filter :size="16" />
             </template>
             筛选
           </n-button>
           <n-button @click="resetFilters">
             <template #icon>
-              <i class="fas fa-redo"></i>
+              <RotateCcw :size="16" />
             </template>
             重置
           </n-button>
@@ -74,6 +74,7 @@ import { ref, h, onMounted, reactive } from "vue";
 import { useMessage, NTag } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { DataTableColumns } from "naive-ui";
+import { RefreshCw, Filter, RotateCcw } from "lucide-vue-next";
 
 interface OperationLog {
   logId: number;

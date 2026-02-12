@@ -13,7 +13,11 @@
         <template #header>关于ME-Frp XL客户端</template>
         <n-descriptions label-placement="left" bordered :column="2">
           <n-descriptions-item label="版本">
-            v{{ appVersion }}
+            <n-tag
+              type="success"
+              @click="openLink('https://mefrp-tpca.yealqp.cn/docs/xl')"
+              >v{{ appVersion }}</n-tag
+            >
           </n-descriptions-item>
           <n-descriptions-item label="开发者">
             <div class="member-avatar-wrapper">
@@ -22,17 +26,67 @@
                 :alt="`yealqp Avatar`"
                 class="member-avatar-img"
               />
-              <a>Yealqp/猫羽雫 @1592239257</a>
+              <a>Yealqp/猫羽雫 QQ1592239257</a>
             </div>
           </n-descriptions-item>
           <n-descriptions-item label="技术栈">
             <n-space>
-              <n-tag :bordered="false" type="success"> Vue3 </n-tag>
-              <n-tag :bordered="false" type="info"> TypeScript </n-tag>
-              <n-tag :bordered="false" type="warning"> Naive UI </n-tag>
-              <n-tag :bordered="false" type="error"> Vite </n-tag>
-              <n-tag :bordered="false" type="info"> Tauri 2 </n-tag>
-              <n-tag :bordered="false" type="error"> Rust </n-tag>
+              <n-tag
+                :bordered="false"
+                type="success"
+                style="cursor: pointer"
+                @click="openLink('https://vuejs.org/')"
+              >
+                Vue3
+              </n-tag>
+              <n-tag
+                :bordered="false"
+                type="info"
+                style="cursor: pointer"
+                @click="openLink('https://www.typescriptlang.org/')"
+              >
+                TypeScript
+              </n-tag>
+              <n-tag
+                :bordered="false"
+                type="warning"
+                style="cursor: pointer"
+                @click="openLink('https://www.naiveui.com/')"
+              >
+                Naive UI
+              </n-tag>
+              <n-tag
+                :bordered="false"
+                type="warning"
+                style="cursor: pointer"
+                @click="openLink('https://pinia.vuejs.org/zh/')"
+              >
+                Pinna
+              </n-tag>
+              <n-tag
+                :bordered="false"
+                type="error"
+                style="cursor: pointer"
+                @click="openLink('https://vite.dev/')"
+              >
+                Vite
+              </n-tag>
+              <n-tag
+                :bordered="false"
+                type="info"
+                style="cursor: pointer"
+                @click="openLink('https://v2.tauri.app/')"
+              >
+                Tauri 2
+              </n-tag>
+              <n-tag
+                :bordered="false"
+                type="error"
+                style="cursor: pointer"
+                @click="openLink('https://www.rust-lang.org/')"
+              >
+                Rust
+              </n-tag>
             </n-space>
           </n-descriptions-item>
         </n-descriptions>
@@ -41,7 +95,7 @@
       <n-card :bordered="true" class="hitokoto-card">
         <div class="hitokoto-content">
           <div class="hitokoto-text">
-            <i class="fas fa-quote-left quote-icon"></i>
+            <Quote :size="20" class="quote-icon" />
             <span class="hitokoto-sentence">{{ hitokoto.sentence }}</span>
           </div>
           <div class="hitokoto-meta">
@@ -60,7 +114,7 @@
               size="small"
             >
               <template #icon>
-                <i class="fas fa-sync-alt"></i>
+                <RefreshCw :size="16" />
               </template>
               换一句
             </n-button>
@@ -72,7 +126,7 @@
       <n-card :bordered="true" class="feedback-card">
         <template #header>
           <div class="section-header">
-            <i class="fas fa-comment-dots"></i>
+            <MessageCircle :size="18" />
             <span>桌面版反馈</span>
           </div>
         </template>
@@ -82,42 +136,25 @@
         <div class="card-actions">
           <n-button type="primary" @click="showFeedbackModal = true">
             <template #icon>
-              <i class="fas fa-edit"></i>
+              <Edit :size="16" />
             </template>
             表单反馈
           </n-button>
-          <n-button type="info" @click="sendyEmail">
+          <n-button type="primary" @click="sendyEmail">
             <template #icon>
-              <i class="fas fa-envelope"></i>
+              <Mail :size="16" />
             </template>
             发送邮件
           </n-button>
-          <n-button type="default" @click="OpenDownloadpage">
+          <n-button type="primary" @click="OpenDownloadpage">
             <template #icon>
-              <i class="fas fa-download"></i>
+              <Download :size="16" />
             </template>
             查看下载页
           </n-button>
-        </div>
-      </n-card>
-      <!-- 检查更新卡片 -->
-      <n-card :bordered="true" class="update-card">
-        <template #header>
-          <div class="section-header">
-            <i class="fas fa-sync-alt"></i>
-            <span>检查更新</span>
-          </div>
-        </template>
-        <div class="update-content">
-          <n-button
-            type="primary"
-            size="large"
-            @click="checkForUpdates"
-            :loading="updateChecking"
-            block
-          >
+          <n-button type="primary" @click="checkForUpdates">
             <template #icon>
-              <i class="fas fa-download"></i>
+              <Download :size="16" />
             </template>
             {{ updateChecking ? "检查中..." : "检查更新" }}
           </n-button>
@@ -138,7 +175,7 @@
             <n-tag type="info" :bordered="false" size="large">
               v{{ currentVersion }}
             </n-tag>
-            <i class="fas fa-arrow-right"></i>
+            <ArrowRight :size="18" />
             <n-tag type="success" :bordered="false" size="large">
               v{{ latestVersion }}
             </n-tag>
@@ -160,7 +197,7 @@
           <n-button @click="handleCancelUpdate">稍后提醒</n-button>
           <n-button type="primary" @click="handleUpdate">
             <template #icon>
-              <i class="fas fa-download"></i>
+              <Download :size="16" />
             </template>
             立即更新
           </n-button>
@@ -221,6 +258,15 @@ import {
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  MessageCircle,
+  Edit,
+  Mail,
+  Download,
+  ArrowRight,
+  RefreshCw,
+  Quote,
+} from "lucide-vue-next";
 
 interface UpdateCheckResult {
   has_update: boolean;
@@ -367,8 +413,19 @@ const sendyEmail = async () => {
 
 const OpenDownloadpage = async () => {
   try {
-    await openUrl("https://alist.yealqp.cn/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF");
+    await openUrl(
+      "https://alist.yealqp.cn/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF",
+    );
     message.success("正在打开下载页面");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
+};
+
+// 打开外部链接
+const openLink = async (url: string) => {
+  try {
+    await openUrl(url);
   } catch (error) {
     message.error("打开链接失败");
   }
@@ -394,7 +451,9 @@ const submitFeedback = async () => {
     feedbackForm.value.content = "";
   } catch (error) {
     console.error("提交反馈失败:", error);
-    message.error(`提交反馈失败: ${error instanceof Error ? error.message : "网络错误"}`);
+    message.error(
+      `提交反馈失败: ${error instanceof Error ? error.message : "网络错误"}`,
+    );
   } finally {
     feedbackSubmitting.value = false;
   }
@@ -406,7 +465,7 @@ const submitFeedback = async () => {
 }
 
 .about-content {
-  max-width: 600px;
+  max-width: 900px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -415,7 +474,8 @@ const submitFeedback = async () => {
 
 /* 一言卡片样式 */
 .hitokoto-card {
-  border: none;
+  background: #18181c;
+  border: 1px solid #29292c;
 }
 
 .hitokoto-card :deep(.n-card__content) {
@@ -436,10 +496,9 @@ const submitFeedback = async () => {
 }
 
 .quote-icon {
-  font-size: 20px;
-  color: rgba(255, 255, 255, 0.6);
   flex-shrink: 0;
   margin-top: 4px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .hitokoto-sentence {
@@ -490,6 +549,23 @@ const submitFeedback = async () => {
 
 .app-info {
   text-align: center;
+  background: #18181c;
+  border: 1px solid #29292c;
+}
+
+.tech-stack {
+  background: #18181c;
+  border: 1px solid #29292c;
+}
+
+/* 技术栈标签悬停效果 */
+.tech-stack :deep(.n-tag) {
+  transition: all 0.3s ease;
+}
+
+.tech-stack :deep(.n-tag:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 159, 244, 0.3);
 }
 
 .app-logo {
@@ -638,6 +714,13 @@ const submitFeedback = async () => {
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-drag: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 /* 检查更新卡片样式 */
@@ -655,7 +738,7 @@ const submitFeedback = async () => {
   color: #ffffff;
 }
 
-.section-header i {
+.section-header :deep(svg) {
   color: #349ff4;
 }
 
@@ -736,9 +819,8 @@ const submitFeedback = async () => {
   border-radius: 8px;
 }
 
-.version-info i {
+.version-info :deep(svg) {
   color: #349ff4;
-  font-size: 18px;
 }
 
 .update-info {

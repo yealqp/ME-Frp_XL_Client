@@ -215,7 +215,7 @@
             </div>
             <div class="node-actions">
               <n-button type="default" @click="goBack">
-                <template #icon><i class="fas fa-arrow-left"></i></template>
+                <template #icon><ArrowLeft :size="16" /></template>
                 返回选择
               </n-button>
               <n-button
@@ -223,7 +223,7 @@
                 @click="createTunnel"
                 :loading="creating"
               >
-                <template #icon><i class="fas fa-plus"></i></template>
+                <template #icon><Plus :size="16" /></template>
                 创建隧道
               </n-button>
             </div>
@@ -348,6 +348,7 @@
 import { ref, onMounted, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
+import { ArrowLeft, Plus } from "lucide-vue-next";
 
 const message = useMessage();
 

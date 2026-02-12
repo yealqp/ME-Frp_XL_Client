@@ -196,7 +196,7 @@
     <n-card :bordered="true" class="traffic-stats-card">
       <template #header>
         <div class="section-header">
-          <i class="fas fa-chart-line"></i>
+          <TrendingUp :size="18" />
           <span>流量历史记录</span>
         </div>
       </template>
@@ -288,7 +288,7 @@
     <n-card :bordered="true" class="cdk-section">
       <template #header>
         <div class="section-header">
-          <i class="fas fa-gift"></i>
+          <Gift :size="18" />
           <span>CDK兑换</span>
         </div>
       </template>
@@ -301,14 +301,14 @@
           </div>
           <n-button type="primary" @click="showCdkDialog">
             <template #icon>
-              <i class="fas fa-ticket-alt"></i>
+              <Ticket :size="16" />
             </template>
             兑换CDK
           </n-button>
         </div>
       </n-space>
       <div class="section-header">
-        <i class="fas fa-history"></i>
+        <History :size="18" />
         <span>CDK兑换历史</span>
       </div>
 
@@ -371,7 +371,7 @@
       <n-space vertical :size="24">
         <div class="cdk-redeem-item">
           <div class="cdk-info">
-            <i class="fas fa-history"></i>
+            <History :size="18" />
             查看我的操作审计日志
             <p>
               此操作仅用于查阅本账号历史操作记录，不会对当前运行的服务或网络连接造成任何影响。
@@ -383,7 +383,7 @@
         </div>
         <div class="cdk-redeem-item">
           <div class="cdk-info">
-            <i class="fas fa-power-off"></i>
+            <Power :size="18" />
             下线所有隧道
             <p>
               执行此操作后，您的在线隧道都将被踢出服务器，若您仍有正在运行的服务，请提前做好容灾措施。
@@ -518,6 +518,7 @@ import { useUserStore } from "../stores/user";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts";
 import CaptchaVerify from "./CaptchaVerify.vue";
+import { TrendingUp, Gift, Ticket, History, Power } from "lucide-vue-next";
 
 const router = useRouter();
 const message = useMessage();
@@ -1374,17 +1375,12 @@ onMounted(() => {
 
   // 初始化图表 - 确保 DOM 完全渲染后再初始化
   nextTick(() => {
-    console.log("nextTick 执行");
-    console.log("chartContainer.value:", chartContainer.value);
 
     setTimeout(() => {
-      console.log("setTimeout 执行，准备初始化图表");
       if (chartContainer.value) {
-        console.log("容器存在，开始初始化");
         initChart();
         loadTrafficStats();
       } else {
-        console.error("容器不存在！");
       }
     }, 200);
   });
@@ -1576,7 +1572,7 @@ onBeforeUnmount(() => {
   color: #ffffff;
 }
 
-.section-header i {
+.section-header :deep(svg) {
   color: #349ff4;
 }
 
