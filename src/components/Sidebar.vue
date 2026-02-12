@@ -28,6 +28,7 @@
 
         <!-- 仙林云计算广告 -->
         <a
+          v-if="showAd"
           href="https://www.idcxl.cn"
           target="_blank"
           rel="noopener noreferrer"
@@ -57,9 +58,27 @@ import { h, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { darkTheme } from "naive-ui";
 import type { MenuOption } from "naive-ui";
+import { invoke } from "@tauri-apps/api/core";
+import type { UnifiedConfig } from "../types/config";
+import { showAdGlobal } from "../utils/eventBus";
 
 const router = useRouter();
 const route = useRoute();
+
+// 使用全局响应式广告显示状态
+const showAd = showAdGlobal;
+
+// 加载广告显示设置
+const loadAdSettings = async () => {
+  try {
+    const config = await invoke<UnifiedConfig>("load_unified_config");
+    if (config) {
+      showAdGlobal.value = config.showAd !== undefined ? config.showAd : true;
+    }
+  } catch (error) {
+    console.error("加载广告设置失败:", error);
+  }
+};
 
 // 自定义主题配置
 const customTheme = {
@@ -115,7 +134,7 @@ const navItems: NavItem[] = [
   { id: "tunnel-management", name: "隧道管理", icon: "fas fa-cogs" },
   { id: "user-center", name: "用户中心", icon: "fas fa-user" },
   { id: "help-center", name: "帮助中心", icon: "fas fa-question-circle" },
-  { id: "settings", name: "设置", icon: "fas fa-cog" },
+  { id: "settings", name: "选项设置", icon: "fas fa-cog" },
   { id: "about", name: "关于面板", icon: "fas fa-info-circle" },
 ];
 
@@ -154,6 +173,9 @@ function handleNavClick(navId: string) {
 
 // 隐藏 Menu 的 tooltip
 onMounted(() => {
+  // 加载广告设置
+  loadAdSettings();
+  
   // 使用 MutationObserver 监听 DOM 变化，移除 popover
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {

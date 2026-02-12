@@ -210,7 +210,7 @@
                 :placement="dropdownPlacement[tunnel.proxyId] || 'bottom-start'"
                 :x="dropdownPosition[tunnel.proxyId]?.x || 0"
                 :y="dropdownPosition[tunnel.proxyId]?.y || 0"
-                @clickoutside="showMoreMenu[tunnel.proxyId] = false"
+                @clickoutside="() => { showMoreMenu[tunnel.proxyId] = false; }"
                 @select="
                   (key: string) => handleMoreActionClick(key, tunnel.proxyId)
                 "
@@ -566,12 +566,10 @@
                   :rows="20"
                   :autosize="{ minRows: 20, maxRows: 30 }"
                   placeholder="请输入配置内容"
-                  style="
-                    font-family:
-                      &quot;Consolas&quot;, &quot;Monaco&quot;,
-                      &quot;Courier New&quot;, monospace;
-                    font-size: 12px;
-                  "
+                  :style="{
+                    fontFamily: 'Consolas, Monaco, Courier New, monospace',
+                    fontSize: '12px'
+                  }"
                 />
                 <n-code
                   v-else
@@ -594,7 +592,7 @@
 
 <script setup lang="ts">
 import { h, ref, onMounted, watch, nextTick } from "vue";
-import { useMessage, NIcon } from "naive-ui";
+import { useMessage, useDialog, NIcon } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 
 interface Tunnel {
@@ -639,6 +637,7 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 const message = useMessage();
+const dialog = useDialog();
 
 // 响应式数据
 const tunnels = ref<Tunnel[]>([]);
@@ -653,16 +652,21 @@ const dropdownPlacement = ref<Record<number, "top-start" | "bottom-start">>({});
 
 // 切换更多菜单
 function toggleMoreMenu(tunnelId: number, event: MouseEvent) {
-  // 关闭所有其他菜单
+  event.stopPropagation(); // 阻止事件冒泡
+  
+  // 获取当前状态
+  const currentState = showMoreMenu.value[tunnelId] || false;
+  const willShow = !currentState;
+  
+  // 关闭所有菜单
+  const newShowMoreMenu: Record<number, boolean> = {};
   Object.keys(showMoreMenu.value).forEach((key) => {
-    if (Number(key) !== tunnelId) {
-      showMoreMenu.value[Number(key)] = false;
-    }
+    newShowMoreMenu[Number(key)] = false;
   });
-
-  // 切换当前菜单
-  const willShow = !showMoreMenu.value[tunnelId];
-  showMoreMenu.value[tunnelId] = willShow;
+  
+  // 设置当前菜单状态
+  newShowMoreMenu[tunnelId] = willShow;
+  showMoreMenu.value = newShowMoreMenu;
 
   // 如果要显示菜单，设置下拉菜单位置
   if (willShow && event) {
@@ -690,8 +694,14 @@ function toggleMoreMenu(tunnelId: number, event: MouseEvent) {
       placement = "bottom-start";
     }
 
-    dropdownPosition.value[tunnelId] = { x, y };
-    dropdownPlacement.value[tunnelId] = placement;
+    dropdownPosition.value = {
+      ...dropdownPosition.value,
+      [tunnelId]: { x, y }
+    };
+    dropdownPlacement.value = {
+      ...dropdownPlacement.value,
+      [tunnelId]: placement
+    };
   }
 }
 
@@ -781,8 +791,15 @@ async function startTunnel(id: number) {
 
     if (result.code === 200) {
       message.success("隧道启动成功");
+      
       // 更新运行状态
       await loadRunningTunnels();
+      
+      // 更新对应隧道的在线状态
+      const tunnel = tunnels.value.find((t) => t.proxyId === id);
+      if (tunnel) {
+        tunnel.isOnline = true;
+      }
     } else {
       throw new Error(result.message || "启动隧道失败");
     }
@@ -805,8 +822,15 @@ async function stopTunnel(id: number) {
 
     if (result.code === 200) {
       message.success("隧道停止成功");
+      
       // 更新运行状态
       await loadRunningTunnels();
+      
+      // 更新对应隧道的在线状态
+      const tunnel = tunnels.value.find((t) => t.proxyId === id);
+      if (tunnel) {
+        tunnel.isOnline = false;
+      }
     } else {
       throw new Error(result.message || "停止隧道失败");
     }
@@ -1575,6 +1599,8 @@ function getMoreOptions(tunnelId: number) {
 }
 
 async function handleMoreAction(action: string, tunnelId: number) {
+  const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
+  
   switch (action) {
     case "edit":
       editTunnel(tunnelId);
@@ -1589,32 +1615,76 @@ async function handleMoreAction(action: string, tunnelId: number) {
       await switchToQuickStart(tunnelId);
       break;
     case "enable":
-      await toggleTunnel(tunnelId, true);
+      // 启用隧道确认
+      if (tunnel) {
+        dialog.info({
+          title: "确认启用",
+          content: `确定要启用隧道 "${tunnel.proxyName}" 吗？`,
+          positiveText: "确认启用",
+          negativeText: "取消",
+          onPositiveClick: async () => {
+            await toggleTunnel(tunnelId, true);
+          },
+        });
+      }
       break;
     case "disable":
-      await toggleTunnel(tunnelId, false);
+      // 禁用隧道确认
+      if (tunnel) {
+        dialog.warning({
+          title: "确认禁用",
+          content: `确定要禁用隧道 "${tunnel.proxyName}" 吗？禁用后将无法启动此隧道。`,
+          positiveText: "确认禁用",
+          negativeText: "取消",
+          onPositiveClick: async () => {
+            await toggleTunnel(tunnelId, false);
+          },
+        });
+      }
       break;
     case "kick":
-      await kickTunnel(tunnelId);
+      // 强制下线确认
+      if (tunnel) {
+        dialog.error({
+          title: "确认强制下线",
+          content: `确定要强制下线隧道 "${tunnel.proxyName}" 吗？这将立即断开所隧道连接。`,
+          positiveText: "确认下线",
+          negativeText: "取消",
+          onPositiveClick: async () => {
+            await kickTunnel(tunnelId);
+          },
+        });
+      }
       break;
     case "delete":
-      try {
-        const responseText = await invoke("api_delete_tunnel", {
-          proxyId: tunnelId,
-        });
-        const result = JSON.parse(responseText as string);
+      // 删除隧道确认
+      if (tunnel) {
+        dialog.warning({
+          title: "确认删除",
+          content: `确定要删除隧道 "${tunnel.proxyName}" 吗？删除后将无法恢复。`,
+          positiveText: "确认删除",
+          negativeText: "取消",
+          onPositiveClick: async () => {
+            try {
+              const responseText = await invoke("api_delete_tunnel", {
+                proxyId: tunnelId,
+              });
+              const result = JSON.parse(responseText as string);
 
-        if (result.code === 200) {
-          message.success("隧道删除成功");
-          // 重新加载隧道列表
-          await loadTunnels();
-          emit("tunnel-delete", tunnelId);
-        } else {
-          throw new Error(result.message || "删除隧道失败");
-        }
-      } catch (err) {
-        console.error("删除隧道失败:", err);
-        message.error(err instanceof Error ? err.message : "删除隧道失败");
+              if (result.code === 200) {
+                message.success("隧道删除成功");
+                // 重新加载隧道列表
+                await loadTunnels();
+                emit("tunnel-delete", tunnelId);
+              } else {
+                throw new Error(result.message || "删除隧道失败");
+              }
+            } catch (err) {
+              console.error("删除隧道失败:", err);
+              message.error(err instanceof Error ? err.message : "删除隧道失败");
+            }
+          },
+        });
       }
       break;
   }

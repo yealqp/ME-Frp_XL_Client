@@ -442,36 +442,6 @@
       </template>
     </n-modal>
 
-    <!-- 下线所有隧道确认对话框 -->
-    <n-modal
-      v-model:show="showKickAllProxiesModal"
-      preset="dialog"
-      title="确认下线所有隧道"
-      :positive-text="kickingAllProxies ? '下线中...' : '确认下线'"
-      negative-text="取消"
-      :positive-button-props="{ type: 'error', loading: kickingAllProxies }"
-      :closable="!kickingAllProxies"
-      :mask-closable="!kickingAllProxies"
-      @positive-click="handleKickAllProxies"
-    >
-      <n-space vertical :size="12">
-        <n-alert type="warning" :bordered="false">
-          <template #icon>
-            <i class="fas fa-exclamation-triangle"></i>
-          </template>
-          此操作将强制下线您账户下的所有在线隧道
-        </n-alert>
-        <div style="color: #ffffffd1; font-size: 14px; line-height: 1.6">
-          <p style="margin: 8px 0">下线后：</p>
-          <ul style="margin: 8px 0; padding-left: 20px">
-            <li>执行此操作后，您的所有在线隧道都将被踢出服务器。</li>
-            <li>若您仍有正在运行的服务，请提前做好容灾措施。</li>
-            <li>确定要继续执行此操作吗？</li>
-          </ul>
-        </div>
-      </n-space>
-    </n-modal>
-
     <!-- CDK兑换模态框 -->
     <n-modal
       v-model:show="showCdkModal"
@@ -531,6 +501,7 @@ import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   useMessage,
+  useDialog,
   NCard,
   NButton,
   NSpace,
@@ -547,6 +518,8 @@ import type { ECharts } from "echarts";
 import CaptchaVerify from "./CaptchaVerify.vue";
 
 const router = useRouter();
+const message = useMessage();
+const dialog = useDialog();
 
 interface UserDetailInfo {
   email: string;
@@ -599,8 +572,6 @@ interface TrafficStatsResponse {
   message: string;
 }
 
-const message = useMessage();
-
 // 用户信息
 const userInfo = ref<UserDetailInfo | null>(null);
 const userInfoLoading = ref(true);
@@ -612,7 +583,6 @@ const signCaptchaToken = ref("");
 
 // 下线所有隧道相关
 const kickingAllProxies = ref(false);
-const showKickAllProxiesModal = ref(false);
 
 // CDK兑换相关
 const cdkCode = ref("");
@@ -756,7 +726,15 @@ const goToOperationLog = () => {
 
 // 显示下线所有隧道对话框
 const showKickAllProxiesDialog = () => {
-  showKickAllProxiesModal.value = true;
+  dialog.error({
+    title: "确认下线所有隧道",
+    content: "此操作将强制下线您账户下的所有在线隧道。确定要继续执行此操作？",
+    positiveText: "确认下线",
+    negativeText: "取消",
+    onPositiveClick: async () => {
+      await handleKickAllProxies();
+    },
+  });
 };
 
 // 执行下线所有隧道
@@ -773,7 +751,6 @@ const handleKickAllProxies = async () => {
 
     if (result.code === 200) {
       message.success(result.message || "强制下线隧道成功");
-      showKickAllProxiesModal.value = false;
     } else {
       message.error(result.message || "下线隧道失败");
       return false;

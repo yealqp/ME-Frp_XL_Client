@@ -81,40 +81,6 @@
           </div>
         </template>
       </n-card>
-      <n-card title="桌面版反馈" hoverable>
-        <template #header-extra>
-          <div class="tags">
-            <n-tag type="success" size="small">推荐</n-tag>
-            <n-tag type="info" size="small">快速响应</n-tag>
-          </div>
-        </template>
-        <p class="card-description">
-          如果发现图形化客户端的BUG 或者有任何建议 欢迎去QQ群找@1592239257反馈
-        </p>
-        <template #footer>
-          <div class="card-actions">
-            <n-button type="primary" @click="sendyEmail">发送邮件</n-button>
-            <n-button type="primary" @click="OpenDownloadpage"
-              >查看下载页</n-button
-            >
-          </div>
-        </template>
-      </n-card>
-      <n-card title="仙林云计算" hoverable>
-        <template #header-extra>
-          <div class="tags">
-            <n-tag type="success" size="small">低价</n-tag>
-            <n-tag type="info" size="small">种类多样</n-tag>
-          </div>
-        </template>
-        <p class="card-description">赞助商 低价云服务器 NAT机 挂机宝</p>
-        <template #footer>
-          <div class="card-actions">
-            <n-button type="primary" @click="xlwy">点击前往</n-button>
-            <n-button type="primary" @click="xlqq">QQ群</n-button>
-          </div>
-        </template>
-      </n-card>
 
       <!-- 政策与条款 -->
       <n-card title="政策与条款" hoverable>
@@ -196,44 +162,6 @@ const copyQQGroup2 = () => {
 const sendEmail = async () => {
   try {
     await openUrl("mailto:support@mefrp.com");
-    message.success("正在打开邮件客户端");
-  } catch (error) {
-    message.error("打开邮件客户端失败");
-  }
-};
-
-const OpenDownloadpage = async () => {
-  try {
-    await openUrl("https://alist.yealqp.cn/");
-    message.success("正在打开下载页面");
-  } catch (error) {
-    message.error("打开链接失败");
-  }
-};
-
-const xlwy = async () => {
-  try {
-    await openUrl("https://www.idcxl.cn/");
-    message.success("正在跳转到仙林云计算");
-  } catch (error) {
-    message.error("打开链接失败");
-  }
-};
-
-const xlqq = async () => {
-  try {
-    await openUrl(
-      "https://qm.qq.com/cgi-bin/qm/qr?k=S5tzhFVCoN28LIyPA5BJEZ0EFayLz4zh&jump_from=webapi&authKey=/FxL2ZT41DaqB5gyb8f9jauks1L6b/143XAXv5z0MhYkET0OeVdyT+umItJVlzrL",
-    );
-    message.success("正在跳转到仙林云计算QQ群");
-  } catch (error) {
-    message.error("打开链接失败");
-  }
-};
-
-const sendyEmail = async () => {
-  try {
-    await openUrl("mailto:im@yealqp.cn?subject=ME-Frp XL用户支持");
     message.success("正在打开邮件客户端");
   } catch (error) {
     message.error("打开邮件客户端失败");

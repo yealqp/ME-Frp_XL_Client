@@ -658,6 +658,34 @@ async fn check_tunnel_config_files(_app_handle: tauri::AppHandle) -> Result<Vec<
     tunnel::check_tunnel_config_files().await
 }
 
+// 发送反馈到QQ群
+#[tauri::command]
+async fn api_send_feedback(
+    _app_handle: tauri::AppHandle,
+    content: String,
+) -> Result<String, String> {
+    let config = config::load_unified_config()
+        .await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    // 获取用户信息以获取 user_id 和 email
+    let user_info = api::auth::get_user_info(&config.user_token)
+        .await
+        .map_err(|e| format!("获取用户信息失败: {}", e))?;
+
+    api::feedback::send_feedback(
+        &config.user_token,
+        &content,
+        user_info.user_id,
+        &user_info.email,
+    )
+    .await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_manager: ProcessManager = Arc::new(Mutex::new(HashMap::new()));
@@ -852,7 +880,8 @@ pub fn run() {
             quit_app,
             get_app_version,
             check_for_updates,
-            download_and_install_update
+            download_and_install_update,
+            api_send_feedback
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

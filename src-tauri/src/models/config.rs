@@ -37,6 +37,8 @@ pub struct UnifiedConfig {
     pub startup_delay: i32,
     #[serde(rename = "minimizeToTray")]
     pub minimize_to_tray: bool,
+    #[serde(rename = "showAd")]
+    pub show_ad: bool,
 }
 
 impl Default for UnifiedConfig {
@@ -55,6 +57,7 @@ impl Default for UnifiedConfig {
             auto_start_tunnels: Vec::new(),
             startup_delay: 5,
             minimize_to_tray: true,
+            show_ad: true,
         }
     }
 }
@@ -77,6 +80,8 @@ pub struct AppSettings {
     pub theme: String,
     #[serde(rename = "minimizeToTray")]
     pub minimize_to_tray: bool,
+    #[serde(rename = "showAd")]
+    pub show_ad: bool,
 }
 
 impl Default for AppSettings {
@@ -89,6 +94,7 @@ impl Default for AppSettings {
             startup_delay: 5,
             theme: "dark".to_string(),
             minimize_to_tray: true,
+            show_ad: true,
         }
     }
 }

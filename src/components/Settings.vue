@@ -45,6 +45,18 @@
               @update:value="handleMinimizeToTrayChange"
             />
           </div>
+
+          <!-- 显示广告 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>显示侧边栏广告</h4>
+              <p>显示或隐藏侧边栏底部的广告</p>
+            </div>
+            <n-switch
+              v-model:value="settings.showAd"
+              @update:value="handleShowAdChange"
+            />
+          </div>
         </n-space>
       </n-card>
 
@@ -253,6 +265,7 @@ import {
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
+import { showAdGlobal } from "../utils/eventBus";
 
 // 使用导入的AppSettings类型
 type Settings = AppSettings;
@@ -284,6 +297,7 @@ const settings = ref<Settings>({
   startupDelay: 5,
   theme: "dark",
   minimizeToTray: true,
+  showAd: true,
 });
 
 // 隧道数据
@@ -384,6 +398,14 @@ const handleMinimizeToTrayChange = async (value: boolean) => {
   }
 };
 
+// 处理显示广告变化
+const handleShowAdChange = (value: boolean) => {
+  // 立即更新全局状态
+  showAdGlobal.value = value;
+  message.success(value ? "已开启侧边栏广告" : "已关闭侧边栏广告");
+  saveSettings();
+};
+
 // 保存设置
 const saveSettings = async () => {
   try {
@@ -399,6 +421,7 @@ const saveSettings = async () => {
       autoStartTunnels: settings.value.autoStartTunnels,
       startupDelay: settings.value.startupDelay,
       minimizeToTray: settings.value.minimizeToTray,
+      showAd: settings.value.showAd,
     };
 
     await invoke("save_unified_config", { config: updatedConfig });
@@ -429,7 +452,14 @@ const loadSettings = async () => {
           unifiedConfig.minimizeToTray !== undefined
             ? unifiedConfig.minimizeToTray
             : true,
+        showAd:
+          unifiedConfig.showAd !== undefined
+            ? unifiedConfig.showAd
+            : true,
       };
+      
+      // 同步全局广告显示状态
+      showAdGlobal.value = settings.value.showAd;
     }
 
     // 同步最小化到托盘设置到后端

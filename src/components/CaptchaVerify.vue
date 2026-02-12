@@ -3,68 +3,13 @@
     <!-- 加载状态 -->
     <div v-show="isLoading && !error" class="captcha-loading">
       <div class="loading-spinner">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="48px"
-          height="60px"
-          viewBox="0 0 24 30"
-        >
-          <rect x="0" y="9.22656" width="4" height="12.5469" fill="#349ff4">
-            <animate
-              attributeName="height"
-              attributeType="XML"
-              values="5;21;5"
-              begin="0s"
-              dur="0.6s"
-              repeatCount="indefinite"
-            ></animate>
-            <animate
-              attributeName="y"
-              attributeType="XML"
-              values="13; 5; 13"
-              begin="0s"
-              dur="0.6s"
-              repeatCount="indefinite"
-            ></animate>
-          </rect>
-          <rect x="10" y="5.22656" width="4" height="20.5469" fill="#349ff4">
-            <animate
-              attributeName="height"
-              attributeType="XML"
-              values="5;21;5"
-              begin="0.15s"
-              dur="0.6s"
-              repeatCount="indefinite"
-            ></animate>
-            <animate
-              attributeName="y"
-              attributeType="XML"
-              values="13; 5; 13"
-              begin="0.15s"
-              dur="0.6s"
-              repeatCount="indefinite"
-            ></animate>
-          </rect>
-          <rect x="20" y="8.77344" width="4" height="13.4531" fill="#349ff4">
-            <animate
-              attributeName="height"
-              attributeType="XML"
-              values="5;21;5"
-              begin="0.3s"
-              dur="0.6s"
-              repeatCount="indefinite"
-            ></animate>
-            <animate
-              attributeName="y"
-              attributeType="XML"
-              values="13; 5; 13"
-              begin="0.3s"
-              dur="0.6s"
-              repeatCount="indefinite"
-            ></animate>
-          </rect>
-        </svg>
-        <span class="loading-text">验证码加载中...</span>
+        <div class="spinner-container">
+          <div class="spinner-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -384,22 +329,127 @@ defineExpose({
   justify-content: center;
   width: 100%;
   padding: 20px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .loading-spinner {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
-.loading-spinner svg {
-  width: 18px;
-  height: 18px;
+.spinner-container {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-ring::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid rgba(52, 159, 244, 0.1);
+  border-radius: 50%;
+}
+
+.spinner-ring-inner {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top-color: #349ff4;
+  border-right-color: #349ff4;
+  border-radius: 50%;
+  animation: spin 0.8s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner-dots {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background-color: #349ff4;
+  border-radius: 50%;
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .loading-text {
   font-size: 14px;
-  color: #999;
+  color: #ffffffd1;
+  font-weight: 500;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .captcha-error {
@@ -413,6 +463,18 @@ defineExpose({
   border-radius: 0;
   color: #d03050;
   font-size: 14px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .retry-btn {
@@ -424,15 +486,19 @@ defineExpose({
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
 }
 
 .retry-btn:hover {
   background-color: #4da8f5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(52, 159, 244, 0.3);
 }
 
 .retry-btn:active {
   background-color: #2891f3;
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .captcha-container {

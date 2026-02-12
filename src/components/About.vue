@@ -68,6 +68,38 @@
         </div>
       </n-card>
 
+      <!-- 桌面版反馈卡片 -->
+      <n-card :bordered="true" class="feedback-card">
+        <template #header>
+          <div class="section-header">
+            <i class="fas fa-comment-dots"></i>
+            <span>桌面版反馈</span>
+          </div>
+        </template>
+        <p class="card-description">
+          如果发现图形化客户端的BUG 或者有任何建议 欢迎去QQ群找@1592239257反馈
+        </p>
+        <div class="card-actions">
+          <n-button type="primary" @click="showFeedbackModal = true">
+            <template #icon>
+              <i class="fas fa-edit"></i>
+            </template>
+            表单反馈
+          </n-button>
+          <n-button type="info" @click="sendyEmail">
+            <template #icon>
+              <i class="fas fa-envelope"></i>
+            </template>
+            发送邮件
+          </n-button>
+          <n-button type="default" @click="OpenDownloadpage">
+            <template #icon>
+              <i class="fas fa-download"></i>
+            </template>
+            查看下载页
+          </n-button>
+        </div>
+      </n-card>
       <!-- 检查更新卡片 -->
       <n-card :bordered="true" class="update-card">
         <template #header>
@@ -135,6 +167,40 @@
         </n-space>
       </template>
     </n-modal>
+
+    <!-- 反馈表单模态框 -->
+    <n-modal
+      v-model:show="showFeedbackModal"
+      preset="card"
+      :style="{ width: '500px' }"
+      title="表单反馈"
+    >
+      <n-form ref="feedbackFormRef" :model="feedbackForm" label-placement="top">
+        <n-form-item label="反馈内容" path="content" required>
+          <n-input
+            v-model:value="feedbackForm.content"
+            type="textarea"
+            placeholder="请详细描述您遇到的问题或建议"
+            :rows="6"
+            :maxlength="500"
+            show-count
+          />
+        </n-form-item>
+      </n-form>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showFeedbackModal = false">取消</n-button>
+          <n-button
+            type="primary"
+            @click="submitFeedback"
+            :loading="feedbackSubmitting"
+          >
+            提交反馈
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -149,8 +215,12 @@ import {
   NTag,
   NButton,
   NModal,
+  NForm,
+  NFormItem,
+  NInput,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 interface UpdateCheckResult {
   has_update: boolean;
@@ -173,6 +243,13 @@ const latestVersion = ref("");
 const currentVersion = ref("");
 const updateInfo = ref<string[]>([]);
 const appVersion = ref("加载中...");
+
+// 反馈表单相关
+const showFeedbackModal = ref(false);
+const feedbackSubmitting = ref(false);
+const feedbackForm = ref({
+  content: "",
+});
 
 // 一言相关
 const hitokoto = ref<Hitokoto>({
@@ -276,6 +353,51 @@ const handleUpdate = async () => {
 const handleCancelUpdate = () => {
   showUpdateModal.value = false;
   message.info("已取消更新，下次启动时会再次检查");
+};
+
+// 桌面版反馈相关
+const sendyEmail = async () => {
+  try {
+    await openUrl("mailto:im@yealqp.cn?subject=ME-Frp XL用户支持");
+    message.success("正在打开邮件客户端");
+  } catch (error) {
+    message.error("打开邮件客户端失败");
+  }
+};
+
+const OpenDownloadpage = async () => {
+  try {
+    await openUrl("https://alist.yealqp.cn/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF");
+    message.success("正在打开下载页面");
+  } catch (error) {
+    message.error("打开链接失败");
+  }
+};
+
+// 提交反馈表单
+const submitFeedback = async () => {
+  if (!feedbackForm.value.content.trim()) {
+    message.error("请输入反馈内容");
+    return;
+  }
+
+  feedbackSubmitting.value = true;
+
+  try {
+    await invoke("api_send_feedback", {
+      content: feedbackForm.value.content,
+    });
+
+    message.success("反馈提交成功，感谢您的反馈！");
+    showFeedbackModal.value = false;
+    // 清空表单
+    feedbackForm.value.content = "";
+  } catch (error) {
+    console.error("提交反馈失败:", error);
+    message.error(`提交反馈失败: ${error instanceof Error ? error.message : "网络错误"}`);
+  } finally {
+    feedbackSubmitting.value = false;
+  }
 };
 </script>
 <style scoped>
@@ -548,6 +670,57 @@ const handleCancelUpdate = () => {
   font-size: 14px;
   margin: 0;
   text-align: center;
+}
+
+/* 桌面版反馈卡片样式 */
+.feedback-card {
+  background: #18181c;
+  border: 1px solid #29292c;
+}
+
+.feedback-card .card-description {
+  color: #a0a0a0;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.feedback-card .card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* 仙林云计算卡片样式 */
+.sponsor-card {
+  background: #18181c;
+  border: 1px solid #29292c;
+}
+
+.sponsor-card .card-description {
+  color: #a0a0a0;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.sponsor-card .card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-description {
+  color: #a0a0a0;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 /* 更新模态框样式 */

@@ -15,6 +15,7 @@ export interface UnifiedConfig {
   autoStartTunnels: number[];
   startupDelay: number;
   minimizeToTray: boolean;
+  showAd: boolean;
 }
 
 // 旧的用户信息类型（保留用于向后兼容）
@@ -43,4 +44,5 @@ export interface AppSettings {
   startupDelay: number;
   theme: string;
   minimizeToTray: boolean;
+  showAd: boolean;
 }
