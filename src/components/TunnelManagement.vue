@@ -193,28 +193,37 @@
                 详情
               </n-button>
 
-              <n-button
-                type="default"
-                size="small"
-                @click="(e: MouseEvent) => toggleMoreMenu(tunnel.proxyId, e)"
-              >
-                <template #icon>
-                  <SettingsIcon :size="14" />
-                </template>
-                更多
-              </n-button>
-
-              <n-dropdown
-                :show="showMoreMenu[tunnel.proxyId] || false"
-                :options="getMoreOptions(tunnel.proxyId)"
-                :placement="dropdownPlacement[tunnel.proxyId] || 'bottom-start'"
-                :x="dropdownPosition[tunnel.proxyId]?.x || 0"
-                :y="dropdownPosition[tunnel.proxyId]?.y || 0"
-                @clickoutside="() => { showMoreMenu[tunnel.proxyId] = false; }"
-                @select="
-                  (key: string) => handleMoreActionClick(key, tunnel.proxyId)
-                "
-              />
+              <div class="more-dropdown-wrapper">
+                <n-button
+                  type="default"
+                  size="small"
+                  @click="toggleMoreMenu(tunnel.proxyId, $event)"
+                >
+                  <template #icon>
+                    <SettingsIcon :size="14" />
+                  </template>
+                  更多
+                </n-button>
+                <transition name="dropdown-fade">
+                  <div
+                    v-if="activeMoreMenu === tunnel.proxyId"
+                    class="more-dropdown-menu"
+                    @click.stop
+                  >
+                    <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
+                      <div v-if="option.type === 'divider'" class="dropdown-divider"></div>
+                      <div
+                        v-else
+                        class="dropdown-item"
+                        @click="handleMoreActionClick(option.key, tunnel.proxyId)"
+                      >
+                        <component :is="option.icon" class="dropdown-icon" />
+                        <span class="dropdown-label">{{ option.label }}</span>
+                      </div>
+                    </template>
+                  </div>
+                </transition>
+              </div>
             </div>
           </template>
         </n-card>
@@ -591,7 +600,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted, watch, nextTick } from "vue";
+import { h, ref, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useMessage, useDialog, NIcon } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -667,64 +676,37 @@ const error = ref("");
 const actionLoading = ref<Record<number, boolean>>({});
 const nodeNameMap = ref<Record<number, string>>({});
 const nodeHostnameMap = ref<Record<number, string>>({});
-const showMoreMenu = ref<Record<number, boolean>>({});
-const dropdownPosition = ref<Record<number, { x: number; y: number }>>({});
-const dropdownPlacement = ref<Record<number, "top-start" | "bottom-start">>({});
+const activeMoreMenu = ref<number | null>(null);
 
 // 切换更多菜单
 function toggleMoreMenu(tunnelId: number, event: MouseEvent) {
-  event.stopPropagation(); // 阻止事件冒泡
-  
-  // 获取当前状态
-  const currentState = showMoreMenu.value[tunnelId] || false;
-  const willShow = !currentState;
-  
-  // 关闭所有菜单
-  const newShowMoreMenu: Record<number, boolean> = {};
-  Object.keys(showMoreMenu.value).forEach((key) => {
-    newShowMoreMenu[Number(key)] = false;
-  });
-  
-  // 设置当前菜单状态
-  newShowMoreMenu[tunnelId] = willShow;
-  showMoreMenu.value = newShowMoreMenu;
-
-  // 如果要显示菜单，设置下拉菜单位置
-  if (willShow && event) {
-    const target = event.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-
-    // 估算菜单高度（大约每项40px，加上分隔线和内边距）
-    const estimatedMenuHeight = 400; // 保守估计
-    const windowHeight = window.innerHeight;
-    const spaceBelow = windowHeight - rect.bottom;
-    const spaceAbove = rect.top;
-
-    // 如果下方空间不足，且上方空间更多，则显示在上方
-    let x = rect.left;
-    let y: number;
-    let placement: "top-start" | "bottom-start";
-
-    if (spaceBelow < estimatedMenuHeight && spaceAbove > spaceBelow) {
-      // 显示在按钮上方
-      y = rect.top - 4;
-      placement = "top-start";
-    } else {
-      // 显示在按钮下方
-      y = rect.bottom + 4;
-      placement = "bottom-start";
-    }
-
-    dropdownPosition.value = {
-      ...dropdownPosition.value,
-      [tunnelId]: { x, y }
-    };
-    dropdownPlacement.value = {
-      ...dropdownPlacement.value,
-      [tunnelId]: placement
-    };
+  event.stopPropagation();
+  if (activeMoreMenu.value === tunnelId) {
+    activeMoreMenu.value = null;
+  } else {
+    activeMoreMenu.value = tunnelId;
   }
 }
+
+// 点击外部关闭菜单
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.more-dropdown-wrapper')) {
+    activeMoreMenu.value = null;
+  }
+}
+
+// 监听点击外部事件和初始化
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+  loadTunnels();
+  loadRunningTunnels();
+});
+
+// 清理事件监听
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 
 // 加载节点名称列表
 async function loadNodeNames() {
@@ -1522,23 +1504,18 @@ function getMoreOptions(tunnelId: number) {
       {
         label: "刷新",
         key: "refresh",
-        icon: () =>
-          h(NIcon, null, {
-            default: () => h(RefreshCw, { size: 16 }),
-          }),
+        icon: () => h(NIcon, null, { default: () => h(RefreshCw, { size: 16 }) }),
       },
     ];
   }
 
   const isUsingConfig = usingConfigFile.value.includes(tunnelId);
-  console.log(`隧道 ${tunnelId} 配置文件状态:`, isUsingConfig, "当前数组:", usingConfigFile.value);
 
   const options: any[] = [
     {
       label: "编辑",
       key: "edit",
-      icon: () =>
-        h(NIcon, null, { default: () => h(Edit, { size: 16 }) }),
+      icon: () => h(NIcon, null, { default: () => h(Edit, { size: 16 }) }),
     },
     {
       type: "divider",
@@ -1551,26 +1528,19 @@ function getMoreOptions(tunnelId: number) {
       {
         label: "配置文件",
         key: "view-config",
-        icon: () =>
-          h(NIcon, null, {
-            default: () => h(FileCode, { size: 16 }),
-          }),
+        icon: () => h(NIcon, null, { default: () => h(FileCode, { size: 16 }) }),
       },
       {
         label: "改用快速启动",
         key: "use-quick-start",
-        icon: () =>
-          h(NIcon, null, { default: () => h(Rocket, { size: 16 }) }),
+        icon: () => h(NIcon, null, { default: () => h(Rocket, { size: 16 }) }),
       },
     );
   } else {
     options.push({
       label: "改用配置文件",
       key: "use-config",
-      icon: () =>
-        h(NIcon, null, {
-          default: () => h(FileOutput, { size: 16 }),
-        }),
+      icon: () => h(NIcon, null, { default: () => h(FileOutput, { size: 16 }) }),
     });
   }
 
@@ -1584,17 +1554,13 @@ function getMoreOptions(tunnelId: number) {
       key: tunnel.isDisabled ? "enable" : "disable",
       icon: () =>
         h(NIcon, null, {
-          default: () =>
-            h(tunnel.isDisabled ? PlayCircle : PauseCircle, { size: 16 }),
+          default: () => h(tunnel.isDisabled ? PlayCircle : PauseCircle, { size: 16 }),
         }),
     },
     {
       label: "强制下线",
       key: "kick",
-      icon: () =>
-        h(NIcon, null, {
-          default: () => h(LogOut, { size: 16 }),
-        }),
+      icon: () => h(NIcon, null, { default: () => h(LogOut, { size: 16 }) }),
     },
     {
       type: "divider",
@@ -1604,11 +1570,7 @@ function getMoreOptions(tunnelId: number) {
       label: "删除隧道",
       key: "delete",
       icon: () =>
-        h(
-          NIcon,
-          { style: { color: "#d03050" } },
-          { default: () => h(Trash2, { size: 16 }) },
-        ),
+        h(NIcon, { style: { color: "#d03050" } }, { default: () => h(Trash2, { size: 16 }) }),
     },
   );
 
@@ -1676,7 +1638,7 @@ async function handleMoreAction(action: string, tunnelId: number) {
     case "delete":
       // 删除隧道确认
       if (tunnel) {
-        dialog.warning({
+        dialog.error({
           title: "确认删除",
           content: `确定要删除隧道 "${tunnel.proxyName}" 吗？删除后将无法恢复。`,
           positiveText: "确认删除",
@@ -1707,19 +1669,13 @@ async function handleMoreAction(action: string, tunnelId: number) {
   }
 }
 
-// 处理更多菜单点击（关闭菜单后执行操作）
+// 处理更多菜单点击
 function handleMoreActionClick(action: string, tunnelId: number) {
   // 关闭菜单
-  showMoreMenu.value[tunnelId] = false;
+  activeMoreMenu.value = null;
   // 执行操作
   handleMoreAction(action, tunnelId);
 }
-
-// 初始化时加载隧道列表和运行状态
-onMounted(() => {
-  loadTunnels();
-  loadRunningTunnels();
-});
 
 // 定期更新运行状态
 setInterval(() => {
@@ -1800,6 +1756,8 @@ defineExpose({
 
 .tunnels-container {
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .tunnels-grid {
@@ -1807,11 +1765,13 @@ defineExpose({
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+  position: relative;
 }
 
 /* 确保下拉框不被裁剪 */
 .tunnel-card {
   overflow: visible !important;
+  position: relative;
 }
 
 .tunnel-card :deep(.n-card__content) {
@@ -1820,6 +1780,8 @@ defineExpose({
 
 .tunnel-card :deep(.n-card__action) {
   overflow: visible !important;
+  position: relative;
+  z-index: 1;
 }
 
 .error-container {
@@ -1904,6 +1866,67 @@ defineExpose({
   align-items: center;
   justify-content: center;
   margin: 0;
+}
+
+/* 自定义下拉菜单 */
+.more-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.more-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background-color: rgb(72, 72, 78);
+  border-radius: 3px;
+  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  padding: 4px 0;
+  z-index: 9999;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.09);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.09);
+  margin: 4px 0;
+}
+
+.dropdown-icon {
+  margin-right: 8px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-label {
+  flex: 1;
+}
+
+/* 下拉菜单动画 */
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 .empty-state {
@@ -2150,5 +2173,15 @@ defineExpose({
 /* 全局样式 - 确保下拉框正确显示 */
 .n-dropdown-menu {
   z-index: 9999 !important;
+  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05) !important;
+  min-width: 160px !important;
+}
+
+.n-dropdown {
+  z-index: 9999 !important;
+}
+
+.n-dropdown-option {
+  padding: 8px 12px !important;
 }
 </style>

@@ -37,13 +37,12 @@ pub async fn send_feedback(
     _user_token: &str,
     content: &str,
     user_id: i32,
-    user_email: &str,
 ) -> Result<String, String> {
     // 构建反馈消息
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let feedback_message = format!(
-        "【XL客户端用户反馈】\n时间：{}\nME-Frp ID：{}\n邮箱：{}\n内容：{}",
-        timestamp, user_id, user_email, content
+        "【XL客户端用户反馈】\n时间：{}\nME-Frp ID：{}\n内容：{}",
+        timestamp, user_id, content
     );
 
     // 构建请求体

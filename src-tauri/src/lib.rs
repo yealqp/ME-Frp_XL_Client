@@ -681,7 +681,6 @@ async fn api_send_feedback(
         &config.user_token,
         &content,
         user_info.user_id,
-        &user_info.email,
     )
     .await
 }
