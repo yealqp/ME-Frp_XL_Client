@@ -33,17 +33,6 @@
                 show-password-on="mousedown"
               />
             </n-form-item>
-
-            <!-- 人机验证区域 -->
-            <div class="vaptcha-section">
-              <!-- 人机验证组件 -->
-              <CaptchaVerify @solve="handleCapSolve" />
-
-              <!-- 隐藏的token输入框，用于表单验证 -->
-              <n-form-item path="captchaToken" style="display: none">
-                <n-input v-model:value="loginForm.captchaToken" />
-              </n-form-item>
-            </div>
           </template>
 
           <!-- Token登录模式 -->
@@ -85,9 +74,7 @@
             :disabled="
               isTokenMode
                 ? !loginForm.userToken
-                : !loginForm.username ||
-                  !loginForm.password ||
-                  !loginForm.captchaToken
+                : !loginForm.username || !loginForm.password
             "
             @click="handleLogin"
             class="login-btn"
@@ -95,6 +82,14 @@
             {{ isLogging ? "登录中..." : "登录" }}
           </n-button>
         </n-form>
+        
+        <!-- 隐式验证组件 -->
+        <ImplicitCaptcha
+          v-if="!isTokenMode"
+          ref="implicitCaptchaRef"
+          @solve="handleCapSolve"
+          @error="handleCapError"
+        />
 
         <!-- 模式切换按钮 -->
         <div class="mode-switch-container">
@@ -118,7 +113,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { darkTheme, useMessage } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
-import CaptchaVerify from "./CaptchaVerify.vue";
+import ImplicitCaptcha from "./ImplicitCaptcha.vue";
 import type { UnifiedConfig } from "../types/config";
 
 // 自定义主题配置
@@ -159,12 +154,21 @@ const isTokenMode = ref(false);
 // 验证状态
 const isVerified = ref(false);
 
-// 处理CaptchaVerify验证成功事件
+// 隐式验证组件引用
+const implicitCaptchaRef = ref<any>(null);
+
+// 处理验证成功事件
 function handleCapSolve(token: string) {
   console.log("验证成功，获得token:", token);
   loginForm.value.captchaToken = token;
   isVerified.value = true;
-  message.success("人机验证完成");
+}
+
+// 处理验证失败事件
+function handleCapError(error: string) {
+  console.error("验证失败:", error);
+  message.error(`人机验证失败: ${error}`);
+  isLogging.value = false;
 }
 
 // 表单引用
@@ -194,11 +198,7 @@ const rules = computed(() => {
         message: "请输入密码",
         trigger: "blur",
       },
-      captchaToken: {
-        required: true,
-        message: "请完成人机验证",
-        trigger: "blur",
-      },
+      // 移除 captchaToken 验证，因为现在是隐式验证
     };
   }
 });
@@ -404,37 +404,61 @@ async function handleLogin() {
   }
 
   isLogging.value = true;
-  message.loading("正在登录中，请稍候...");
 
   try {
     if (isTokenMode.value) {
       // Token登录模式
+      message.loading("正在登录中，请稍候...");
       await handleTokenLogin();
     } else {
-      // 普通登录模式
-      console.log("开始登录:", loginForm.value.username);
+      // 普通登录模式 - 先进行人机验证
+      message.loading("正在进行人机验证...", { duration: 0 });
+      
+      try {
+        // 触发隐式验证
+        const captchaToken = await implicitCaptchaRef.value?.verify();
+        console.log("获取到的 captchaToken:", captchaToken, "类型:", typeof captchaToken);
+        
+        // 确保 token 是字符串
+        if (typeof captchaToken !== 'string') {
+          throw new Error(`验证 token 类型错误: ${typeof captchaToken}`);
+        }
+        
+        loginForm.value.captchaToken = captchaToken;
+        
+        message.destroyAll();
+        message.loading("正在登录中，请稍候...");
+        
+        console.log("开始登录:", loginForm.value.username, "captchaToken:", loginForm.value.captchaToken);
 
-      // 调用后端登录API命令
-      const config = await invoke<UnifiedConfig>("api_login", {
-        username: loginForm.value.username,
-        password: loginForm.value.password,
-        captchaToken: loginForm.value.captchaToken || null,
-      });
+        // 调用后端登录API命令
+        const config = await invoke<UnifiedConfig>("api_login", {
+          username: loginForm.value.username,
+          password: loginForm.value.password,
+          captchaToken: loginForm.value.captchaToken,
+        });
 
-      console.log("登录成功，配置已保存:", config);
-      message.success("登录成功");
+        console.log("登录成功，配置已保存:", config);
+        message.success("登录成功");
 
-      // Call auth store login action with user info
-      authStore.login({
-        userToken: config.userToken,
-        username: config.username,
-        group: config.group,
-        frpToken: config.frpToken,
-      });
+        // Call auth store login action with user info
+        authStore.login({
+          userToken: config.userToken,
+          username: config.username,
+          group: config.group,
+          frpToken: config.frpToken,
+        });
 
-      // 立即触发登录成功事件
-      console.log("触发login-success事件");
-      emit("login-success");
+        // 立即触发登录成功事件
+        console.log("触发login-success事件");
+        emit("login-success");
+      } catch (captchaError) {
+        message.destroyAll();
+        console.error("人机验证失败:", captchaError);
+        message.error("人机验证失败，请重试");
+        isLogging.value = false;
+        return;
+      }
     }
   } catch (error) {
     console.error("登录失败:", error);

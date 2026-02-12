@@ -60,7 +60,8 @@ import { darkTheme } from "naive-ui";
 import type { MenuOption } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig } from "../types/config";
-import { showAdGlobal } from "../utils/eventBus";
+import { storeToRefs } from "pinia";
+import { useSettingsStore } from "../stores/settings";
 import {
   Home,
   PlusCircle,
@@ -74,16 +75,15 @@ import {
 const router = useRouter();
 const route = useRoute();
 
-// 使用全局响应式广告显示状态
-const showAd = showAdGlobal;
+// 使用 Settings store 中的广告显示状态
+const settingsStore = useSettingsStore();
+const { settings } = storeToRefs(settingsStore);
+const showAd = computed(() => settings.value.showAd);
 
 // 加载广告显示设置
 const loadAdSettings = async () => {
   try {
-    const config = await invoke<UnifiedConfig>("load_unified_config");
-    if (config) {
-      showAdGlobal.value = config.showAd !== undefined ? config.showAd : true;
-    }
+    await settingsStore.loadSettings();
   } catch (error) {
     console.error("加载广告设置失败:", error);
   }

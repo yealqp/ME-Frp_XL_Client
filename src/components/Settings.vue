@@ -265,8 +265,14 @@ import {
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
-import { showAdGlobal } from "../utils/eventBus";
-import { Settings as SettingsIcon, Rocket, ArrowUp, ArrowDown } from "lucide-vue-next";
+import { storeToRefs } from "pinia";
+import { useSettingsStore } from "../stores/settings";
+import {
+  Settings as SettingsIcon,
+  Rocket,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-vue-next";
 
 // 使用导入的AppSettings类型
 type Settings = AppSettings;
@@ -297,8 +303,8 @@ const settings = ref<Settings>({
   autoStartTunnels: [],
   startupDelay: 5,
   theme: "dark",
-  minimizeToTray: false, // 改为 false，等待从配置加载
-  showAd: false, // 改为 false，等待从配置加载
+  minimizeToTray: false,
+  showAd: true,
 });
 
 // 隧道数据
@@ -400,11 +406,10 @@ const handleMinimizeToTrayChange = async (value: boolean) => {
 };
 
 // 处理显示广告变化
-const handleShowAdChange = (value: boolean) => {
-  // 立即更新全局状态
-  showAdGlobal.value = value;
+const handleShowAdChange = async (value: boolean) => {
+  const settingsStore = useSettingsStore();
+  await settingsStore.updateSetting('showAd', value);
   message.success(value ? "已开启侧边栏广告" : "已关闭侧边栏广告");
-  saveSettings();
 };
 
 // 保存设置
@@ -426,7 +431,7 @@ const saveSettings = async () => {
     };
 
     await invoke("save_unified_config", { config: updatedConfig });
-    
+
     // theme 保存到 localStorage
     localStorage.setItem("mefrp_theme", settings.value.theme);
   } catch (error) {
@@ -454,13 +459,8 @@ const loadSettings = async () => {
             ? unifiedConfig.minimizeToTray
             : true,
         showAd:
-          unifiedConfig.showAd !== undefined
-            ? unifiedConfig.showAd
-            : true,
+          unifiedConfig.showAd !== undefined ? unifiedConfig.showAd : true,
       };
-      
-      // 同步全局广告显示状态
-      showAdGlobal.value = settings.value.showAd;
     }
 
     // 同步最小化到托盘设置到后端

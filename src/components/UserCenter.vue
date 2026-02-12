@@ -400,47 +400,12 @@
       </n-space>
     </n-card>
 
-    <!-- 签到模态框 -->
-    <n-modal
-      v-model:show="showSignModal"
-      preset="card"
-      title="每日签到"
-      :style="{ width: '450px', maxWidth: '90vw' }"
-      :bordered="true"
-      :segmented="{ content: true }"
-      :closable="!isSigning"
-      :mask-closable="!isSigning"
-    >
-      <n-space vertical :size="16">
-        <div v-if="!isSigning">
-          <p
-            style="
-              margin-bottom: 8px;
-              color: #999;
-              text-align: center;
-              font-size: 13px;
-            "
-          >
-            请完成人机验证后自动签到
-          </p>
-          <CaptchaVerify @solve="handleSignCaptchaSolve" />
-        </div>
-        <div v-else style="text-align: center; padding: 20px 0">
-          <n-spin size="large" />
-          <p style="margin-top: 16px; color: #999; font-size: 14px">
-            正在签到中...
-          </p>
-        </div>
-      </n-space>
-
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showSignModal = false" :disabled="isSigning">
-            取消
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
+    <!-- 隐式验证组件 - 签到 -->
+    <ImplicitCaptcha
+      ref="signCaptchaRef"
+      @solve="handleSignCaptchaSolve"
+      @error="handleSignCaptchaError"
+    />
 
     <!-- CDK兑换模态框 -->
     <n-modal
@@ -450,6 +415,8 @@
       :style="{ width: '450px', maxWidth: '90vw' }"
       :bordered="true"
       :segmented="{ content: true }"
+      :closable="!isRedeeming"
+      :mask-closable="!isRedeeming"
     >
       <n-space vertical :size="16">
         <div>
@@ -461,20 +428,6 @@
             placeholder="请输入CDK兑换码"
             :disabled="isRedeeming"
           />
-        </div>
-
-        <div>
-          <p
-            style="
-              margin-bottom: 8px;
-              color: #999;
-              text-align: center;
-              font-size: 13px;
-            "
-          >
-            请完成人机验证
-          </p>
-          <CaptchaVerify @solve="handleCdkCaptchaSolve" />
         </div>
       </n-space>
 
@@ -493,6 +446,13 @@
         </n-space>
       </template>
     </n-modal>
+    
+    <!-- 隐式验证组件 - CDK -->
+    <ImplicitCaptcha
+      ref="cdkCaptchaRef"
+      @solve="handleCdkCaptchaSolve"
+      @error="handleCdkCaptchaError"
+    />
   </div>
 </template>
 
@@ -507,7 +467,6 @@ import {
   NSpace,
   NTag,
   NInput,
-  NModal,
   NSkeleton,
   NText,
   NSpin,
@@ -517,7 +476,7 @@ import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts";
-import CaptchaVerify from "./CaptchaVerify.vue";
+import ImplicitCaptcha from "./ImplicitCaptcha.vue";
 import { TrendingUp, Gift, Ticket, History, Power } from "lucide-vue-next";
 
 const router = useRouter();
@@ -565,8 +524,8 @@ interface TrafficStatsResponse {
 
 // 签到相关
 const isSigning = ref(false);
-const showSignModal = ref(false);
 const signCaptchaToken = ref("");
+const signCaptchaRef = ref<any>(null);
 
 // 下线所有隧道相关
 const kickingAllProxies = ref(false);
@@ -576,6 +535,7 @@ const cdkCode = ref("");
 const isRedeeming = ref(false);
 const showCdkModal = ref(false);
 const cdkCaptchaToken = ref("");
+const cdkCaptchaRef = ref<any>(null);
 
 // CDK兑换历史相关
 const cdkHistory = ref<CdkHistoryLog[]>([]);
@@ -627,9 +587,19 @@ const formatRegTime = (timestamp: number): string => {
 };
 
 // 显示签到对话框
-const showSignDialog = () => {
+const showSignDialog = async () => {
   signCaptchaToken.value = "";
-  showSignModal.value = true;
+  
+  // 触发隐式验证
+  try {
+    message.loading("正在进行人机验证...", { duration: 0 });
+    const token = await signCaptchaRef.value?.verify();
+    message.destroyAll();
+    await handleSignCaptchaSolve(token);
+  } catch (error) {
+    message.destroyAll();
+    message.error("人机验证失败，请重试");
+  }
 };
 
 // 处理签到验证成功
@@ -638,6 +608,13 @@ const handleSignCaptchaSolve = async (token: string) => {
 
   // 自动执行签到
   await performSign();
+};
+
+// 处理签到验证失败
+const handleSignCaptchaError = (error: string) => {
+  console.error("签到验证失败:", error);
+  message.error(`人机验证失败: ${error}`);
+  showSignModal.value = false;
 };
 
 // 执行签到
@@ -677,7 +654,6 @@ const performSign = async () => {
         duration: 5000,
       });
 
-      showSignModal.value = false;
       signCaptchaToken.value = "";
       // 刷新用户信息
       await userStore.refreshUserInfo();
@@ -751,15 +727,17 @@ const handleCdkCaptchaSolve = (token: string) => {
   cdkCaptchaToken.value = token;
 };
 
+// 处理CDK验证失败
+const handleCdkCaptchaError = (error: string) => {
+  console.error("CDK验证失败:", error);
+  message.error(`人机验证失败: ${error}`);
+  isRedeeming.value = false;
+};
+
 // 执行CDK兑换
 const performCdkRedeem = async () => {
   if (!cdkCode.value.trim()) {
     message.error("请输入CDK兑换码");
-    return;
-  }
-
-  if (!cdkCaptchaToken.value) {
-    message.error("请先完成人机验证");
     return;
   }
 
@@ -768,14 +746,23 @@ const performCdkRedeem = async () => {
   }
 
   isRedeeming.value = true;
-
+  
+  // 触发隐式验证
   try {
+    message.loading("正在进行人机验证...", { duration: 0 });
+    const token = await cdkCaptchaRef.value?.verify();
+    cdkCaptchaToken.value = token;
+    
+    message.destroyAll();
+    message.loading("正在兑换中...", { duration: 0 });
+
     const responseText = await invoke("api_redeem_cdk", {
       code: cdkCode.value.trim(),
       captchaToken: cdkCaptchaToken.value,
     });
 
     const result = JSON.parse(responseText as string);
+    message.destroyAll();
 
     if (result.code === 200) {
       const { type, value } = result.data;
@@ -807,6 +794,7 @@ const performCdkRedeem = async () => {
       message.error(result.message || "CDK兑换失败");
     }
   } catch (error) {
+    message.destroyAll();
     console.error("CDK兑换失败:", error);
     message.error(`CDK兑换失败: ${error}`);
   } finally {

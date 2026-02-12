@@ -9,7 +9,6 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 import type { UnifiedConfig, AppSettings } from '@/types/config';
-import { showAdGlobal } from '@/utils/eventBus';
 
 export const useSettingsStore = defineStore('settings', () => {
   // ============================================================================
@@ -75,9 +74,6 @@ export const useSettingsStore = defineStore('settings', () => {
         minimizeToTray: config.minimizeToTray ?? true,
         showAd: config.showAd ?? true,
       };
-
-      // Sync showAd to eventBus
-      showAdGlobal.value = settings.value.showAd;
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err);
       console.error('加载设置失败:', err);
@@ -133,12 +129,6 @@ export const useSettingsStore = defineStore('settings', () => {
     value: AppSettings[K]
   ): Promise<void> {
     settings.value[key] = value;
-    
-    // Sync showAd to eventBus if it's being updated
-    if (key === 'showAd') {
-      showAdGlobal.value = value as boolean;
-    }
-    
     await saveSettings();
   }
 

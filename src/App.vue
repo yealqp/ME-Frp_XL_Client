@@ -47,6 +47,11 @@ const { message } = createDiscreteApi(["message"], {
   configProviderProps: {
     theme: customTheme,
   },
+  messageProviderProps: {
+    containerStyle: {
+      zIndex: 100000,
+    },
+  },
 });
 
 // 节点选择完成，进入隧道配置页面
@@ -305,7 +310,7 @@ onMounted(async () => {
 <template>
   <div class="app-container">
     <n-config-provider :theme="customTheme">
-      <n-message-provider>
+      <n-message-provider :container-style="{ zIndex: 100000 }">
         <n-dialog-provider>
           <!-- 加载状态 -->
           <div v-if="isCheckingAuth" class="loading-container"></div>

@@ -9,6 +9,7 @@ interface CapConfig {
   siteId?: string;
   workerCount?: number;
   hiddenFieldName?: string;
+  mode?: 'explicit' | 'implicit'; // 添加验证模式
   i18n?: {
     verifyingLabel?: string;
     initialState?: string;
@@ -326,6 +327,11 @@ export function useCap(config: CapConfig) {
           "data-cap-hidden-field-name",
           "cap-token",
         );
+      }
+      
+      // 设置验证模式（隐式或显式）
+      if (config.mode === 'implicit') {
+        capWidgetElement.setAttribute("data-cap-mode", "implicit");
       }
 
       // 设置国际化属性
