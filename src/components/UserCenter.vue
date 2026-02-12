@@ -513,6 +513,8 @@ import {
   NSpin,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
+import { storeToRefs } from "pinia";
+import { useUserStore } from "../stores/user";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts";
 import CaptchaVerify from "./CaptchaVerify.vue";
@@ -521,22 +523,10 @@ const router = useRouter();
 const message = useMessage();
 const dialog = useDialog();
 
-interface UserDetailInfo {
-  email: string;
-  friendlyGroup: string;
-  group: string;
-  inBound: number;
-  isRealname: boolean;
-  maxProxies: number;
-  outBound: number;
-  regTime: number;
-  status: number;
-  todaySigned: boolean;
-  traffic: number;
-  usedProxies: number;
-  userId: number;
-  username: string;
-}
+// Initialize User Store
+const userStore = useUserStore();
+const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
+const { formattedBandwidth, formattedTraffic, formattedRegTime } = userStore;
 
 interface CdkHistoryLog {
   logId: number;
@@ -571,10 +561,6 @@ interface TrafficStatsResponse {
   };
   message: string;
 }
-
-// 用户信息
-const userInfo = ref<UserDetailInfo | null>(null);
-const userInfoLoading = ref(true);
 
 // 签到相关
 const isSigning = ref(false);
@@ -621,20 +607,6 @@ const currentChartData = ref<{
   totalTraffic: number[];
   unit: string;
 } | null>(null);
-
-// 加载用户信息
-const loadUserInfo = async () => {
-  userInfoLoading.value = true;
-  try {
-    const result = await invoke<UserDetailInfo>("api_get_user_info");
-    userInfo.value = result;
-  } catch (error) {
-    console.error("加载用户信息失败:", error);
-    message.error("加载用户信息失败");
-  } finally {
-    userInfoLoading.value = false;
-  }
-};
 
 // 格式化带宽（单位：Mbps，响应数值/128是显示数值）
 const formatBandwidth = (value: number): string => {
@@ -707,7 +679,7 @@ const performSign = async () => {
       showSignModal.value = false;
       signCaptchaToken.value = "";
       // 刷新用户信息
-      await loadUserInfo();
+      await userStore.refreshUserInfo();
     } else {
       message.error(result.message || "签到失败");
     }
@@ -829,7 +801,7 @@ const performCdkRedeem = async () => {
 
       // 兑换成功后刷新历史记录和用户信息
       loadCdkHistory();
-      loadUserInfo();
+      userStore.refreshUserInfo();
     } else {
       message.error(result.message || "CDK兑换失败");
     }
@@ -1397,7 +1369,7 @@ watch(trafficStatsLoading, (newVal, oldVal) => {
 
 onMounted(() => {
   console.log("UserCenter 组件已挂载");
-  loadUserInfo();
+  userStore.loadUserInfo();
   loadCdkHistory();
 
   // 初始化图表 - 确保 DOM 完全渲染后再初始化

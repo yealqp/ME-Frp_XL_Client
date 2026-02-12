@@ -117,6 +117,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { darkTheme, useMessage } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useAuthStore } from "../stores/auth";
 import CaptchaVerify from "./CaptchaVerify.vue";
 import type { UnifiedConfig } from "../types/config";
 
@@ -142,6 +143,7 @@ const customTheme = {
 
 const emit = defineEmits(["login-success"]);
 const message = useMessage();
+const authStore = useAuthStore();
 
 // 登录表单数据
 const loginForm = ref({
@@ -346,13 +348,19 @@ async function handleTokenLogin() {
     await invoke("save_unified_config", { config: completeConfig });
     console.log("完整配置保存成功，包含 frpToken");
 
-    message.success("Token登录成功，正在进入主界面...");
+    message.success("Token登录成功");
 
-    // 延迟1秒后跳转
-    setTimeout(() => {
-      console.log("触发login-success事件");
-      emit("login-success");
-    }, 1000);
+    // Call auth store login action with user info
+    authStore.login({
+      userToken: completeConfig.userToken,
+      username: completeConfig.username,
+      group: completeConfig.group,
+      frpToken: completeConfig.frpToken,
+    });
+
+    // 立即触发登录成功事件
+    console.log("触发login-success事件");
+    emit("login-success");
   } catch (error) {
     console.error("Token登录失败，详细错误:", error);
 
@@ -407,20 +415,26 @@ async function handleLogin() {
       console.log("开始登录:", loginForm.value.username);
 
       // 调用后端登录API命令
-      const config = await invoke("api_login", {
+      const config = await invoke<UnifiedConfig>("api_login", {
         username: loginForm.value.username,
         password: loginForm.value.password,
         captchaToken: loginForm.value.captchaToken || null,
       });
 
       console.log("登录成功，配置已保存:", config);
-      message.success("登录成功，正在进入主界面...");
+      message.success("登录成功");
 
-      // 延迟1秒后跳转
-      setTimeout(() => {
-        console.log("触发login-success事件");
-        emit("login-success");
-      }, 1000);
+      // Call auth store login action with user info
+      authStore.login({
+        userToken: config.userToken,
+        username: config.username,
+        group: config.group,
+        frpToken: config.frpToken,
+      });
+
+      // 立即触发登录成功事件
+      console.log("触发login-success事件");
+      emit("login-success");
     }
   } catch (error) {
     console.error("登录失败:", error);

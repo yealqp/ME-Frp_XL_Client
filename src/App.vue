@@ -4,6 +4,9 @@ import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { darkTheme, NDialogProvider, createDiscreteApi } from "naive-ui";
+import { storeToRefs } from "pinia";
+import { useAuthStore } from "./stores/auth";
+import { useCreateTunnelStore } from "./stores/createTunnel";
 import Sidebar from "./components/Sidebar.vue";
 import Login from "./components/Login.vue";
 import type { UnifiedConfig } from "./types/config";
@@ -11,27 +14,13 @@ import type { UnifiedConfig } from "./types/config";
 const router = useRouter();
 const route = useRoute();
 
-interface Node {
-  nodeId: number;
-  name: string;
-  hostname: string;
-  description: string;
-  token: string;
-  servicePort: number;
-  adminPort: number;
-  adminPass: string;
-  allowGroup: string;
-  allowPort: string;
-  allowType: string;
-  region: string;
-  bandwidth: string;
-  isOnline: boolean;
-  isDisabled: boolean;
-  totalTrafficIn: number;
-  totalTrafficOut: number;
-  upTime: number;
-  version: string;
-}
+// Initialize stores
+const authStore = useAuthStore();
+const createTunnelStore = useCreateTunnelStore();
+
+// Use storeToRefs for state/getters to maintain reactivity
+const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
+const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 
 // 自定义主题配置
 const customTheme = {
@@ -53,10 +42,6 @@ const customTheme = {
   },
 };
 
-// 登录状态管理
-const isLoggedIn = ref(false);
-const isCheckingAuth = ref(true);
-
 // 消息和对话框 - 使用 createDiscreteApi
 const { message } = createDiscreteApi(["message"], {
   configProviderProps: {
@@ -64,31 +49,24 @@ const { message } = createDiscreteApi(["message"], {
   },
 });
 
-// 页面状态管理
-const currentPage = ref("node-selection"); // 'node-selection' | 'tunnel-config'
-const selectedNode = ref<Node | null>(null);
-
 // 节点选择完成，进入隧道配置页面
-function handleNodeSelected(node: Node) {
+function handleNodeSelected(node: any) {
   console.log("App.vue: 接收到节点选择事件", node);
   console.log("App.vue: 当前页面状态", currentPage.value);
-  selectedNode.value = node;
-  currentPage.value = "tunnel-config";
+  createTunnelStore.selectNode(node);
   router.push("/tunnel-config");
   console.log("App.vue: 切换到隧道配置页面", currentPage.value);
 }
 
 // 返回节点选择页面
 function handleGoBackToNodeSelection() {
-  currentPage.value = "node-selection";
-  selectedNode.value = null;
+  createTunnelStore.goBackToNodeSelection();
   router.push("/create-tunnel");
 }
 
 // 跳转到创建隧道页面
 function handleGoToCreateTunnel() {
-  currentPage.value = "node-selection";
-  selectedNode.value = null;
+  createTunnelStore.resetCreateFlow();
   router.push("/create-tunnel");
 }
 
@@ -140,78 +118,40 @@ function getComponentListeners(component: any) {
 
 // 配置相关函数
 const checkAuthStatus = async (retryCount = 0): Promise<void> => {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 500; // 500ms
-
   try {
-    // 从统一配置读取
-    const config = await invoke<UnifiedConfig>("load_unified_config");
-    console.log("从统一配置读取:", config);
-
-    if (config) {
-      // 检查是否有有效的 userToken
-      if (config.userToken) {
-        isLoggedIn.value = true;
-        // 如果当前在登录页，跳转到首页
-        if (route.path === "/login" || route.path === "/") {
-          router.push("/dashboard");
-        }
-      } else {
-        // 未登录，跳转到登录页
-        router.push("/login");
-      }
-    } else {
+    await authStore.checkAuthStatus(retryCount);
+    
+    // 如果登录成功且当前在登录页，跳转到首页
+    if (authStore.isLoggedIn && (route.path === "/login" || route.path === "/")) {
+      router.push("/dashboard");
+    } else if (!authStore.isLoggedIn) {
+      // 未登录，跳转到登录页
       router.push("/login");
     }
-    
-    // 成功加载配置，结束检查状态
-    isCheckingAuth.value = false;
   } catch (error) {
-    console.error(`检查登录状态失败 (尝试 ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
-    
-    // 如果还有重试次数，延迟后重试
-    if (retryCount < MAX_RETRIES) {
-      console.log(`将在 ${RETRY_DELAY}ms 后重试...`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return checkAuthStatus(retryCount + 1);
-    }
-    
-    // 重试次数用尽，跳转到登录页
     console.error("配置加载失败，已达到最大重试次数");
     router.push("/login");
-    isCheckingAuth.value = false;
   }
 };
 
 const handleLoginSuccess = (): void => {
   console.log("收到登录成功事件，设置登录状态为true");
-  isLoggedIn.value = true;
-  console.log("当前登录状态:", isLoggedIn.value);
-  router.push("/dashboard");
+  console.log("当前登录状态:", authStore.isLoggedIn);
+  
+  // 立即跳转到首页，不等待任何延迟
+  router.replace("/dashboard");
 };
 
 const handleLogout = async (): Promise<void> => {
-  isLoggedIn.value = false;
-  // 清除本地存储的配置
-  localStorage.removeItem("mefrp_config");
-
-  // 清除统一配置中的登录相关信息，但保留应用设置
   try {
-    const config = await invoke<UnifiedConfig>("load_unified_config");
-    const clearedConfig: UnifiedConfig = {
-      ...config,
-      userToken: "",
-      frpToken: "",
-      username: "",
-      group: "",
-    };
-    await invoke("save_unified_config", { config: clearedConfig });
-    console.log("已清除登录信息，保留应用设置");
+    await authStore.logout();
+    // 清除本地存储的配置
+    localStorage.removeItem("mefrp_config");
+    router.push("/login");
   } catch (error) {
-    console.error("清除登录信息失败:", error);
+    console.error("登出失败:", error);
+    message.error("登出失败，请重试");
   }
-
-  router.push("/login");
 };
 
 // 自动启动隧道的函数
@@ -349,7 +289,7 @@ onMounted(async () => {
 
   // 等待登录完成后再启动自启动隧道
   const waitForLogin = () => {
-    if (isLoggedIn.value && !isCheckingAuth.value) {
+    if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
       autoStartTunnels();
     } else {
       // 每500ms检查一次登录状态
@@ -384,7 +324,9 @@ onMounted(async () => {
             <main class="main-content">
               <div class="content-body">
                 <router-view v-slot="{ Component }">
+                  <!-- 只渲染非登录页面的组件 -->
                   <component
+                    v-if="Component && Component.__name !== 'Login'"
                     :is="Component"
                     v-bind="{
                       ...getComponentProps(Component),

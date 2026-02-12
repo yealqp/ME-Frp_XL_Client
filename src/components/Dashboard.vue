@@ -1,42 +1,29 @@
 <template>
   <div class="dashboard">
-    <!-- 弹窗公告 Modal -->
-    <n-modal
-      v-model:show="showPopupNotice"
-      preset="card"
-      title="重要公告"
-      :bordered="true"
-      size="large"
-      :closable="true"
-      :mask-closable="false"
-      style="max-width: 700px"
-      @after-leave="closePopupNotice"
-    >
-      <div class="popup-notice-content">
-        <div v-if="popupNoticeLoading" class="loading-container">
-          <n-spin size="large" />
-        </div>
-        <div v-else class="notice-text" v-html="parseMarkdownContent(popupNoticeContent)"></div>
-      </div>
-      <template #footer>
-        <div style="display: flex; justify-content: flex-end">
-          <n-button type="primary" @click="closePopupNotice">
-            我已知晓
-          </n-button>
-        </div>
-      </template>
-    </n-modal>
-
     <!-- 欢迎信息 -->
     <div class="welcome-header">
       <h2 class="welcome-text">
-        欢迎回来，{{ userInfoLoading ? "加载中..." : userInfo.username }}
+        欢迎回来，{{ userInfoLoading ? "加载中..." : (userInfo?.username || "用户") }}
       </h2>
     </div>
 
     <div class="dashboard-grid">
       <!-- 左侧列 -->
       <div class="left-column">
+        <!-- 重要公告警告框 -->
+        <n-alert
+          v-if="showImportantNotice && popupNoticeContent"
+          type="warning"
+          closable
+          @close="closeImportantNotice"
+          class="important-notice-alert"
+        >
+          <template #header>
+            <span class="alert-title">重要公告</span>
+          </template>
+          <div v-html="parseMarkdownContent(popupNoticeContent)"></div>
+        </n-alert>
+
         <!-- 系统状态卡片 -->
         <div
           v-if="systemStatusLoaded"
@@ -165,7 +152,7 @@
               </div>
             </template>
             <template v-else>
-              <div class="user-info-grid">
+              <div v-if="userInfo" class="user-info-grid">
                 <div class="user-info-item">
                   <n-text :style="{ fontSize: '13px' }" depth="3"
                     >用户名</n-text
@@ -290,24 +277,12 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import MarkdownIt from "markdown-it";
 import { useMessage } from "naive-ui";
+import { storeToRefs } from "pinia";
+import { useUserStore } from "../stores/user";
 
-// 用户信息数据结构
-interface UserInfo {
-  email: string;
-  friendlyGroup: string;
-  group: string;
-  inBound: number;
-  isRealname: boolean;
-  maxProxies: number;
-  outBound: number;
-  regTime: number;
-  status: number;
-  todaySigned: boolean;
-  traffic: number;
-  usedProxies: number;
-  userId: number;
-  username: string;
-}
+// Initialize User Store
+const userStore = useUserStore();
+const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
 
 interface Announcement {
   id: number;
@@ -327,24 +302,6 @@ interface PopupNoticeResponse {
   message: string;
 }
 
-// 用户信息响应式数据
-const userInfo = ref<UserInfo>({
-  email: "",
-  friendlyGroup: "",
-  group: "",
-  inBound: 0,
-  isRealname: false,
-  maxProxies: 0,
-  outBound: 0,
-  regTime: 0,
-  status: 0,
-  todaySigned: false,
-  traffic: 0,
-  usedProxies: 0,
-  userId: 0,
-  username: "加载中...",
-});
-
 // 系统公告数据
 const announcements = ref<Announcement[]>([]);
 
@@ -357,22 +314,17 @@ const systemStatus = ref<SystemStatus>({
 // 系统状态是否已加载
 const systemStatusLoaded = ref(false);
 
-// 弹窗公告相关
-const showPopupNotice = ref(false);
+// 重要公告相关
+const showImportantNotice = ref(false); // 控制重要公告警告框显示
 const popupNoticeContent = ref("");
 const popupNoticeLoading = ref(false);
 
 // 加载状态
-const userInfoLoading = ref(true);
 const announcementsLoading = ref(true);
 const message = useMessage();
 
 // 缓存相关
 const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存时间
-const userInfoCache = ref<{ data: UserInfo | null; timestamp: number }>({
-  data: null,
-  timestamp: 0,
-});
 const announcementsCache = ref<{ data: Announcement[]; timestamp: number }>({
   data: [],
   timestamp: 0,
@@ -505,60 +457,6 @@ const fetchAnnouncements = async (forceRefresh: boolean = false) => {
   }
 };
 
-// 格式化带宽（单位：Mbps，响应数值/128是显示数值）
-const formatBandwidth = (value: number): string => {
-  if (value === 0) return "0 Mbps";
-  const mbps = value / 128;
-  return parseFloat(mbps.toFixed(2)) + " Mbps";
-};
-
-// 获取用户信息
-const fetchUserInfo = async (forceRefresh: boolean = false) => {
-  // 检查缓存是否有效且不强制刷新
-  if (
-    !forceRefresh &&
-    userInfoCache.value.data &&
-    isCacheValid(userInfoCache.value.timestamp)
-  ) {
-    userInfo.value = userInfoCache.value.data;
-    userInfoLoading.value = false;
-    console.log("使用缓存的用户信息");
-    return;
-  }
-
-  userInfoLoading.value = true;
-  try {
-    // 调用后端API命令获取用户信息
-    const userDetailInfo: any = await invoke("api_get_user_info");
-    userInfo.value = userDetailInfo as UserInfo;
-
-    // 更新缓存
-    userInfoCache.value = {
-      data: userDetailInfo as UserInfo,
-      timestamp: Date.now(),
-    };
-
-    console.log("获取用户信息成功");
-  } catch (error) {
-    console.error("获取用户信息失败", error);
-    // 显示完整的错误信息
-    const errorMessage =
-      error && typeof error === "string"
-        ? error
-        : error && typeof error === "object" && "message" in error
-          ? (error as any).message
-          : "请检查网络连接";
-    message.error(`获取用户信息失败: ${errorMessage}`);
-    // 如果有缓存数据，使用缓存数据
-    if (userInfoCache.value.data) {
-      userInfo.value = userInfoCache.value.data;
-      console.log("API请求失败，使用缓存的用户信息");
-    }
-  } finally {
-    userInfoLoading.value = false;
-  }
-};
-
 // 格式化注册时间
 const formatRegTime = (timestamp: number): string => {
   const date = new Date(timestamp * 1000);
@@ -634,10 +532,17 @@ const fetchSystemStatus = async () => {
   }
 };
 
+// 格式化带宽（单位：Mbps，响应数值/128是显示数值）
+const formatBandwidth = (value: number): string => {
+  if (value === 0) return "0 Mbps";
+  const mbps = value / 128;
+  return parseFloat(mbps.toFixed(2)) + " Mbps";
+};
+
 // 获取剩余流量（直接使用API返回的traffic字段）
 const getRemainingTraffic = (): number => {
   // API响应中的traffic字段就是剩余流量
-  return userInfo.value.traffic || 0;
+  return userInfo.value?.traffic || 0;
 };
 
 // 初始化markdown-it
@@ -725,15 +630,14 @@ const getAnnouncementCardClass = (announcement: any): string => {
   }
 };
 
-// 获取弹窗公告
+// 获取弹窗公告（改为获取重要公告）
 const fetchPopupNotice = async () => {
-  // 检查是否已经显示过（使用 localStorage 记录）
-  const lastShownTime = localStorage.getItem("popup_notice_last_shown");
-  const now = Date.now();
-
-  // 如果距离上次显示不到 24 小时，则不再显示
-  if (lastShownTime && now - parseInt(lastShownTime) < 24 * 60 * 60 * 1000) {
-    console.log("弹窗公告今日已显示过，跳过");
+  // 检查是否已经关闭过（使用 localStorage 记录）
+  const noticeClosed = localStorage.getItem("important_notice_closed");
+  
+  // 如果用户已关闭，则不再显示
+  if (noticeClosed === "true") {
+    console.log("重要公告已被用户关闭，跳过");
     return;
   }
 
@@ -748,42 +652,287 @@ const fetchPopupNotice = async () => {
 
       if (result.code === 200 && result.data) {
         popupNoticeContent.value = result.data;
-        showPopupNotice.value = true;
-
-        // 记录显示时间
-        localStorage.setItem("popup_notice_last_shown", now.toString());
+        showImportantNotice.value = true; // 显示警告框
       } else {
-        console.log("弹窗公告:", result.message || "无公告内容");
+        console.log("重要公告:", result.message || "无公告内容");
       }
     } catch (parseError) {
       // 如果解析失败，可能是纯文本响应
-      console.log("弹窗公告响应格式异常，跳过显示");
+      console.log("重要公告响应格式异常，跳过显示");
     }
   } catch (error) {
     // 静默处理错误，不影响用户体验
-    console.log("获取弹窗公告:", error);
+    console.log("获取重要公告:", error);
   } finally {
     popupNoticeLoading.value = false;
   }
 };
 
-// 关闭弹窗公告
-const closePopupNotice = () => {
-  showPopupNotice.value = false;
+// 关闭重要公告警告框
+const closeImportantNotice = () => {
+  showImportantNotice.value = false;
+  // 记录用户已关闭，下次不再显示
+  localStorage.setItem("important_notice_closed", "true");
 };
 
 // 组件挂载时获取用户信息和系统公告
 onMounted(() => {
   fetchSystemStatus();
-  fetchUserInfo();
+  userStore.loadUserInfo();
   fetchAnnouncements();
-  fetchPopupNotice();
+  fetchPopupNotice(); // 获取重要公告
 });
 </script>
 
 <style scoped>
 .dashboard {
   padding: 0;
+}
+
+/* 重要公告警告框样式 */
+.important-notice-alert {
+  border-radius: 0;
+}
+
+.important-notice-alert .alert-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 通用 Markdown 渲染样式 - 用于重要公告和普通公告 */
+.important-notice-alert :deep(.n-alert__content),
+.announcement-card :deep(.n-card__content) {
+  line-height: 1.8;
+  font-size: 14px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Markdown 标题样式 */
+.important-notice-alert :deep(h1),
+.important-notice-alert :deep(h2),
+.important-notice-alert :deep(h3),
+.important-notice-alert :deep(h4),
+.important-notice-alert :deep(h5),
+.important-notice-alert :deep(h6),
+.announcement-card :deep(h1),
+.announcement-card :deep(h2),
+.announcement-card :deep(h3),
+.announcement-card :deep(h4),
+.announcement-card :deep(h5),
+.announcement-card :deep(h6) {
+  margin: 16px 0 10px 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.important-notice-alert :deep(h1),
+.announcement-card :deep(h1) {
+  font-size: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.important-notice-alert :deep(h2),
+.announcement-card :deep(h2) {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.important-notice-alert :deep(h3),
+.announcement-card :deep(h3) {
+  font-size: 16px;
+}
+
+.important-notice-alert :deep(h4),
+.announcement-card :deep(h4) {
+  font-size: 15px;
+}
+
+/* h2下的分割线 */
+.important-notice-alert :deep(.h2-divider),
+.announcement-card :deep(.h2-divider) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 0 12px 0;
+}
+
+/* 段落样式 */
+.important-notice-alert :deep(p),
+.announcement-card :deep(p) {
+  margin: 10px 0;
+  line-height: 1.8;
+}
+
+/* 列表样式 */
+.important-notice-alert :deep(ul),
+.important-notice-alert :deep(ol),
+.announcement-card :deep(ul),
+.announcement-card :deep(ol) {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.important-notice-alert :deep(li),
+.announcement-card :deep(li) {
+  margin: 0;
+  line-height: 1.8;
+  padding-left: 8px;
+}
+
+.important-notice-alert :deep(ul li),
+.announcement-card :deep(ul li) {
+  list-style-type: disc;
+}
+
+.important-notice-alert :deep(ul li::marker),
+.announcement-card :deep(ul li::marker) {
+  font-size: 0.8em;
+}
+
+.important-notice-alert :deep(ol li),
+.announcement-card :deep(ol li) {
+  list-style-type: decimal;
+}
+
+.important-notice-alert :deep(ol li::marker),
+.announcement-card :deep(ol li::marker) {
+  font-weight: 600;
+}
+
+.important-notice-alert :deep(ul ul),
+.important-notice-alert :deep(ol ol),
+.important-notice-alert :deep(ul ol),
+.important-notice-alert :deep(ol ul),
+.announcement-card :deep(ul ul),
+.announcement-card :deep(ol ol),
+.announcement-card :deep(ul ol),
+.announcement-card :deep(ol ul) {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.important-notice-alert :deep(li p),
+.announcement-card :deep(li p) {
+  margin: 2px 0;
+}
+
+/* 行内代码样式 */
+.important-notice-alert :deep(code.inline-code),
+.announcement-card :deep(code.inline-code) {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ff6b6b;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 代码块样式 */
+.important-notice-alert :deep(pre),
+.announcement-card :deep(pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.important-notice-alert :deep(pre code),
+.announcement-card :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 引用块样式 */
+.important-notice-alert :deep(blockquote.custom-blockquote),
+.announcement-card :deep(blockquote.custom-blockquote) {
+  border-left: 4px solid #4da8f5;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 4px 4px 0;
+}
+
+.important-notice-alert :deep(blockquote.custom-blockquote p),
+.announcement-card :deep(blockquote.custom-blockquote p) {
+  margin: 4px 0;
+}
+
+/* 链接样式 - 全局统一为 #4da8f5 */
+.important-notice-alert :deep(a),
+.announcement-card :deep(a) {
+  color: #4da8f5;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-weight: 500;
+}
+
+.important-notice-alert :deep(a:hover),
+.announcement-card :deep(a:hover) {
+  color: #6bb8f7;
+  text-decoration: underline;
+}
+
+/* 强调文本 */
+.important-notice-alert :deep(strong),
+.announcement-card :deep(strong) {
+  font-weight: 600;
+}
+
+.important-notice-alert :deep(em),
+.announcement-card :deep(em) {
+  font-style: italic;
+}
+
+/* 删除线 */
+.important-notice-alert :deep(del),
+.announcement-card :deep(del) {
+  text-decoration: line-through;
+}
+
+/* 水平分割线 */
+.important-notice-alert :deep(hr),
+.announcement-card :deep(hr) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
+}
+
+/* 表格样式 */
+.important-notice-alert :deep(table),
+.announcement-card :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.important-notice-alert :deep(table th),
+.important-notice-alert :deep(table td),
+.announcement-card :deep(table th),
+.announcement-card :deep(table td) {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.important-notice-alert :deep(table th),
+.announcement-card :deep(table th) {
+  background: rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+}
+
+.important-notice-alert :deep(table tr:hover),
+.announcement-card :deep(table tr:hover) {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* 系统状态卡片 */
@@ -1082,213 +1231,10 @@ onMounted(() => {
 }
 
 .announcement-card .n-card__content {
-  color: #666;
   line-height: 1.6;
   font-size: 14px;
   word-wrap: break-word;
   overflow-wrap: break-word;
-}
-
-/* Markdown内容样式 */
-.announcement-card .n-card__content h1,
-.announcement-card .n-card__content h2,
-.announcement-card .n-card__content h3,
-.announcement-card .n-card__content h4,
-.announcement-card .n-card__content h5,
-.announcement-card .n-card__content h6 {
-  margin: 16px 0 8px 0;
-  color: #ffffffd1;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.announcement-card .n-card__content h1 {
-  font-size: 24px;
-  border-bottom: 2px solid #3e3e42;
-  padding-bottom: 8px;
-}
-
-.announcement-card .n-card__content h2 {
-  font-size: 20px;
-  margin-bottom: 4px;
-}
-
-.announcement-card .n-card__content h3 {
-  font-size: 18px;
-}
-
-.announcement-card .n-card__content h4 {
-  font-size: 16px;
-}
-
-/* h2下的分割线 */
-.announcement-card .n-card__content .h2-divider {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 8px 0 16px 0;
-}
-
-.announcement-card .n-card__content p {
-  margin: 8px 0;
-  color: #a0a0a0;
-  line-height: 1.7;
-}
-
-/* 行内代码 */
-.announcement-card .n-card__content code.inline-code {
-  background: #303033;
-  color: #e8e8ea;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  border: 1px solid #3e3e42;
-}
-
-/* 代码块 */
-.announcement-card .n-card__content pre {
-  background: #1a1a1e;
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 12px 0;
-  border: 1px solid #3e3e42;
-}
-
-.announcement-card .n-card__content pre code {
-  background: transparent;
-  color: #e8e8ea;
-  padding: 0;
-  border: none;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-/* 引用块 */
-.announcement-card .n-card__content blockquote.custom-blockquote {
-  border-left: 4px solid #349ff4;
-  margin: 12px 0;
-  padding: 8px 12px;
-  background: #242428;
-  color: #a0a0a0;
-  border-radius: 0 4px 4px 0;
-}
-
-.announcement-card .n-card__content blockquote.custom-blockquote p {
-  margin: 4px 0;
-}
-
-/* 列表样式 */
-.announcement-card .n-card__content ul,
-.announcement-card .n-card__content ol {
-  margin: 12px 0;
-  padding-left: 28px;
-  color: #a0a0a0;
-}
-
-.announcement-card .n-card__content li {
-  margin: 6px 0;
-  line-height: 1.7;
-  padding-left: 8px;
-}
-
-.announcement-card .n-card__content ul li {
-  list-style-type: disc;
-}
-
-.announcement-card .n-card__content ul li::marker {
-  color: #349ff4;
-  font-size: 0.8em;
-}
-
-.announcement-card .n-card__content ol li {
-  list-style-type: decimal;
-}
-
-.announcement-card .n-card__content ol li::marker {
-  color: #349ff4;
-  font-weight: 600;
-}
-
-/* 嵌套列表 */
-.announcement-card .n-card__content ul ul,
-.announcement-card .n-card__content ol ol,
-.announcement-card .n-card__content ul ol,
-.announcement-card .n-card__content ol ul {
-  margin: 4px 0;
-  padding-left: 24px;
-}
-
-/* 列表中的段落 */
-.announcement-card .n-card__content li p {
-  margin: 2px 0;
-}
-
-/* 链接样式 */
-.announcement-card .n-card__content a {
-  color: #349ff4;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.announcement-card .n-card__content a:hover {
-  color: #4da8f5;
-  text-decoration: underline;
-}
-
-/* 水平分割线 */
-.announcement-card .n-card__content hr {
-  border: none;
-  border-top: 1px solid #3e3e42;
-  margin: 16px 0;
-}
-
-/* 表格样式 */
-.announcement-card .n-card__content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 12px 0;
-  background: #1a1a1e;
-  border: 1px solid #3e3e42;
-}
-
-.announcement-card .n-card__content table th,
-.announcement-card .n-card__content table td {
-  padding: 8px 12px;
-  border: 1px solid #3e3e42;
-  text-align: left;
-}
-
-.announcement-card .n-card__content table th {
-  background: #242428;
-  color: #ffffffd1;
-  font-weight: 600;
-}
-
-.announcement-card .n-card__content table td {
-  color: #a0a0a0;
-}
-
-.announcement-card .n-card__content table tr:hover {
-  background: #242428;
-}
-
-/* 强调文本 */
-.announcement-card .n-card__content strong {
-  color: #ffffffd1;
-  font-weight: 600;
-}
-
-.announcement-card .n-card__content em {
-  color: #b0b0b0;
-  font-style: italic;
-}
-
-/* 删除线 */
-.announcement-card .n-card__content del {
-  color: #707070;
-  text-decoration: line-through;
 }
 
 /* 对话框中的验证组件样式 */
@@ -1308,218 +1254,5 @@ onMounted(() => {
 
 :deep(.n-dialog cap-widget div) {
   max-width: 100% !important;
-}
-
-/* 弹窗公告样式 */
-.popup-notice-content {
-  min-height: 200px;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-.popup-notice-content .loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-}
-
-.popup-notice-content .notice-text {
-  line-height: 1.8;
-  color: #ffffffd1;
-  font-size: 14px;
-  padding: 10px 0;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-/* 弹窗公告 Markdown 样式 */
-.popup-notice-content .notice-text h1,
-.popup-notice-content .notice-text h2,
-.popup-notice-content .notice-text h3,
-.popup-notice-content .notice-text h4,
-.popup-notice-content .notice-text h5,
-.popup-notice-content .notice-text h6 {
-  margin: 16px 0 8px 0;
-  color: #ffffffd1;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.popup-notice-content .notice-text h1 {
-  font-size: 24px;
-  border-bottom: 2px solid #3e3e42;
-  padding-bottom: 8px;
-}
-
-.popup-notice-content .notice-text h2 {
-  font-size: 20px;
-  margin-bottom: 4px;
-}
-
-.popup-notice-content .notice-text h3 {
-  font-size: 18px;
-}
-
-.popup-notice-content .notice-text h4 {
-  font-size: 16px;
-}
-
-.popup-notice-content .notice-text .h2-divider {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 8px 0 16px 0;
-}
-
-.popup-notice-content .notice-text p {
-  margin: 8px 0;
-  color: #a0a0a0;
-  line-height: 1.7;
-}
-
-.popup-notice-content .notice-text code.inline-code {
-  background: #303033;
-  color: #e8e8ea;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  border: 1px solid #3e3e42;
-}
-
-.popup-notice-content .notice-text pre {
-  background: #1a1a1e;
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 12px 0;
-  border: 1px solid #3e3e42;
-}
-
-.popup-notice-content .notice-text pre code {
-  background: transparent;
-  color: #e8e8ea;
-  padding: 0;
-  border: none;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.popup-notice-content .notice-text blockquote.custom-blockquote {
-  border-left: 4px solid #349ff4;
-  margin: 12px 0;
-  padding: 8px 12px;
-  background: #242428;
-  color: #a0a0a0;
-  border-radius: 0 4px 4px 0;
-}
-
-.popup-notice-content .notice-text blockquote.custom-blockquote p {
-  margin: 4px 0;
-}
-
-.popup-notice-content .notice-text ul,
-.popup-notice-content .notice-text ol {
-  margin: 12px 0;
-  padding-left: 28px;
-  color: #a0a0a0;
-}
-
-.popup-notice-content .notice-text li {
-  margin: 6px 0;
-  line-height: 1.7;
-  padding-left: 8px;
-}
-
-.popup-notice-content .notice-text ul li {
-  list-style-type: disc;
-}
-
-.popup-notice-content .notice-text ul li::marker {
-  color: #349ff4;
-  font-size: 0.8em;
-}
-
-.popup-notice-content .notice-text ol li {
-  list-style-type: decimal;
-}
-
-.popup-notice-content .notice-text ol li::marker {
-  color: #349ff4;
-  font-weight: 600;
-}
-
-.popup-notice-content .notice-text ul ul,
-.popup-notice-content .notice-text ol ol,
-.popup-notice-content .notice-text ul ol,
-.popup-notice-content .notice-text ol ul {
-  margin: 4px 0;
-  padding-left: 24px;
-}
-
-.popup-notice-content .notice-text li p {
-  margin: 2px 0;
-}
-
-.popup-notice-content .notice-text a {
-  color: #349ff4;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.popup-notice-content .notice-text a:hover {
-  color: #4da8f5;
-  text-decoration: underline;
-}
-
-.popup-notice-content .notice-text hr {
-  border: none;
-  border-top: 1px solid #3e3e42;
-  margin: 16px 0;
-}
-
-.popup-notice-content .notice-text table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 12px 0;
-  background: #1a1a1e;
-  border: 1px solid #3e3e42;
-}
-
-.popup-notice-content .notice-text table th,
-.popup-notice-content .notice-text table td {
-  padding: 8px 12px;
-  border: 1px solid #3e3e42;
-  text-align: left;
-}
-
-.popup-notice-content .notice-text table th {
-  background: #242428;
-  color: #ffffffd1;
-  font-weight: 600;
-}
-
-.popup-notice-content .notice-text table td {
-  color: #a0a0a0;
-}
-
-.popup-notice-content .notice-text table tr:hover {
-  background: #242428;
-}
-
-.popup-notice-content .notice-text strong {
-  color: #ffffffd1;
-  font-weight: 600;
-}
-
-.popup-notice-content .notice-text em {
-  color: #b0b0b0;
-  font-style: italic;
-}
-
-.popup-notice-content .notice-text del {
-  color: #707070;
-  text-decoration: line-through;
 }
 </style>
