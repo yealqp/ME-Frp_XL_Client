@@ -207,7 +207,7 @@
                 <transition name="dropdown-fade">
                   <div
                     v-if="activeMoreMenu === tunnel.proxyId"
-                    class="more-dropdown-menu"
+                    :class="['more-dropdown-menu', menuPosition[tunnel.proxyId] === 'top' ? 'menu-top' : 'menu-bottom']"
                     @click.stop
                   >
                     <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
@@ -677,13 +677,30 @@ const actionLoading = ref<Record<number, boolean>>({});
 const nodeNameMap = ref<Record<number, string>>({});
 const nodeHostnameMap = ref<Record<number, string>>({});
 const activeMoreMenu = ref<number | null>(null);
+const menuPosition = ref<Record<number, 'top' | 'bottom'>>({});
 
 // 切换更多菜单
 function toggleMoreMenu(tunnelId: number, event: MouseEvent) {
   event.stopPropagation();
+  
   if (activeMoreMenu.value === tunnelId) {
     activeMoreMenu.value = null;
   } else {
+    // 计算菜单应该显示在上方还是下方
+    const button = event.currentTarget as HTMLElement;
+    const rect = button.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    const menuHeight = 400; // 估算菜单高度
+    const spaceBelow = windowHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    // 如果下方空间不足且上方空间更多，则显示在上方
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      menuPosition.value[tunnelId] = 'top';
+    } else {
+      menuPosition.value[tunnelId] = 'bottom';
+    }
+    
     activeMoreMenu.value = tunnelId;
   }
 }
@@ -1876,14 +1893,23 @@ defineExpose({
 
 .more-dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
   right: 0;
   min-width: 160px;
+  max-height: 400px;
+  overflow-y: auto;
   background-color: rgb(72, 72, 78);
   border-radius: 3px;
   box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
   padding: 4px 0;
   z-index: 9999;
+}
+
+.more-dropdown-menu.menu-bottom {
+  top: calc(100% + 4px);
+}
+
+.more-dropdown-menu.menu-top {
+  bottom: calc(100% + 4px);
 }
 
 .dropdown-item {
