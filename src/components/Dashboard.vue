@@ -48,7 +48,10 @@
         <UserInfoCard
           :user-info="userInfo"
           :loading="userInfoLoading"
+          :is-signing="isSigning"
+          :user-info-loading="userInfoLoading"
           title="用户信息"
+          @sign="handleSign"
         />
 
         <!-- 统计信息卡片 -->
@@ -94,6 +97,7 @@ import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
+import { handleApiError } from "@/utils/errorHandler";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import StatisticsCard from "./common/StatisticsCard.vue";
 
@@ -139,6 +143,9 @@ const popupNoticeLoading = ref(false);
 // 加载状态
 const announcementsLoading = ref(true);
 const message = useMessage();
+
+// 签到状态
+const isSigning = ref(false);
 
 // 缓存相关
 const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存时间
@@ -244,15 +251,8 @@ const fetchAnnouncements = async (forceRefresh: boolean = false) => {
       timestamp: Date.now(),
     };
   } catch (error) {
-    console.error("获取系统公告失败", error);
-    // 显示完整的错误信息
-    const errorMessage =
-      error && typeof error === "string"
-        ? error
-        : error && typeof error === "object" && "message" in error
-          ? (error as any).message
-          : "请检查网络连接";
-    message.error(`获取系统公告失败: ${errorMessage}`);
+    const errorMessage = handleApiError(error, "获取系统公告失败", "获取系统公告失败");
+    message.error(errorMessage);
 
     // 如果有缓存数据，使用缓存数据
     if (announcementsCache.value.data.length > 0) {
@@ -387,6 +387,23 @@ const fetchPopupNotice = async () => {
 const closeImportantNotice = () => {
   showImportantNotice.value = false;
   // 不再记录到 localStorage，每次进入页面都会显示
+};
+
+// 处理签到
+const handleSign = async () => {
+  isSigning.value = true;
+  try {
+    // 调用签到 API
+    await invoke("api_user_sign");
+    message.success("签到成功！");
+    // 重新加载用户信息
+    await userStore.loadUserInfo();
+  } catch (error) {
+    const errorMessage = handleApiError(error, "签到失败", "签到失败");
+    message.error(errorMessage);
+  } finally {
+    isSigning.value = false;
+  }
 };
 
 // 组件挂载时获取用户信息和系统公告

@@ -1,16 +1,8 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-import Dashboard from "../components/Dashboard.vue";
-import CreateTunnel from "../components/CreateTunnel.vue";
-import TunnelManagement from "../components/TunnelManagement.vue";
-import UserCenter from "../components/UserCenter.vue";
-import Settings from "../components/Settings.vue";
-import HelpCenter from "../components/HelpCenter.vue";
-import About from "../components/About.vue";
-import Login from "../components/Login.vue";
-import OperationLog from "../components/OperationLog.vue";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig } from "../types/config";
 
+// 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
   {
     path: "/",
@@ -19,55 +11,55 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/login",
     name: "Login",
-    component: Login,
+    component: () => import("../components/Login.vue"),
     meta: { requiresAuth: false },
   },
   {
     path: "/dashboard",
     name: "Dashboard",
-    component: Dashboard,
+    component: () => import("../components/Dashboard.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/create-tunnel",
     name: "CreateTunnel",
-    component: CreateTunnel,
+    component: () => import("../components/CreateTunnel.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/tunnel-management",
     name: "TunnelManagement",
-    component: TunnelManagement,
+    component: () => import("../components/TunnelManagement.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/user-center",
     name: "UserCenter",
-    component: UserCenter,
+    component: () => import("../components/UserCenter.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/operation-log",
     name: "OperationLog",
-    component: OperationLog,
+    component: () => import("../components/OperationLog.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/settings",
     name: "Settings",
-    component: Settings,
+    component: () => import("../components/Settings.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/help-center",
     name: "HelpCenter",
-    component: HelpCenter,
+    component: () => import("../components/HelpCenter.vue"),
     meta: { requiresAuth: true },
   },
   {
     path: "/about",
     name: "About",
-    component: About,
+    component: () => import("../components/About.vue"),
     meta: { requiresAuth: true },
   },
 ];

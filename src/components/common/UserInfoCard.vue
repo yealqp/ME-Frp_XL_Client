@@ -124,8 +124,8 @@
           type="primary"
           size="large"
           block
-          :loading="isSigning"
-          :disabled="userInfo?.todaySigned || userInfoLoading"
+          :loading="props.isSigning"
+          :disabled="userInfo?.todaySigned || props.userInfoLoading"
           @click="showSignDialog"
         >
           {{ userInfo?.todaySigned ? "今日已签到" : "每日签到" }}
@@ -165,6 +165,7 @@ interface UserInfo {
   traffic: number;
   inBound: number;
   outBound: number;
+  todaySigned?: boolean;
   [key: string]: any;
 }
 
@@ -173,13 +174,27 @@ interface Props {
   loading?: boolean;
   title?: string;
   bordered?: boolean;
+  isSigning?: boolean;
+  userInfoLoading?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   title: "用户信息",
   bordered: true,
+  isSigning: false,
+  userInfoLoading: false,
 });
+
+// 定义 emits
+const emit = defineEmits<{
+  (e: 'sign'): void;
+}>();
+
+// 签到处理函数
+const showSignDialog = () => {
+  emit('sign');
+};
 
 // 根据用户组返回标签类型
 const getUserGroupType = (

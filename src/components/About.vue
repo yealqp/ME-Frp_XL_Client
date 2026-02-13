@@ -184,11 +184,7 @@
 
         <div v-if="updateInfo.length > 0" class="update-info">
           <p class="update-info-title">更新内容：</p>
-          <ul class="update-list">
-            <li v-for="(info, index) in updateInfo" :key="index">
-              {{ info }}
-            </li>
-          </ul>
+          <div class="update-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
         </div>
       </div>
 
@@ -267,6 +263,7 @@ import {
   RefreshCw,
   Quote,
 } from "lucide-vue-next";
+import { parseMarkdown } from "@/utils/markdownParser";
 
 interface UpdateCheckResult {
   has_update: boolean;
@@ -370,6 +367,19 @@ const checkForUpdates = async () => {
   } finally {
     updateChecking.value = false;
   }
+};
+
+// 将更新信息数组转换为 Markdown 格式并解析
+const parseUpdateInfo = (infoArray: string[]): string => {
+  if (!infoArray || infoArray.length === 0) {
+    return '<p>暂无更新信息</p>';
+  }
+  
+  // 将数组每一项用换行符连接成一个字符串
+  const markdownContent = infoArray.join('\n');
+  
+  // 使用 parseMarkdown 解析为 HTML
+  return parseMarkdown(markdownContent);
 };
 
 // 处理更新
@@ -832,6 +842,199 @@ const submitFeedback = async () => {
   font-weight: 600;
   color: #ffffffd1;
   margin-bottom: 12px;
+}
+
+.update-content-markdown {
+  padding: 12px 0;
+  line-height: 1.8;
+  font-size: 14px;
+  color: #a0a0a0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Markdown 标题样式 */
+.update-content-markdown :deep(h1),
+.update-content-markdown :deep(h2),
+.update-content-markdown :deep(h3),
+.update-content-markdown :deep(h4),
+.update-content-markdown :deep(h5),
+.update-content-markdown :deep(h6) {
+  margin: 16px 0 10px 0;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+.update-content-markdown :deep(h1) {
+  font-size: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.update-content-markdown :deep(h2) {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.update-content-markdown :deep(h3) {
+  font-size: 16px;
+}
+
+.update-content-markdown :deep(h4) {
+  font-size: 15px;
+}
+
+/* h2下的分割线 */
+.update-content-markdown :deep(.h2-divider) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 0 12px 0;
+}
+
+/* 段落样式 */
+.update-content-markdown :deep(p) {
+  margin: 10px 0;
+  line-height: 1.8;
+  color: #a0a0a0;
+}
+
+/* 列表样式 */
+.update-content-markdown :deep(ul),
+.update-content-markdown :deep(ol) {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.update-content-markdown :deep(li) {
+  margin: 0;
+  line-height: 1.8;
+  padding-left: 8px;
+  color: #a0a0a0;
+}
+
+.update-content-markdown :deep(ul li) {
+  list-style-type: disc;
+}
+
+.update-content-markdown :deep(ul li::marker) {
+  font-size: 0.8em;
+  color: #4da8f5;
+}
+
+.update-content-markdown :deep(ol li) {
+  list-style-type: decimal;
+}
+
+.update-content-markdown :deep(ol li::marker) {
+  font-weight: 600;
+  color: #4da8f5;
+}
+
+.update-content-markdown :deep(ul ul),
+.update-content-markdown :deep(ol ol),
+.update-content-markdown :deep(ul ol),
+.update-content-markdown :deep(ol ul) {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.update-content-markdown :deep(li p) {
+  margin: 2px 0;
+}
+
+/* 行内代码样式 */
+.update-content-markdown :deep(code.inline-code) {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ff6b6b;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 代码块样式 */
+.update-content-markdown :deep(pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.update-content-markdown :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #a0a0a0;
+}
+
+/* 引用块样式 */
+.update-content-markdown :deep(blockquote.custom-blockquote) {
+  border-left: 4px solid #4da8f5;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 4px 4px 0;
+}
+
+.update-content-markdown :deep(blockquote.custom-blockquote p) {
+  margin: 4px 0;
+}
+
+/* 链接样式 */
+.update-content-markdown :deep(a) {
+  color: #4da8f5;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-weight: 500;
+  position: relative;
+}
+
+.update-content-markdown :deep(a::after) {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 1px;
+  background-color: #6bb8f7;
+  transition: width 0.3s ease;
+}
+
+.update-content-markdown :deep(a:hover) {
+  color: #6bb8f7;
+}
+
+.update-content-markdown :deep(a:hover::after) {
+  width: 100%;
+}
+
+/* 强调文本 */
+.update-content-markdown :deep(strong) {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.update-content-markdown :deep(em) {
+  font-style: italic;
+}
+
+/* 删除线 */
+.update-content-markdown :deep(del) {
+  text-decoration: line-through;
+}
+
+/* 水平分割线 */
+.update-content-markdown :deep(hr) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
 }
 
 .update-list {

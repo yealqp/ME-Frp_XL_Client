@@ -4,8 +4,11 @@
     <UserInfoCard
       :user-info="userInfo"
       :loading="userInfoLoading"
+      :is-signing="isSigning"
+      :user-info-loading="userInfoLoading"
       title="用户信息"
       :bordered="true"
+      @sign="showSignDialog"
     >
     </UserInfoCard>
 
@@ -217,13 +220,6 @@
       </n-space>
     </n-card>
 
-    <!-- 隐式验证组件 - 签到 -->
-    <ImplicitCaptcha
-      ref="signCaptchaRef"
-      @solve="handleSignCaptchaSolve"
-      @error="handleSignCaptchaError"
-    />
-
     <!-- CDK兑换模态框 -->
     <n-modal
       v-model:show="showCdkModal"
@@ -263,13 +259,6 @@
         </n-space>
       </template>
     </n-modal>
-    
-    <!-- 隐式验证组件 - CDK -->
-    <ImplicitCaptcha
-      ref="cdkCaptchaRef"
-      @solve="handleCdkCaptchaSolve"
-      @error="handleCdkCaptchaError"
-    />
   </div>
 </template>
 
@@ -291,7 +280,8 @@ import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts";
-import ImplicitCaptcha from "./ImplicitCaptcha.vue";
+import { createCaptcha } from "@/utils/captcha";
+import { handleApiError } from "@/utils/errorHandler";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
 import { TrendingUp, Gift, Ticket, History, Power } from "lucide-vue-next";
@@ -342,7 +332,15 @@ interface TrafficStatsResponse {
 // 签到相关
 const isSigning = ref(false);
 const signCaptchaToken = ref("");
-const signCaptchaRef = ref<any>(null);
+
+// 创建签到验证码实例
+const signCaptchaInstance = createCaptcha({
+  onProgress: (progress) => console.log(`签到验证进度: ${progress}%`),
+  onError: (error) => {
+    console.error("签到验证错误:", error);
+    message.error(`人机验证失败: ${error}`);
+  },
+});
 
 // 下线所有隧道相关
 const kickingAllProxies = ref(false);
@@ -352,7 +350,15 @@ const cdkCode = ref("");
 const isRedeeming = ref(false);
 const showCdkModal = ref(false);
 const cdkCaptchaToken = ref("");
-const cdkCaptchaRef = ref<any>(null);
+
+// 创建 CDK 验证码实例
+const cdkCaptchaInstance = createCaptcha({
+  onProgress: (progress) => console.log(`CDK 验证进度: ${progress}%`),
+  onError: (error) => {
+    console.error("CDK 验证错误:", error);
+    message.error(`人机验证失败: ${error}`);
+  },
+});
 
 // CDK兑换历史相关
 const cdkHistory = ref<CdkHistoryLog[]>([]);
@@ -393,7 +399,7 @@ const showSignDialog = async () => {
   // 触发隐式验证
   try {
     message.loading("正在进行人机验证...", { duration: 0 });
-    const token = await signCaptchaRef.value?.verify();
+    const token = await signCaptchaInstance.verify();
     message.destroyAll();
     await handleSignCaptchaSolve(token);
   } catch (error) {
@@ -408,12 +414,6 @@ const handleSignCaptchaSolve = async (token: string) => {
 
   // 自动执行签到
   await performSign();
-};
-
-// 处理签到验证失败
-const handleSignCaptchaError = (error: string) => {
-  console.error("签到验证失败:", error);
-  message.error(`人机验证失败: ${error}`);
 };
 
 // 执行签到
@@ -460,8 +460,8 @@ const performSign = async () => {
       message.error(result.message || "签到失败");
     }
   } catch (error) {
-    console.error("签到失败:", error);
-    message.error(`签到失败: ${error}`);
+    const errorMessage = handleApiError(error, "签到失败", "签到失败");
+    message.error(errorMessage);
   } finally {
     isSigning.value = false;
   }
@@ -504,8 +504,8 @@ const handleKickAllProxies = async () => {
       return false;
     }
   } catch (error) {
-    console.error("下线隧道失败:", error);
-    message.error(`下线隧道失败: ${error}`);
+    const errorMessage = handleApiError(error, "下线隧道失败", "下线隧道失败");
+    message.error(errorMessage);
     return false;
   } finally {
     kickingAllProxies.value = false;
@@ -519,18 +519,6 @@ const showCdkDialog = () => {
   cdkCode.value = "";
   cdkCaptchaToken.value = "";
   showCdkModal.value = true;
-};
-
-// 处理CDK验证成功
-const handleCdkCaptchaSolve = (token: string) => {
-  cdkCaptchaToken.value = token;
-};
-
-// 处理CDK验证失败
-const handleCdkCaptchaError = (error: string) => {
-  console.error("CDK验证失败:", error);
-  message.error(`人机验证失败: ${error}`);
-  isRedeeming.value = false;
 };
 
 // 执行CDK兑换
@@ -549,7 +537,7 @@ const performCdkRedeem = async () => {
   // 触发隐式验证
   try {
     message.loading("正在进行人机验证...", { duration: 0 });
-    const token = await cdkCaptchaRef.value?.verify();
+    const token = await cdkCaptchaInstance.verify();
     cdkCaptchaToken.value = token;
     
     message.destroyAll();
@@ -594,8 +582,8 @@ const performCdkRedeem = async () => {
     }
   } catch (error) {
     message.destroyAll();
-    console.error("CDK兑换失败:", error);
-    message.error(`CDK兑换失败: ${error}`);
+    const errorMessage = handleApiError(error, "CDK兑换失败", "CDK兑换失败");
+    message.error(errorMessage);
   } finally {
     isRedeeming.value = false;
   }
@@ -621,8 +609,8 @@ const loadCdkHistory = async () => {
       cdkHistoryTotal.value = 0;
     }
   } catch (error) {
-    console.error("加载CDK兑换历史失败:", error);
-    message.error("加载CDK兑换历史失败，请检查网络连接");
+    const errorMessage = handleApiError(error, "加载CDK兑换历史失败", "加载CDK兑换历史失败");
+    message.error(errorMessage);
     cdkHistory.value = [];
     cdkHistoryTotal.value = 0;
   } finally {
@@ -742,8 +730,8 @@ const loadTrafficStats = async () => {
       message.error(result.message || "获取流量统计失败");
     }
   } catch (error) {
-    console.error("加载流量统计失败:", error);
-    message.error("加载流量统计失败，请检查网络连接");
+    const errorMessage = handleApiError(error, "加载流量统计失败", "加载流量统计失败");
+    message.error(errorMessage);
   } finally {
     trafficStatsLoading.value = false;
     console.log("流量统计加载完成");
@@ -1183,6 +1171,10 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", () => {
     chartInstance.value?.resize();
   });
+  
+  // 清理验证码实例
+  signCaptchaInstance.destroy();
+  cdkCaptchaInstance.destroy();
 });
 </script>
 

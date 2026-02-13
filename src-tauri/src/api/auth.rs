@@ -44,17 +44,15 @@ pub async fn login(
         .await
         .map_err(|e| format!("登录请求失败: {e}"))?;
 
-    if !response.status().is_success() {
-        return Err(format!("登录请求失败，状态码: {}", response.status()));
-    }
-
+    // 尝试解析响应体，即使HTTP状态码不是2xx
+    // ME-Frp API在业务错误时也会返回非2xx状态码，但响应体中包含详细错误信息
     let api_response: ApiResponse<LoginData> = response
         .json()
         .await
         .map_err(|e| format!("解析登录响应失败: {e}"))?;
 
     if api_response.code != 200 {
-        return Err(format!("登录失败: {}", api_response.message));
+        return Err(api_response.message);
     }
 
     let login_data = api_response.data.ok_or("登录响应数据为空")?;
@@ -104,17 +102,14 @@ pub async fn get_user_info(token: &str) -> Result<UserDetailInfo, String> {
         .await
         .map_err(|e| format!("获取用户信息请求失败: {e}"))?;
 
-    if !response.status().is_success() {
-        return Err(format!("获取用户信息失败，状态码: {}", response.status()));
-    }
-
+    // 尝试解析响应体，即使HTTP状态码不是2xx
     let api_response: ApiResponse<UserDetailInfo> = response
         .json()
         .await
         .map_err(|e| format!("解析用户信息响应失败: {e}"))?;
 
     if api_response.code != 200 {
-        return Err(format!("获取用户信息失败: {}", api_response.message));
+        return Err(api_response.message);
     }
 
     api_response.data.ok_or("用户信息响应数据为空".to_string())

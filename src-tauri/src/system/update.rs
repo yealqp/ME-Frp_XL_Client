@@ -35,7 +35,7 @@ pub async fn check_for_updates() -> Result<VersionCheckResult, String> {
 
     // 请求远程版本信息
     let response = client
-        .get("https://check.yealqp.cn/version.json")
+        .get("http://127.0.0.1:5500/version.json")
         .send()
         .await
         .map_err(|e| format!("请求版本信息失败: {e}"))?;
