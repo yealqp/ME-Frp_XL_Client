@@ -1,196 +1,13 @@
 <template>
   <div class="user-center">
-    <!-- 用户信息卡片 - 与Dashboard完全相同 -->
-    <n-card title="用户信息" :bordered="true" class="user-info-card">
-      <div class="user-profile">
-        <template v-if="userInfoLoading">
-          <div class="user-info-grid">
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 60%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 50%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 40%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 70%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 50%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 45%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 55%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 40%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 45%" />
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-skeleton
-                text
-                :repeat="1"
-                style="width: 30%; font-size: 13px"
-              />
-              <div class="user-info-value">
-                <n-skeleton text :repeat="1" style="width: 55%" />
-              </div>
-            </div>
-          </div>
-        </template>
-        <template v-else>
-          <div class="user-info-grid">
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">用户名</n-text>
-              <div class="user-info-value">{{ userInfo?.username }}</div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">用户 ID</n-text>
-              <div class="user-info-value">
-                <n-tag type="warning" :bordered="false" size="small">
-                  #{{ userInfo?.userId }}
-                </n-tag>
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">实名认证</n-text>
-              <div class="user-info-value">
-                <n-tag type="success" :bordered="false" size="small">
-                  {{ userInfo?.isRealname ? "已实名" : "未实名" }}
-                </n-tag>
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">用户组</n-text>
-              <div class="user-info-value">
-                <n-tag type="info" :bordered="false" size="small">
-                  {{ userInfo?.friendlyGroup }}
-                </n-tag>
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">注册时间</n-text>
-              <div class="user-info-value">
-                {{ formatRegTime(userInfo?.regTime || 0) }}
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">注册邮箱</n-text>
-              <div class="user-info-value">{{ userInfo?.email }}</div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">隧道数量</n-text>
-              <div class="user-info-value">
-                {{ userInfo?.usedProxies }}/{{ userInfo?.maxProxies }}
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">剩余流量</n-text>
-              <div class="user-info-value">
-                {{ ((userInfo?.traffic || 0) / 1024).toFixed(2) }} GB
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">入站带宽</n-text>
-              <div class="user-info-value">
-                {{ formatBandwidth(userInfo?.inBound || 0) }}
-              </div>
-            </div>
-            <div class="user-info-item">
-              <n-text :style="{ fontSize: '13px' }" depth="3">出站带宽</n-text>
-              <div class="user-info-value">
-                {{ formatBandwidth(userInfo?.outBound || 0) }}
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- 签到按钮 -->
-      <template #footer>
-        <div class="sign-in-section">
-          <n-button
-            type="primary"
-            size="large"
-            block
-            :loading="isSigning"
-            :disabled="userInfo?.todaySigned || userInfoLoading"
-            @click="showSignDialog"
-          >
-            {{ userInfo?.todaySigned ? "今日已签到" : "每日签到" }}
-          </n-button>
-        </div>
-      </template>
-    </n-card>
+    <!-- 用户信息卡片 - 使用 UserInfoCard 组件 -->
+    <UserInfoCard
+      :user-info="userInfo"
+      :loading="userInfoLoading"
+      title="用户信息"
+      :bordered="true"
+    >
+    </UserInfoCard>
 
     <!-- 流量统计卡片 -->
     <n-card :bordered="true" class="traffic-stats-card">
@@ -263,13 +80,13 @@
           <div class="tooltip-content">
             <div class="tooltip-item">
               <span class="tooltip-label"
-                >上传流量: {{ customTooltipData.trafficOut }}
+                >下载流量: {{ customTooltipData.trafficOut }}
                 {{ customTooltipData.unit }}</span
               >
             </div>
             <div class="tooltip-item">
               <span class="tooltip-label"
-                >下载流量: {{ customTooltipData.trafficIn }}
+                >上传流量: {{ customTooltipData.trafficIn }}
                 {{ customTooltipData.unit }}</span
               >
             </div>
@@ -465,11 +282,9 @@ import {
   NCard,
   NButton,
   NSpace,
-  NTag,
   NInput,
-  NSkeleton,
-  NText,
   NSpin,
+  NModal,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import { storeToRefs } from "pinia";
@@ -477,6 +292,8 @@ import { useUserStore } from "../stores/user";
 import * as echarts from "echarts";
 import type { ECharts } from "echarts";
 import ImplicitCaptcha from "./ImplicitCaptcha.vue";
+import UserInfoCard from "./common/UserInfoCard.vue";
+import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
 import { TrendingUp, Gift, Ticket, History, Power } from "lucide-vue-next";
 
 const router = useRouter();
@@ -569,23 +386,6 @@ const currentChartData = ref<{
   unit: string;
 } | null>(null);
 
-// 格式化带宽（单位：Mbps，响应数值/128是显示数值）
-const formatBandwidth = (value: number): string => {
-  if (value === 0) return "0 Mbps";
-  const mbps = value / 128;
-  return parseFloat(mbps.toFixed(2)) + " Mbps";
-};
-
-// 格式化注册时间
-const formatRegTime = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-};
-
 // 显示签到对话框
 const showSignDialog = async () => {
   signCaptchaToken.value = "";
@@ -614,7 +414,6 @@ const handleSignCaptchaSolve = async (token: string) => {
 const handleSignCaptchaError = (error: string) => {
   console.error("签到验证失败:", error);
   message.error(`人机验证失败: ${error}`);
-  showSignModal.value = false;
 };
 
 // 执行签到
@@ -865,16 +664,9 @@ const formatCdkValue = (type: string, value: number): string => {
   }
 };
 
-// 格式化时间戳
+// 使用导入的时间格式化工具
 const formatTimestamp = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  return formatTimestampUtil(timestamp, { format: 'datetime' });
 };
 
 // 初始化图表
@@ -1024,7 +816,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
       triggerOn: "none", // 禁用自动触发，改为手动控制
     },
     legend: {
-      data: ["入站流量", "出站流量", "总流量"],
+      data: ["下载流量", "上传流量", "总流量"],
       textStyle: {
         color: "#ffffffd1",
       },
@@ -1090,7 +882,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
     },
     series: [
       {
-        name: "入站流量",
+        name: "下载流量",
         type: "line",
         smooth: true,
         data: trafficData.trafficIn,
@@ -1105,7 +897,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
         },
       },
       {
-        name: "出站流量",
+        name: "上传流量",
         type: "line",
         smooth: true,
         data: trafficData.trafficOut,
@@ -1502,41 +1294,11 @@ onBeforeUnmount(() => {
   color: #ffffff !important;
 }
 
-/* 用户信息卡片样式 - 与Dashboard完全相同 */
-.user-info-card {
-  background: #18181c;
-  border: 1px solid #29292c;
-}
-
-.user-info-grid {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 30px;
-  row-gap: 10px;
-  column-gap: 60px;
-}
-
-.user-info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: #18181c;
-  border-radius: 8px;
-}
-
-.user-info-value {
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 14px;
-  margin-top: 4px;
-}
-
 /* 签到按钮区域样式 */
 .sign-in-section {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #29292c;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .sign-in-section .n-button {
@@ -1699,10 +1461,6 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .user-center {
     padding: 10px;
-  }
-
-  .user-info-grid {
-    grid-template-columns: 1fr;
   }
 
   .cdk-redeem-item {

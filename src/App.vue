@@ -331,7 +331,7 @@ onMounted(async () => {
                 <router-view v-slot="{ Component }">
                   <!-- 只渲染非登录页面的组件 -->
                   <component
-                    v-if="Component && Component.__name !== 'Login'"
+                    v-if="Component && (Component as any).__name !== 'Login'"
                     :is="Component"
                     v-bind="{
                       ...getComponentProps(Component),

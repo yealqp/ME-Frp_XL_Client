@@ -21,7 +21,7 @@
           <template #header>
             <span class="alert-title">重要公告</span>
           </template>
-          <div v-html="parseMarkdownContent(popupNoticeContent)"></div>
+          <div v-html="parseMarkdown(popupNoticeContent)"></div>
         </n-alert>
 
         <!-- 系统状态卡片 -->
@@ -45,200 +45,14 @@
         </div>
 
         <!-- 用户信息卡片 -->
-        <n-card title="用户信息" :bordered="true" class="user-info-card">
-          <div class="user-profile">
-            <template v-if="userInfoLoading">
-              <div class="user-info-grid">
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 60%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 50%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 40%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 70%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 50%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 45%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 55%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 40%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 45%" />
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-skeleton
-                    text
-                    :repeat="1"
-                    style="width: 30%; font-size: 13px"
-                  />
-                  <div class="user-info-value">
-                    <n-skeleton text :repeat="1" style="width: 55%" />
-                  </div>
-                </div>
-              </div>
-            </template>
-            <template v-else>
-              <div v-if="userInfo" class="user-info-grid">
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >用户名</n-text
-                  >
-                  <div class="user-info-value">{{ userInfo.username }}</div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >用户 ID</n-text
-                  >
-                  <div class="user-info-value">
-                    <n-tag type="warning" :bordered="false" size="small">
-                      #{{ userInfo.userId }}
-                    </n-tag>
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >实名认证</n-text
-                  >
-                  <div class="user-info-value">
-                    <n-tag type="success" :bordered="false" size="small">
-                      {{ userInfo.isRealname ? "已实名" : "未实名" }}
-                    </n-tag>
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >用户组</n-text
-                  >
-                  <div class="user-info-value">
-                    <n-tag type="info" :bordered="false" size="small">
-                      {{ userInfo.friendlyGroup }}
-                    </n-tag>
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >注册时间</n-text
-                  >
-                  <div class="user-info-value">
-                    {{ formatRegTime(userInfo.regTime) }}
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >注册邮箱</n-text
-                  >
-                  <div class="user-info-value">{{ userInfo.email }}</div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >隧道数量</n-text
-                  >
-                  <div class="user-info-value">
-                    {{ userInfo.usedProxies }}/{{ userInfo.maxProxies }}
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >剩余流量</n-text
-                  >
-                  <div class="user-info-value">
-                    {{ (getRemainingTraffic() / 1024).toFixed(2) }} GB
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >入站带宽</n-text
-                  >
-                  <div class="user-info-value">
-                    {{ formatBandwidth(userInfo.inBound) }}
-                  </div>
-                </div>
-                <div class="user-info-item">
-                  <n-text :style="{ fontSize: '13px' }" depth="3"
-                    >出站带宽</n-text
-                  >
-                  <div class="user-info-value">
-                    {{ formatBandwidth(userInfo.outBound) }}
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-        </n-card>
+        <UserInfoCard
+          :user-info="userInfo"
+          :loading="userInfoLoading"
+          title="用户信息"
+        />
+
+        <!-- 统计信息卡片 -->
+        <StatisticsCard />
       </div>
 
       <!-- 右侧系统公告卡片 -->
@@ -264,7 +78,7 @@
             <template #header-extra>
               <span class="announcement-date">{{ announcement.date }}</span>
             </template>
-            <div v-html="parseMarkdownContent(announcement.content)"></div>
+            <div v-html="parseMarkdown(announcement.content)"></div>
           </n-card>
         </template>
       </div>
@@ -275,11 +89,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import MarkdownIt from "markdown-it";
 import { useMessage } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle } from "lucide-vue-next";
+import { parseMarkdown } from "@/utils/markdownParser";
+import UserInfoCard from "./common/UserInfoCard.vue";
+import StatisticsCard from "./common/StatisticsCard.vue";
 
 // Initialize User Store
 const userStore = useUserStore();
@@ -458,16 +274,6 @@ const fetchAnnouncements = async (forceRefresh: boolean = false) => {
   }
 };
 
-// 格式化注册时间
-const formatRegTime = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-};
-
 // 获取系统状态类名
 const getStatusClass = (): string => {
   switch (systemStatus.value.status) {
@@ -533,90 +339,7 @@ const fetchSystemStatus = async () => {
   }
 };
 
-// 格式化带宽（单位：Mbps，响应数值/128是显示数值）
-const formatBandwidth = (value: number): string => {
-  if (value === 0) return "0 Mbps";
-  const mbps = value / 128;
-  return parseFloat(mbps.toFixed(2)) + " Mbps";
-};
-
-// 获取剩余流量（直接使用API返回的traffic字段）
-const getRemainingTraffic = (): number => {
-  // API响应中的traffic字段就是剩余流量
-  return userInfo.value?.traffic || 0;
-};
-
-// 初始化markdown-it
-const md = new MarkdownIt({
-  html: true,
-  breaks: true,
-  linkify: true,
-});
-
-// 自定义链接渲染规则,添加target="_blank"
-const defaultRender =
-  md.renderer.rules.link_open ||
-  function (tokens: any, idx: any, options: any, _env: any, self: any) {
-    return self.renderToken(tokens, idx, options);
-  };
-
-md.renderer.rules.link_open = function (
-  tokens: any,
-  idx: any,
-  options: any,
-  _env: any,
-  self: any,
-) {
-  const aIndex = tokens[idx].attrIndex("target");
-  if (aIndex < 0) {
-    tokens[idx].attrPush(["target", "_blank"]);
-    tokens[idx].attrPush(["rel", "noopener noreferrer"]);
-  }
-  return defaultRender(tokens, idx, options, _env, self);
-};
-
-// 解析Markdown内容并处理转义字符
-const parseMarkdownContent = (content: string): string => {
-  if (!content) return "";
-
-  // 处理转义字符
-  const unescapedContent = content
-    .replace(/\\n/g, "\n")
-    .replace(/\\t/g, "\t")
-    .replace(/\\r/g, "\r")
-    .replace(/\\\\/g, "\\")
-    .replace(/\\"/g, '"')
-    .replace(/\\'/g, "'")
-    .replace(/\\&/g, "&")
-    .replace(/\\</g, "<")
-    .replace(/\\>/g, ">");
-
-  // 解析Markdown
-  try {
-    // 使用markdown-it解析
-    let html = md.render(unescapedContent);
-
-    // 后处理：在h2标签后添加分割线
-    html = html.replace(
-      /<h2>(.*?)<\/h2>/g,
-      '<h2>$1</h2><hr class="h2-divider">',
-    );
-
-    // 为行内代码添加class
-    html = html.replace(/<code>(?!<\/code>)/g, '<code class="inline-code">');
-
-    // 为引用块添加class
-    html = html.replace(
-      /<blockquote>/g,
-      '<blockquote class="custom-blockquote">',
-    );
-
-    return html;
-  } catch (error) {
-    console.error("Markdown解析失败:", error);
-    return unescapedContent.replace(/\n/g, "<br>");
-  }
-};
+// 初始化markdown-it已移除，使用 parseMarkdown 工具函数
 
 // 根据内容长度计算公告卡片的CSS类
 const getAnnouncementCardClass = (announcement: any): string => {

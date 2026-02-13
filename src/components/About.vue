@@ -131,14 +131,14 @@
           </div>
         </template>
         <p class="card-description">
-          如果发现图形化客户端的BUG 或者有任何建议 欢迎去QQ群找@1592239257反馈
+          如果发现图形化客户端的BUG 或者有任何建议 欢迎点击反馈按钮和发送邮件。
         </p>
         <div class="card-actions">
           <n-button type="primary" @click="showFeedbackModal = true">
             <template #icon>
               <Edit :size="16" />
             </template>
-            表单反馈
+            填写反馈
           </n-button>
           <n-button type="primary" @click="sendyEmail">
             <template #icon>

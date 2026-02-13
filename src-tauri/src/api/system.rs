@@ -249,3 +249,29 @@ pub async fn api_request(
 
     Ok(response_text)
 }
+
+/// 获取统计信息（公开API，无需token）
+///
+/// # 返回
+/// 成功返回统计信息JSON字符串
+pub async fn get_statistics() -> Result<String, String> {
+    let client = create_http_client();
+
+    let response = client
+        .get("https://api.mefrp.com/api/public/statistics")
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取统计信息请求失败: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("获取统计信息失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析统计信息响应失败: {e}"))?;
+
+    Ok(response_text)
+}

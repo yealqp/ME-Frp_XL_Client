@@ -266,6 +266,12 @@ async fn api_get_popup_notice(_app_handle: tauri::AppHandle) -> Result<String, S
     api::system::get_popup_notice(&config.user_token).await
 }
 
+// 获取统计信息API命令
+#[tauri::command]
+async fn api_get_statistics(_app_handle: tauri::AppHandle) -> Result<String, String> {
+    api::system::get_statistics().await
+}
+
 // 获取节点列表API命令
 #[tauri::command]
 async fn api_get_node_list(_app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -845,6 +851,7 @@ pub fn run() {
             api_get_announcements,
             api_get_system_status,
             api_get_popup_notice,
+            api_get_statistics,
             api_get_node_list,
             api_get_node_status,
             api_get_free_port,

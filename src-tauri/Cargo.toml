@@ -1,6 +1,6 @@
 [package]
 name = "me-frp_desktop_unoffical"
-version = "1.6.1"
+version = "1.6.1-fix-1"
 description = "ME-Frp XL Client"
 authors = ["yealqp"]
 edition = "2021"
@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.5", features = [] }
 
 [dependencies]
-tauri = { version = "2.5", features = ["tray-icon"] }
+tauri = { version = "2.10", features = ["tray-icon"] }
 tauri-plugin-opener = "2.5"
 tauri-plugin-fs = "2.4"
 tauri-plugin-single-instance = "2.3"

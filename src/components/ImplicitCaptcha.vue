@@ -33,8 +33,8 @@ const initCap = async () => {
     // 创建 Cap 实例
     capInstance = new Cap({
       apiEndpoint: `https://captcha.mefrp.com/${props.siteId}/`,
-      workers: props.workerCount,
-    });
+      workerCount: props.workerCount,
+    } as any);
     
     // 监听进度事件
     capInstance.addEventListener("progress", (event: any) => {

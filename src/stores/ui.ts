@@ -8,11 +8,13 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
+import { showAdGlobal } from '@/utils/eventBus';
 
 export const useUIStore = defineStore('ui', () => {
   // State
   const theme = ref<'light' | 'dark'>('light');
   const customTheme = ref<any>(null);
+  const showAd = ref<boolean>(true);
 
   // Getters
   const currentTheme = computed(() => customTheme.value || theme.value);
@@ -32,15 +34,26 @@ export const useUIStore = defineStore('ui', () => {
     localStorage.setItem('theme', theme.value);
   }
 
+  /**
+   * Update showAd state and sync to eventBus
+   * @param value - New showAd value
+   */
+  function updateShowAd(value: boolean) {
+    showAd.value = value;
+    showAdGlobal.value = value;
+  }
+
   return {
     // State
     theme,
     customTheme,
+    showAd,
     // Getters
     currentTheme,
     isDarkMode,
     // Actions
     initTheme,
     toggleTheme,
+    updateShowAd,
   };
 });
