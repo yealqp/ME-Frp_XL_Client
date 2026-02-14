@@ -136,94 +136,153 @@
           <!-- 卡片底部操作 -->
           <template #action>
             <div class="tunnel-actions">
-              <n-button
-                v-if="!runningTunnels.has(tunnel.proxyId)"
-                type="primary"
-                size="small"
-                @click="startTunnel(tunnel.proxyId)"
-                :loading="actionLoading[tunnel.proxyId]"
-              >
-                <template #icon>
-                  <Play :size="14" />
-                </template>
-                启动
-              </n-button>
-              <n-button
-                v-else
-                type="warning"
-                size="small"
-                @click="stopTunnel(tunnel.proxyId)"
-                :loading="actionLoading[tunnel.proxyId]"
-              >
-                <template #icon>
-                  <Square :size="14" />
-                </template>
-                停止
-              </n-button>
-
-              <n-button
-                v-if="runningTunnels.has(tunnel.proxyId)"
-                type="info"
-                size="small"
-                @click="viewLogs(tunnel.proxyId)"
-              >
-                <template #icon>
-                  <FileText :size="14" />
-                </template>
-                日志
-              </n-button>
-              <n-button
-                type="default"
-                size="small"
-                @click="copyRemoteAddress(tunnel.proxyId)"
-              >
-                <template #icon>
-                  <Copy :size="14" />
-                </template>
-                复制地址
-              </n-button>
-              <n-button
-                type="default"
-                size="small"
-                @click="viewTunnelDetails(tunnel.proxyId)"
-              >
-                <template #icon>
-                  <Info :size="14" />
-                </template>
-                详情
-              </n-button>
-
-              <div class="more-dropdown-wrapper">
+              <!-- 未启动时：所有按钮在同一行 -->
+              <div v-if="!runningTunnels.has(tunnel.proxyId)" class="tunnel-actions-row">
+                <n-button
+                  type="primary"
+                  size="small"
+                  @click="startTunnel(tunnel.proxyId)"
+                  :loading="actionLoading[tunnel.proxyId]"
+                >
+                  <template #icon>
+                    <Play :size="14" />
+                  </template>
+                  启动
+                </n-button>
                 <n-button
                   type="default"
                   size="small"
-                  @click="toggleMoreMenu(tunnel.proxyId, $event)"
+                  @click="copyRemoteAddress(tunnel.proxyId)"
                 >
                   <template #icon>
-                    <SettingsIcon :size="14" />
+                    <Copy :size="14" />
                   </template>
-                  更多
+                  复制地址
                 </n-button>
-                <transition name="dropdown-fade">
-                  <div
-                    v-if="activeMoreMenu === tunnel.proxyId"
-                    :class="['more-dropdown-menu', menuPosition[tunnel.proxyId] === 'top' ? 'menu-top' : 'menu-bottom']"
-                    @click.stop
+                <n-button
+                  type="default"
+                  size="small"
+                  @click="viewTunnelDetails(tunnel.proxyId)"
+                >
+                  <template #icon>
+                    <Info :size="14" />
+                  </template>
+                  详情
+                </n-button>
+                <div class="more-dropdown-wrapper">
+                  <n-button
+                    type="default"
+                    size="small"
+                    @click="toggleMoreMenu(tunnel.proxyId, $event)"
                   >
-                    <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
-                      <div v-if="option.type === 'divider'" class="dropdown-divider"></div>
-                      <div
-                        v-else
-                        class="dropdown-item"
-                        @click="handleMoreActionClick(option.key, tunnel.proxyId)"
-                      >
-                        <component :is="option.icon" class="dropdown-icon" />
-                        <span class="dropdown-label">{{ option.label }}</span>
-                      </div>
+                    <template #icon>
+                      <SettingsIcon :size="14" />
                     </template>
-                  </div>
-                </transition>
+                    更多
+                  </n-button>
+                  <transition name="dropdown-fade">
+                    <div
+                      v-if="activeMoreMenu === tunnel.proxyId"
+                      :class="['more-dropdown-menu', menuPosition[tunnel.proxyId] === 'top' ? 'menu-top' : 'menu-bottom']"
+                      @click.stop
+                    >
+                      <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
+                        <div v-if="option.type === 'divider'" class="dropdown-divider"></div>
+                        <div
+                          v-else
+                          class="dropdown-item"
+                          @click="handleMoreActionClick(option.key, tunnel.proxyId)"
+                        >
+                          <component :is="option.icon" class="dropdown-icon" />
+                          <span class="dropdown-label">{{ option.label }}</span>
+                        </div>
+                      </template>
+                    </div>
+                  </transition>
+                </div>
               </div>
+
+              <!-- 启动后：第一行4个按钮，第二行更多按钮独占 -->
+              <template v-else>
+                <div class="tunnel-actions-row">
+                  <n-button
+                    type="warning"
+                    size="small"
+                    @click="stopTunnel(tunnel.proxyId)"
+                    :loading="actionLoading[tunnel.proxyId]"
+                  >
+                    <template #icon>
+                      <Square :size="14" />
+                    </template>
+                    停止
+                  </n-button>
+                  <n-button
+                    type="info"
+                    size="small"
+                    @click="viewLogs(tunnel.proxyId)"
+                  >
+                    <template #icon>
+                      <FileText :size="14" />
+                    </template>
+                    日志
+                  </n-button>
+                  <n-button
+                    type="default"
+                    size="small"
+                    @click="copyRemoteAddress(tunnel.proxyId)"
+                  >
+                    <template #icon>
+                      <Copy :size="14" />
+                    </template>
+                    复制地址
+                  </n-button>
+                  <n-button
+                    type="default"
+                    size="small"
+                    @click="viewTunnelDetails(tunnel.proxyId)"
+                  >
+                    <template #icon>
+                      <Info :size="14" />
+                    </template>
+                    详情
+                  </n-button>
+                </div>
+
+                <div class="tunnel-actions-row tunnel-actions-row-second">
+                  <n-button
+                    type="default"
+                    size="small"
+                    @click="toggleMoreMenu(tunnel.proxyId, $event)"
+                    class="more-button-full"
+                  >
+                    <template #icon>
+                      <SettingsIcon :size="14" />
+                    </template>
+                    更多
+                  </n-button>
+                  <div class="more-dropdown-wrapper">
+                    <transition name="dropdown-fade">
+                      <div
+                        v-if="activeMoreMenu === tunnel.proxyId"
+                        :class="['more-dropdown-menu', menuPosition[tunnel.proxyId] === 'top' ? 'menu-top' : 'menu-bottom']"
+                        @click.stop
+                      >
+                        <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
+                          <div v-if="option.type === 'divider'" class="dropdown-divider"></div>
+                          <div
+                            v-else
+                            class="dropdown-item"
+                            @click="handleMoreActionClick(option.key, tunnel.proxyId)"
+                          >
+                            <component :is="option.icon" class="dropdown-icon" />
+                            <span class="dropdown-label">{{ option.label }}</span>
+                          </div>
+                        </template>
+                      </div>
+                    </transition>
+                  </div>
+                </div>
+              </template>
             </div>
           </template>
         </n-card>
@@ -252,6 +311,8 @@
     title="隧道日志"
     style="width: 80%; max-width: 800px"
     @after-leave="stopAutoRefreshLogs"
+    :auto-focus="false"
+    :trap-focus="false"
   >
     <div class="log-container">
       <div class="log-header">
@@ -260,8 +321,19 @@
           <n-tag type="error">如果您截图分享此页面请打码红色字体内容</n-tag>
           <n-button
             size="small"
+            @click="copyLogs"
+            :autofocus="false"
+          >
+            <template #icon>
+              <Copy :size="14" />
+            </template>
+            复制日志
+          </n-button>
+          <n-button
+            size="small"
             @click="viewLogs(currentTunnelId!)"
             :loading="loadingLogs"
+            :autofocus="false"
           >
             刷新日志
           </n-button>
@@ -731,10 +803,12 @@ async function loadNodeNames() {
     const responseText = await invoke("api_get_node_name_list");
     const result = JSON.parse(responseText as string);
 
-    if (result.code === 200 && Array.isArray(result.data)) {
+    if (result.code === 200) {
+      // 新版 API 可能返回 {nodes} 或直接返回数组
+      const nodeData = result.data.nodes || result.data || [];
       const nameMap: Record<number, string> = {};
       const hostnameMap: Record<number, string> = {};
-      result.data.forEach((node: any) => {
+      nodeData.forEach((node: any) => {
         nameMap[node.nodeId] = node.name;
         hostnameMap[node.nodeId] = node.hostname;
       });
@@ -771,11 +845,13 @@ async function loadTunnels() {
       loadConfigFileStatus(),
       (async () => {
         const responseText = await invoke("api_get_tunnel_list");
-        const result: ApiResponse = JSON.parse(responseText as string);
+        const result = JSON.parse(responseText as string);
 
         if (result.code === 200) {
-          tunnels.value = result.data;
-          message.success(`成功加载 ${result.data.length} 个隧道`);
+          // 新版 API 返回格式: {code, data: {nodes, proxies}, message}
+          const tunnelData = result.data.proxies || result.data || [];
+          tunnels.value = tunnelData;
+          message.success(`成功加载 ${tunnelData.length} 个隧道`);
         } else {
           throw new Error(result.message || "获取隧道列表失败");
         }
@@ -923,6 +999,27 @@ const viewLogs = async (tunnelId: number) => {
     message.error(`获取日志失败: ${error}`);
   } finally {
     loadingLogs.value = false;
+  }
+};
+
+// 复制日志
+const copyLogs = async () => {
+  try {
+    if (currentLogs.value.length === 0) {
+      message.warning("暂无日志内容");
+      return;
+    }
+    
+    // 清理日志中的 ANSI 转义序列和特殊字符
+    const cleanLogs = currentLogs.value.map(log => 
+      log.replace(/\x1b\[[0-9;]*m/g, "").replace(/▣/g, "")
+    ).join("\n");
+    
+    await navigator.clipboard.writeText(cleanLogs);
+    message.success("日志已复制到剪贴板");
+  } catch (error) {
+    console.error("复制日志失败:", error);
+    message.error("复制日志失败");
   }
 };
 
@@ -1127,6 +1224,12 @@ async function updateTunnel(tunnelId: number, updateData: any) {
     const requestData = {
       proxyId: tunnelId,
       ...updateData,
+      // 确保所有必需字段存在，如果为空则设置为空字符串
+      location: updateData.location || "",
+      headerXFromWhere: updateData.headerXFromWhere || "",
+      accessKey: updateData.accessKey || "",
+      hostHeaderRewrite: updateData.hostHeaderRewrite || "",
+      proxyProtocolVersion: updateData.proxyProtocolVersion || "",
     };
     const responseText = await invoke("api_update_tunnel", {
       data: JSON.stringify(requestData),
@@ -1861,14 +1964,34 @@ defineExpose({
 
 .tunnel-actions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.tunnel-actions-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
   align-items: center;
 }
 
-.tunnel-actions .n-button {
+.tunnel-actions-row-second {
+  width: 100%;
+  position: relative;
+}
+
+.tunnel-actions-row .n-button {
   flex: 1;
   min-width: 80px;
+}
+
+.tunnel-actions-row-second .n-button {
+  width: 100%;
+}
+
+.more-button-full {
+  width: 100% !important;
+  flex: none !important;
 }
 
 .tunnel-actions :deep(.n-button__content) {
@@ -1889,6 +2012,16 @@ defineExpose({
 .more-dropdown-wrapper {
   position: relative;
   display: inline-block;
+  flex: 1;
+  min-width: 80px;
+}
+
+.tunnel-actions-row-second .more-dropdown-wrapper {
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
 }
 
 .more-dropdown-menu {
@@ -1997,8 +2130,16 @@ defineExpose({
     flex-direction: column;
   }
 
-  .tunnel-actions .n-button {
+  .tunnel-actions-row {
+    width: 100%;
+  }
+
+  .tunnel-actions-row .n-button {
     flex: none;
+  }
+
+  .tunnel-actions-row-second .n-button {
+    width: 100%;
   }
 
   .tunnel-card {

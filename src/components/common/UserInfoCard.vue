@@ -38,7 +38,7 @@
                   :bordered="false"
                   :type="props.userInfo?.todaySigned ? 'success' : 'primary'"
                   :loading="isSigning"
-                  :disabled="props.userInfo?.todaySigned || props.userInfoLoading"
+                  :disabled="props.userInfoLoading"
                   @click="showSignDialog"
                   style="cursor: pointer"
                   class="sign-tag"
@@ -49,14 +49,14 @@
             </div>
             <div class="profile-meta">
               <div class="meta-item">
-                <n-icon size="16" :component="Mail" />
-                <n-text depth="2">注册邮箱 {{ userInfo.email }}</n-text>
+                <n-icon size="16" :component="Clock" />
+                <n-text depth="2">{{
+                  formatTimestamp(userInfo.regTime, { format: "datetime" })
+                }}</n-text>
               </div>
               <div class="meta-item">
-                <n-icon size="16" :component="Clock" />
-                <n-text depth="2"
-                  >注册时间 {{ formatTimestamp(userInfo.regTime) }}</n-text
-                >
+                <n-icon size="16" :component="Mail" />
+                <n-text depth="2">{{ userInfo.email }}</n-text>
               </div>
             </div>
           </div>
@@ -204,7 +204,7 @@ const showSignDialog = async () => {
   }
 
   isSigning.value = true;
-  message.loading("正在进行人机验证...", { duration: 0, key: "signing" });
+  message.loading("正在进行人机验证...", { duration: 0 });
 
   try {
     // 创建签到验证码实例
@@ -220,7 +220,7 @@ const showSignDialog = async () => {
     // 执行人机验证
     const token = await signCaptchaInstance.verify();
     message.destroyAll();
-    message.loading("正在签到...", { duration: 0, key: "signing" });
+    message.loading("正在签到...", { duration: 0 });
 
     // 使用 token 进行签到
     const responseText = await invoke("api_user_sign", {

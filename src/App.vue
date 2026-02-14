@@ -183,8 +183,10 @@ const autoStartTunnels = async () => {
       const responseText = await invoke("api_get_tunnel_list");
       const result = JSON.parse(responseText as string);
 
-      if (result.code === 200 && Array.isArray(result.data)) {
-        const serverTunnelIds = result.data.map(
+      if (result.code === 200) {
+        // 新版 API 返回格式: {code, data: {nodes, proxies}, message}
+        const tunnelData = result.data.proxies || result.data || [];
+        const serverTunnelIds = tunnelData.map(
           (tunnel: any) => tunnel.proxyId,
         );
         const originalCount = unifiedConfig.autoStartTunnels.length;

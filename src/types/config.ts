@@ -21,6 +21,12 @@ export interface UnifiedConfig {
   sidebarWidth?: number;
   sidebarCollapsible?: boolean;
   sidebarCollapsed?: boolean;
+  
+  // WebUI 设置
+  webuiAddr?: string;
+  webuiPort?: number;
+  webuiPass?: string;
+  hideWebuiEntry?: boolean;
 }
 
 // 旧的用户信息类型（保留用于向后兼容）
@@ -53,4 +59,8 @@ export interface AppSettings {
   sidebarWidth?: number;
   sidebarCollapsible?: boolean;
   sidebarCollapsed?: boolean;
+  webuiAddr?: string;
+  webuiPort?: number;
+  webuiPass?: string;
+  hideWebuiEntry?: boolean;
 }

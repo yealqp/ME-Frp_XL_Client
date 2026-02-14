@@ -105,15 +105,22 @@ const formatBytes = (bytes: number): string => {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 };
 
-// 格式化运行时长
-const formatUptime = (seconds: number): string => {
+// 格式化运行时长或离线时长
+const formatUptime = (seconds: number, isOnline: boolean): string => {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   
-  if (days > 0) return `${days}天${hours}小时${minutes}分钟`;
-  if (hours > 0) return `${hours}小时${minutes}分钟`;
-  return `${minutes}分钟`;
+  let timeStr = '';
+  if (days > 0) {
+    timeStr = `${days}天${hours}小时${minutes}分钟`;
+  } else if (hours > 0) {
+    timeStr = `${hours}小时${minutes}分钟`;
+  } else {
+    timeStr = `${minutes}分钟`;
+  }
+  
+  return isOnline ? `已在线 ${timeStr}` : `${timeStr} 前离线`;
 };
 
 // 获取负载百分比类型
@@ -131,7 +138,7 @@ const columns = [
     key: 'name',
     render: (row: NodeStatusData) => {
       return h(NSpace, { align: 'center', size: 8 }, () => [
-        h(NTag, { type: 'info', size: 'small', bordered: false }, () => `#${row.nodeId}`),
+        h(NTag, { type: 'info', size: 'medium', bordered: false }, () => `#${row.nodeId}`),
         h('span', row.name)
       ]);
     }
@@ -190,9 +197,9 @@ const columns = [
     render: (row: NodeStatusData) => {
       return h(NTag, {
         type: row.isOnline ? 'success' : 'error',
-        size: 'small',
+        size: 'medium',
         bordered: false
-      }, () => row.isOnline ? formatUptime(row.uptime) : '离线');
+      }, () => formatUptime(row.uptime, row.isOnline));
     },
     sorter: (a: NodeStatusData, b: NodeStatusData) => a.uptime - b.uptime
   }

@@ -76,6 +76,7 @@ import {
   Info,
   LogOut,
   Activity,
+  Globe,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -150,6 +151,7 @@ const activeNav = computed(() => {
     "/tunnel-config": "create-tunnel",
     "/tunnel-management": "tunnel-management",
     "/node-status": "node-status",
+    "/mefrp-webui": "mefrp-webui",
     "/user-center": "user-center",
     "/operation-log": "", // 操作日志页面不高亮任何菜单项
     "/settings": "settings",
@@ -165,6 +167,7 @@ const navItems = [
   { id: "dashboard", name: "面板首页", icon: Home },
   { id: "create-tunnel", name: "创建隧道", icon: PlusCircle },
   { id: "tunnel-management", name: "隧道管理", icon: SettingsIcon },
+  { id: "mefrp-webui", name: "WebUI", icon: Globe },
   { id: "node-status", name: "节点监控", icon: Activity },
   { id: "user-center", name: "用户中心", icon: User },
   { id: "help-center", name: "帮助中心", icon: HelpCircle },
@@ -172,9 +175,20 @@ const navItems = [
   { id: "about", name: "关于面板", icon: Info },
 ];
 
+// 根据设置过滤导航项
+const filteredNavItems = computed(() => {
+  return navItems.filter(item => {
+    // 如果开启了隐藏 WebUI 入口，则过滤掉 WebUI 项
+    if (item.id === 'mefrp-webui' && settings.value.hideWebuiEntry) {
+      return false;
+    }
+    return true;
+  });
+});
+
 // 创建菜单选项 - 使用 NIcon 包裹图标以支持 Naive UI 的收缩功能
-const menuOptions: MenuOption[] = [
-  ...navItems.map((item) => ({
+const menuOptions = computed<MenuOption[]>(() => [
+  ...filteredNavItems.value.map((item) => ({
     label: item.name,
     key: item.id,
     icon: () => h(NIcon, { size: 18 }, { default: () => h(item.icon) }),
@@ -188,7 +202,7 @@ const menuOptions: MenuOption[] = [
     key: 'logout',
     icon: () => h(NIcon, { size: 18, color: '#e74c3c' }, { default: () => h(LogOut) }),
   },
-];
+]);
 
 function handleMenuSelect(key: string) {
   if (key === 'logout') {
@@ -211,6 +225,7 @@ function handleMenuSelect(key: string) {
     "create-tunnel": "/create-tunnel",
     "tunnel-management": "/tunnel-management",
     "node-status": "/node-status",
+    "mefrp-webui": "/mefrp-webui",
     "user-center": "/user-center",
     settings: "/settings",
     "help-center": "/help-center",

@@ -57,6 +57,18 @@
               @update:value="handleShowAdChange"
             />
           </div>
+
+          <!-- 隐藏 WebUI 入口 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>隐藏 WebUI 入口</h4>
+              <p>开启后，侧边栏中的 WebUI 入口将被隐藏</p>
+            </div>
+            <n-switch
+              v-model:value="settings.hideWebuiEntry"
+              @update:value="handleHideWebuiEntryChange"
+            />
+          </div>
         </n-space>
       </n-card>
 
@@ -87,7 +99,20 @@
                 @update:value="handleSidebarWidthChange"
                 style="width: 200px"
               />
-              <span class="slider-value">{{ uiSettings.sidebarWidth }}px</span>
+              <n-input-number
+                v-model:value="uiSettings.sidebarWidth"
+                :min="150"
+                :max="300"
+                :step="1"
+                :show-button=false
+                @update:value="handleSidebarWidthChange"
+                style="width: 80px"
+                size="small"
+              >
+                <template #suffix>
+                  px
+                </template>
+              </n-input-number>
             </div>
           </div>
 
@@ -311,7 +336,6 @@ import {
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
-import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
 import { useUIStore } from "../stores/ui";
 import {
@@ -363,6 +387,9 @@ const settings = ref<Settings>({
   theme: "dark",
   minimizeToTray: false,
   showAd: true,
+  webuiAddr: "127.0.0.1",
+  webuiPort: 1201,
+  webuiPass: "admin",
 });
 
 // 隧道数据
@@ -470,8 +497,17 @@ const handleShowAdChange = async (value: boolean) => {
   message.success(value ? "已开启侧边栏广告" : "已关闭侧边栏广告");
 };
 
+// 处理隐藏 WebUI 入口变化
+const handleHideWebuiEntryChange = async (value: boolean) => {
+  const settingsStore = useSettingsStore();
+  await settingsStore.updateSetting('hideWebuiEntry', value);
+  message.success(value ? "已隐藏 WebUI 入口" : "已显示 WebUI 入口");
+};
+
 // 处理侧边栏宽度变化（带防抖）
-const handleSidebarWidthChange = (value: number) => {
+const handleSidebarWidthChange = (value: number | null) => {
+  if (value === null) return;
+  
   // 立即更新本地显示和 store（触发动画）
   uiSettings.value.sidebarWidth = value;
   // 直接更新 store 的响应式值，触发 Sidebar 组件立即响应
@@ -583,8 +619,8 @@ const loadTunnels = async () => {
     const result = JSON.parse(responseText as string);
 
     if (result.code === 200) {
-      // 确保 data 是数组，如果不是则使用空数组
-      const tunnelData = Array.isArray(result.data) ? result.data : [];
+      // 新版 API 返回格式: {code, data: {nodes, proxies}, message}
+      const tunnelData = result.data.proxies || result.data || [];
       tunnels.value = tunnelData;
 
       // 清理无效的自启动隧道ID

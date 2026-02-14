@@ -158,6 +158,12 @@
             </template>
             {{ updateChecking ? "检查中..." : "检查更新" }}
           </n-button>
+          <n-button type="primary" @click="viewChangelog">
+            <template #icon>
+              <FileText :size="16" />
+            </template>
+            {{ changelogLoading ? "加载中..." : "查看更新日志" }}
+          </n-button>
         </div>
       </n-card>
     </div>
@@ -197,6 +203,40 @@
             </template>
             立即更新
           </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 更新日志模态框 -->
+    <n-modal
+      v-model:show="showChangelogModal"
+      preset="card"
+      :style="{ width: '600px', maxHeight: '80vh' }"
+      title="更新日志"
+    >
+      <div class="changelog-modal-content">
+        <div class="version-info">
+          <n-space align="center" :size="16">
+            <n-tag type="info" :bordered="false" size="large">
+              当前版本: v{{ currentVersion }}
+            </n-tag>
+            <n-tag type="success" :bordered="false" size="large">
+              最新版本: v{{ latestVersion }}
+            </n-tag>
+          </n-space>
+        </div>
+
+        <div v-if="updateInfo.length > 0" class="changelog-info">
+          <div class="changelog-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
+        </div>
+        <div v-else class="no-changelog">
+          <p>暂无更新日志信息</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showChangelogModal = false">关闭</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -262,6 +302,7 @@ import {
   ArrowRight,
   RefreshCw,
   Quote,
+  FileText,
 } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
 
@@ -286,6 +327,8 @@ const latestVersion = ref("");
 const currentVersion = ref("");
 const updateInfo = ref<string[]>([]);
 const appVersion = ref("加载中...");
+const changelogLoading = ref(false);
+const showChangelogModal = ref(false);
 
 // 反馈表单相关
 const showFeedbackModal = ref(false);
@@ -380,6 +423,22 @@ const parseUpdateInfo = (infoArray: string[]): string => {
   
   // 使用 parseMarkdown 解析为 HTML
   return parseMarkdown(markdownContent);
+};
+
+// 查看更新日志
+const viewChangelog = async () => {
+  changelogLoading.value = true;
+  try {
+    const result = (await invoke("check_for_updates")) as UpdateCheckResult;
+    latestVersion.value = result.latest_version;
+    currentVersion.value = result.current_version;
+    updateInfo.value = result.update_info || [];
+    showChangelogModal.value = true;
+  } catch (error) {
+    message.error(`获取更新日志失败: ${error}`);
+  } finally {
+    changelogLoading.value = false;
+  }
 };
 
 // 处理更新
@@ -1053,5 +1112,205 @@ const submitFeedback = async () => {
 
 .update-list li:last-child {
   border-bottom: none;
+}
+
+/* 更新日志模态框样式 */
+.changelog-modal-content {
+  padding: 16px 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.changelog-info {
+  margin-top: 20px;
+}
+
+.changelog-content-markdown {
+  padding: 12px 0;
+  line-height: 1.8;
+  font-size: 14px;
+  color: #a0a0a0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 复用 update-content-markdown 的所有样式 */
+.changelog-content-markdown :deep(h1),
+.changelog-content-markdown :deep(h2),
+.changelog-content-markdown :deep(h3),
+.changelog-content-markdown :deep(h4),
+.changelog-content-markdown :deep(h5),
+.changelog-content-markdown :deep(h6) {
+  margin: 16px 0 10px 0;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+.changelog-content-markdown :deep(h1) {
+  font-size: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.changelog-content-markdown :deep(h2) {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.changelog-content-markdown :deep(h3) {
+  font-size: 16px;
+}
+
+.changelog-content-markdown :deep(h4) {
+  font-size: 15px;
+}
+
+.changelog-content-markdown :deep(.h2-divider) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 0 12px 0;
+}
+
+.changelog-content-markdown :deep(p) {
+  margin: 10px 0;
+  line-height: 1.8;
+  color: #a0a0a0;
+}
+
+.changelog-content-markdown :deep(ul),
+.changelog-content-markdown :deep(ol) {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.changelog-content-markdown :deep(li) {
+  margin: 0;
+  line-height: 1.8;
+  padding-left: 8px;
+  color: #a0a0a0;
+}
+
+.changelog-content-markdown :deep(ul li) {
+  list-style-type: disc;
+}
+
+.changelog-content-markdown :deep(ul li::marker) {
+  font-size: 0.8em;
+  color: #4da8f5;
+}
+
+.changelog-content-markdown :deep(ol li) {
+  list-style-type: decimal;
+}
+
+.changelog-content-markdown :deep(ol li::marker) {
+  font-weight: 600;
+  color: #4da8f5;
+}
+
+.changelog-content-markdown :deep(ul ul),
+.changelog-content-markdown :deep(ol ol),
+.changelog-content-markdown :deep(ul ol),
+.changelog-content-markdown :deep(ol ul) {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.changelog-content-markdown :deep(li p) {
+  margin: 2px 0;
+}
+
+.changelog-content-markdown :deep(code.inline-code) {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ff6b6b;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.changelog-content-markdown :deep(pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.changelog-content-markdown :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #a0a0a0;
+}
+
+.changelog-content-markdown :deep(blockquote.custom-blockquote) {
+  border-left: 4px solid #4da8f5;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 4px 4px 0;
+}
+
+.changelog-content-markdown :deep(blockquote.custom-blockquote p) {
+  margin: 4px 0;
+}
+
+.changelog-content-markdown :deep(a) {
+  color: #4da8f5;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-weight: 500;
+  position: relative;
+}
+
+.changelog-content-markdown :deep(a::after) {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 1px;
+  background-color: #6bb8f7;
+  transition: width 0.3s ease;
+}
+
+.changelog-content-markdown :deep(a:hover) {
+  color: #6bb8f7;
+}
+
+.changelog-content-markdown :deep(a:hover::after) {
+  width: 100%;
+}
+
+.changelog-content-markdown :deep(strong) {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.changelog-content-markdown :deep(em) {
+  font-style: italic;
+}
+
+.changelog-content-markdown :deep(del) {
+  text-decoration: line-through;
+}
+
+.changelog-content-markdown :deep(hr) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
+}
+
+.no-changelog {
+  text-align: center;
+  padding: 40px 20px;
+  color: #a0a0a0;
 }
 </style>

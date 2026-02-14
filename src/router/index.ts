@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/mefrp-webui",
+    name: "MEFrpWebUI",
+    component: () => import("../components/MEFrpWebUI.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/user-center",
     name: "UserCenter",
     component: () => import("../components/UserCenter.vue"),

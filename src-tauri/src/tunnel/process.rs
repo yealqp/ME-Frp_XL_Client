@@ -49,7 +49,7 @@ pub async fn start_tunnel(
 
     let mefrpc_path = exe_dir
         .join("bin")
-        .join("mefrpc-x86_64-pc-windows-msvc.exe");
+        .join("mefrpc.exe");
 
     if !mefrpc_path.exists() {
         return Err(format!("mefrpc.exe 不存在: {}", mefrpc_path.display()));

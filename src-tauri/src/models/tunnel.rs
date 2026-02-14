@@ -22,34 +22,49 @@ pub struct TunnelProcess {
 /// 用于管理所有运行中的隧道进程，Key为proxy_id，Value为TunnelProcess
 pub type ProcessManager = Arc<Mutex<HashMap<i32, TunnelProcess>>>;
 
-/// 创建隧道请求结构体
+/// 创建隧道请求结构体（适配新版API）
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CreateTunnelRequest {
     #[serde(rename = "nodeId")]
     pub node_id: i32,
     #[serde(rename = "proxyName")]
     pub proxy_name: String,
+    #[serde(rename = "proxyType")]
+    pub proxy_type: String,
     #[serde(rename = "localIp")]
     pub local_ip: String,
     #[serde(rename = "localPort")]
     pub local_port: i32,
     #[serde(rename = "remotePort")]
-    pub remote_port: Option<i32>,
+    pub remote_port: i32,
     pub domain: String,
-    #[serde(rename = "proxyType")]
-    pub proxy_type: String,
+    pub locations: String,
     #[serde(rename = "accessKey")]
     pub access_key: String,
     #[serde(rename = "hostHeaderRewrite")]
     pub host_header_rewrite: String,
-    #[serde(rename = "headerXFromWhere")]
-    pub header_x_from_where: String,
-    #[serde(rename = "proxyProtocolVersion")]
-    pub proxy_protocol_version: String,
     #[serde(rename = "useEncryption")]
     pub use_encryption: bool,
     #[serde(rename = "useCompression")]
     pub use_compression: bool,
+    #[serde(rename = "proxyProtocolVersion")]
+    pub proxy_protocol_version: String,
+    #[serde(rename = "httpPlugin")]
+    pub http_plugin: String,
+    #[serde(rename = "crtPath")]
+    pub crt_path: String,
+    #[serde(rename = "keyPath")]
+    pub key_path: String,
+    #[serde(rename = "requestHeaders")]
+    pub request_headers: serde_json::Value,
+    #[serde(rename = "responseHeaders")]
+    pub response_headers: serde_json::Value,
+    #[serde(rename = "httpUser")]
+    pub http_user: String,
+    #[serde(rename = "httpPassword")]
+    pub http_password: String,
+    #[serde(rename = "transportProtocol")]
+    pub transport_protocol: String,
 }
 
 /// 更新隧道请求结构体

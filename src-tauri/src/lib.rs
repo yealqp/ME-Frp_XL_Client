@@ -38,10 +38,11 @@ pub mod models;
 pub mod system;
 pub mod tunnel;
 pub mod utils;
+pub mod webui;
 
 // 导入模块中的类型
 use models::api::VersionCheckResult;
-use models::auth::{UserDetailInfo, UserInfo};
+use models::auth::UserDetailInfo;
 use models::config::{AppSettings, Config, UnifiedConfig};
 use models::tunnel::{CreateTunnelRequest, FreePortRequest, UpdateTunnelRequest};
 use tunnel::ProcessManager;
@@ -678,9 +679,103 @@ async fn api_send_feedback(
     .await
 }
 
+// WebUI 相关命令
+
+/// 启动 WebUI
+#[tauri::command]
+async fn start_webui(
+    _app_handle: tauri::AppHandle,
+    addr: String,
+    port: u16,
+    pass: String,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::start_webui(addr, port, pass, webui_manager.inner()).await
+}
+
+/// 停止 WebUI
+#[tauri::command]
+async fn stop_webui(
+    _app_handle: tauri::AppHandle,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::stop_webui(webui_manager.inner()).await
+}
+
+/// 获取 WebUI 运行状态
+#[tauri::command]
+async fn is_webui_running(
+    _app_handle: tauri::AppHandle,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<bool, String> {
+    webui::is_webui_running(webui_manager.inner()).await
+}
+
+/// 获取 WebUI 日志
+#[tauri::command]
+async fn get_webui_logs(
+    _app_handle: tauri::AppHandle,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<Vec<String>, String> {
+    webui::get_webui_logs(webui_manager.inner()).await
+}
+
+/// 打开 URL（在默认浏览器中）
+#[tauri::command]
+async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app_handle
+        .opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| format!("打开 URL 失败: {}", e))
+}
+
+/// 打开 WebUI 窗口
+#[tauri::command]
+async fn open_webui_window(
+    app_handle: tauri::AppHandle,
+    url: String,
+) -> Result<(), String> {
+    use tauri::WebviewUrl;
+    use tauri::WebviewWindowBuilder;
+
+    // 检查窗口是否已存在
+    if let Some(window) = app_handle.get_webview_window("webui") {
+        // 如果窗口已存在，显示并聚焦
+        window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+        window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;
+        return Ok(());
+    }
+
+    // 创建新的 WebView 窗口
+    WebviewWindowBuilder::new(
+        &app_handle,
+        "webui",
+        WebviewUrl::External(url.parse().map_err(|e| format!("URL 解析失败: {}", e))?)
+    )
+    .title("MEFrp WebUI")
+    .inner_size(1200.0, 800.0)
+    .min_inner_size(800.0, 600.0)
+    .resizable(true)
+    .build()
+    .map_err(|e| format!("创建窗口失败: {}", e))?;
+
+    Ok(())
+}
+
+/// 关闭 WebUI 窗口
+#[tauri::command]
+async fn close_webui_window(app_handle: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("webui") {
+        window.close().map_err(|e| format!("关闭窗口失败: {}", e))?;
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_manager: ProcessManager = Arc::new(Mutex::new(HashMap::new()));
+    let webui_manager: webui::WebUIManager = Arc::new(Mutex::new(None));
     let minimize_to_tray_state: Arc<Mutex<bool>> = Arc::new(Mutex::new(true)); // 默认开启最小化到托盘
 
     tauri::Builder::default()
@@ -823,6 +918,7 @@ pub fn run() {
             }
         })
         .manage(process_manager)
+        .manage(webui_manager)
         .manage(minimize_to_tray_state)
         .invoke_handler(tauri::generate_handler![
             save_config,
@@ -874,7 +970,14 @@ pub fn run() {
             get_app_version,
             check_for_updates,
             download_and_install_update,
-            api_send_feedback
+            api_send_feedback,
+            start_webui,
+            stop_webui,
+            is_webui_running,
+            get_webui_logs,
+            open_url,
+            open_webui_window,
+            close_webui_window
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

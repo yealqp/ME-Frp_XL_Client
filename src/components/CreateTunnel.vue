@@ -301,22 +301,76 @@
                 placeholder="例如: example.com 或 subdomain.example.com"
               />
             </n-form-item>
+            <n-form-item
+              label="路径路由"
+              path="locations"
+              v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'"
+            >
+              <n-input
+                v-model:value="tunnelForm.locations"
+                placeholder="多个路径以逗号分隔，例如: /api,/admin"
+              />
+            </n-form-item>
             <n-divider title-placement="left">
               高级配置
               <n-text depth="3" style="font-size: 12px; margin-left: 8px;">
                 （可选，仅推荐技术用户使用）
               </n-text>
             </n-divider>
-            <n-form-item label="Host Header Rewrite">
+            <n-form-item label="访问密钥" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
               <n-input
-                v-model:value="tunnelForm.hostHeaderRewrite"
-                placeholder="留空表示不重写"
+                v-model:value="tunnelForm.accessKey"
+                placeholder="用于身份验证"
+                type="password"
+                show-password-on="click"
               />
             </n-form-item>
-            <n-form-item label="X-From-Where">
+            <n-form-item label="HTTP 插件" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+              <n-select
+                v-model:value="tunnelForm.httpPlugin"
+                placeholder="请选择 HTTP 插件"
+                :options="httpPluginOptions"
+                clearable
+              />
+            </n-form-item>
+            <n-form-item label="TLS 证书路径" v-if="tunnelForm.httpPlugin === 'https2https' || tunnelForm.httpPlugin === 'https2http'">
               <n-input
-                v-model:value="tunnelForm.headerXFromWhere"
-                placeholder="留空表示不添加"
+                v-model:value="tunnelForm.crtPath"
+                placeholder="例如: /etc/crt/example.com.crt"
+              />
+            </n-form-item>
+            <n-form-item label="TLS 私钥路径" v-if="tunnelForm.httpPlugin === 'https2https' || tunnelForm.httpPlugin === 'https2http'">
+              <n-input
+                v-model:value="tunnelForm.keyPath"
+                placeholder="例如: /etc/crt/example.com.key"
+              />
+            </n-form-item>
+            <n-form-item label="HTTP 用户名" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+              <n-input
+                v-model:value="tunnelForm.httpUser"
+                placeholder="HTTP 基础认证用户名"
+              />
+            </n-form-item>
+            <n-form-item label="HTTP 密码" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+              <n-input
+                v-model:value="tunnelForm.httpPassword"
+                placeholder="HTTP 基础认证密码"
+                type="password"
+                show-password-on="click"
+              />
+            </n-form-item>
+            <n-form-item label="Host Header Rewrite" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+              <n-input
+                v-model:value="tunnelForm.hostHeaderRewrite"
+                placeholder="请求 Host 头重写为目标主机"
+              />
+            </n-form-item>
+            <n-form-item label="传输层协议">
+              <n-select
+                v-model:value="tunnelForm.transportProtocol"
+                placeholder="请选择传输层协议"
+                :options="transportProtocolOptions"
+                clearable
               />
             </n-form-item>
             <n-form-item label="Proxy Protocol">
@@ -395,11 +449,18 @@ interface TunnelForm {
   localPort: number | null;
   remotePort: number | null;
   customDomain: string;
+  locations: string;
   hostHeaderRewrite: string;
-  headerXFromWhere: string;
   proxyProtocolVersion: string;
   useEncryption: boolean;
   useCompression: boolean;
+  accessKey: string;
+  httpPlugin: string;
+  crtPath: string;
+  keyPath: string;
+  httpUser: string;
+  httpPassword: string;
+  transportProtocol: string;
 }
 
 // 当前步骤
@@ -428,11 +489,18 @@ const tunnelForm = ref<TunnelForm>({
   localPort: null,
   remotePort: null,
   customDomain: "",
+  locations: "",
   hostHeaderRewrite: "",
-  headerXFromWhere: "",
   proxyProtocolVersion: "",
   useEncryption: true,
   useCompression: true,
+  accessKey: "",
+  httpPlugin: "",
+  crtPath: "",
+  keyPath: "",
+  httpUser: "",
+  httpPassword: "",
+  transportProtocol: "",
 });
 
 const creating = ref(false);
@@ -469,6 +537,20 @@ const proxyProtocolOptions = [
   { label: "不使用", value: "" },
   { label: "v1", value: "v1" },
   { label: "v2", value: "v2" },
+];
+
+const httpPluginOptions = [
+  { label: "不使用", value: "" },
+  { label: "http2https - 本地 HTTPS 使用 HTTP 隧道", value: "http2https" },
+  { label: "https2http - 本地 HTTP 使用 HTTPS 隧道", value: "https2http" },
+  { label: "https2https - 本地 HTTPS 使用 HTTPS 隧道", value: "https2https" },
+];
+
+const transportProtocolOptions = [
+  { label: "默认", value: "" },
+  { label: "TCP", value: "tcp" },
+  { label: "KCP", value: "kcp" },
+  { label: "QUIC", value: "quic" },
 ];
 
 // 隧道类型选项
@@ -662,7 +744,8 @@ async function fetchNodes() {
     const responseText = await invoke<string>("api_get_node_list");
     const response = JSON.parse(responseText);
     if (response.code === 200) {
-      nodes.value = response.data;
+      // 新版 API 返回格式: {code, data: {nodes, proxies}, message}
+      nodes.value = response.data.nodes || response.data || [];
     } else {
       error.value = response.message || "获取节点列表失败";
       message.error(response.message || "获取节点列表失败");
@@ -779,21 +862,29 @@ async function createTunnel() {
     await formRef.value?.validate();
     creating.value = true;
     
-    // 根据 API 文档，所有字段都是必需的
+    // 根据新版 API 文档构建请求数据
     const requestData = {
       nodeId: selectedNode.value?.nodeId,
       proxyName: tunnelForm.value.name,
       proxyType: tunnelForm.value.type,
       localIp: tunnelForm.value.localIp,
       localPort: tunnelForm.value.localPort,
-      remotePort: tunnelForm.value.remotePort || 0, // TCP/UDP 需要，HTTP/HTTPS 传 0
-      domain: tunnelForm.value.customDomain || "", // HTTP/HTTPS 需要，TCP/UDP 传空字符串
-      accessKey: "", // 访问密钥，可选
+      remotePort: tunnelForm.value.remotePort || 0,
+      domain: tunnelForm.value.customDomain || "",
+      locations: tunnelForm.value.locations || "",
+      accessKey: tunnelForm.value.accessKey || "",
       hostHeaderRewrite: tunnelForm.value.hostHeaderRewrite || "",
-      headerXFromWhere: tunnelForm.value.headerXFromWhere || "",
-      proxyProtocolVersion: tunnelForm.value.proxyProtocolVersion || "",
       useEncryption: tunnelForm.value.useEncryption,
       useCompression: tunnelForm.value.useCompression,
+      proxyProtocolVersion: tunnelForm.value.proxyProtocolVersion || "",
+      httpPlugin: tunnelForm.value.httpPlugin || "",
+      crtPath: tunnelForm.value.crtPath || "",
+      keyPath: tunnelForm.value.keyPath || "",
+      requestHeaders: {},
+      responseHeaders: {},
+      httpUser: tunnelForm.value.httpUser || "",
+      httpPassword: tunnelForm.value.httpPassword || "",
+      transportProtocol: tunnelForm.value.transportProtocol || "",
     };
     
     const responseText = await invoke<string>("api_create_tunnel", {
@@ -810,11 +901,18 @@ async function createTunnel() {
         localPort: null,
         remotePort: null,
         customDomain: "",
+        locations: "",
         hostHeaderRewrite: "",
-        headerXFromWhere: "",
         proxyProtocolVersion: "",
         useEncryption: true,
         useCompression: true,
+        accessKey: "",
+        httpPlugin: "",
+        crtPath: "",
+        keyPath: "",
+        httpUser: "",
+        httpPassword: "",
+        transportProtocol: "",
       };
       selectedNode.value = null;
       currentStep.value = 1;
