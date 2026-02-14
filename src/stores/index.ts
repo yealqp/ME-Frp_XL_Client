@@ -6,7 +6,7 @@
  * @example
  * ```typescript
  * // Import stores
- * import { useAuthStore, useUserStore } from '@/stores';
+ * import { useAuthStore, useUserStore, useNodeStore } from '@/stores';
  * 
  * // Use in component
  * const authStore = useAuthStore();
@@ -30,6 +30,11 @@
  * - Maintains node name mappings for display
  * - Provides actions for starting, stopping, and refreshing tunnels
  * 
+ * ### Node Store (node.ts)
+ * - Manages node status and statistics
+ * - Provides filtering and search capabilities
+ * - Tracks node online status, load, and traffic
+ * 
  * ### Settings Store (settings.ts)
  * - Manages application settings (AppSettings)
  * - Validates auto-start tunnel IDs against Tunnel Store
@@ -49,6 +54,7 @@
  * 
  * - Auth Store → User Store: Clears user info on logout
  * - Auth Store → Tunnel Store: Clears tunnel data on logout
+ * - Auth Store → Node Store: Clears node data on logout
  * - Settings Store → Tunnel Store: Validates auto-start tunnel IDs
  * - UI Store ↔ eventBus: Syncs showAd state
  * 
@@ -66,6 +72,7 @@
 export { useAuthStore } from './auth';
 export { useUserStore } from './user';
 export { useTunnelStore } from './tunnel';
+export { useNodeStore } from './node';
 export { useSettingsStore } from './settings';
 export { useCreateTunnelStore } from './createTunnel';
 export { useUIStore } from './ui';

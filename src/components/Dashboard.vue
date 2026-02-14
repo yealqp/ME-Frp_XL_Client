@@ -50,6 +50,7 @@
           :loading="userInfoLoading"
           :user-info-loading="userInfoLoading"
           title="用户信息"
+          @refresh="userStore.loadUserInfo"
         />
 
         <!-- 统计信息卡片 -->

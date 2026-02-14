@@ -134,6 +134,18 @@ export const useAuthStore = defineStore('auth', () => {
       console.warn('Tunnel Store not available:', error);
     }
 
+    try {
+      // Import and clear Node Store if it exists
+      const { useNodeStore } = await import('./node');
+      const nodeStore = useNodeStore();
+      if (nodeStore.clearNodes) {
+        nodeStore.clearNodes();
+      }
+    } catch (error) {
+      // Node Store may not exist yet, skip
+      console.warn('Node Store not available:', error);
+    }
+
     // Clear login information from UnifiedConfig
     try {
       const config = await invoke<UnifiedConfig>('load_unified_config');

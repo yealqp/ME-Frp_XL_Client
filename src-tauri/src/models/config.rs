@@ -45,6 +45,8 @@ pub struct UnifiedConfig {
     pub sidebar_width: Option<i32>,
     #[serde(rename = "sidebarCollapsible", skip_serializing_if = "Option::is_none")]
     pub sidebar_collapsible: Option<bool>,
+    #[serde(rename = "sidebarCollapsed", skip_serializing_if = "Option::is_none")]
+    pub sidebar_collapsed: Option<bool>,
 }
 
 impl Default for UnifiedConfig {
@@ -68,6 +70,7 @@ impl Default for UnifiedConfig {
             // UI 设置默认值
             sidebar_width: Some(200),
             sidebar_collapsible: Some(true),
+            sidebar_collapsed: Some(false),
         }
     }
 }
@@ -96,6 +99,8 @@ pub struct AppSettings {
     pub sidebar_width: Option<i32>,
     #[serde(rename = "sidebarCollapsible", skip_serializing_if = "Option::is_none")]
     pub sidebar_collapsible: Option<bool>,
+    #[serde(rename = "sidebarCollapsed", skip_serializing_if = "Option::is_none")]
+    pub sidebar_collapsed: Option<bool>,
 }
 
 impl Default for AppSettings {
@@ -111,6 +116,7 @@ impl Default for AppSettings {
             show_ad: true,
             sidebar_width: Some(200),
             sidebar_collapsible: Some(true),
+            sidebar_collapsed: Some(false),
         }
     }
 }

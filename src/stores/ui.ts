@@ -70,6 +70,10 @@ export const useUIStore = defineStore('ui', () => {
       if (config.sidebarCollapsible !== undefined) {
         sidebarCollapsible.value = config.sidebarCollapsible;
       }
+      
+      if (config.sidebarCollapsed !== undefined) {
+        sidebarCollapsed.value = config.sidebarCollapsed;
+      }
     } catch (error) {
       console.error('加载侧边栏设置失败:', error);
     }
@@ -86,6 +90,7 @@ export const useUIStore = defineStore('ui', () => {
         ...config,
         sidebarWidth: sidebarWidth.value,
         sidebarCollapsible: sidebarCollapsible.value,
+        sidebarCollapsed: sidebarCollapsed.value,
       };
       
       await invoke('save_unified_config', { config: updatedConfig });
@@ -134,9 +139,11 @@ export const useUIStore = defineStore('ui', () => {
    * Set sidebar collapsed state
    * @param collapsed - New collapsed state
    */
-  function setSidebarCollapsed(collapsed: boolean) {
+  async function setSidebarCollapsed(collapsed: boolean) {
     if (sidebarCollapsible.value) {
       sidebarCollapsed.value = collapsed;
+      // 保存状态到配置文件
+      await saveSidebarSettings();
     }
   }
 

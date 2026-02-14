@@ -4,11 +4,10 @@
     <UserInfoCard
       :user-info="userInfo"
       :loading="userInfoLoading"
-      :is-signing="isSigning"
       :user-info-loading="userInfoLoading"
       title="用户信息"
       :bordered="true"
-      @sign="showSignDialog"
+      @refresh="userStore.refreshUserInfo"
     >
     </UserInfoCard>
 
@@ -329,19 +328,6 @@ interface TrafficStatsResponse {
   message: string;
 }
 
-// 签到相关
-const isSigning = ref(false);
-const signCaptchaToken = ref("");
-
-// 创建签到验证码实例
-const signCaptchaInstance = createCaptcha({
-  onProgress: (progress) => console.log(`签到验证进度: ${progress}%`),
-  onError: (error) => {
-    console.error("签到验证错误:", error);
-    message.error(`人机验证失败: ${error}`);
-  },
-});
-
 // 下线所有隧道相关
 const kickingAllProxies = ref(false);
 
@@ -391,81 +377,6 @@ const currentChartData = ref<{
   totalTraffic: number[];
   unit: string;
 } | null>(null);
-
-// 显示签到对话框
-const showSignDialog = async () => {
-  signCaptchaToken.value = "";
-  
-  // 触发隐式验证
-  try {
-    message.loading("正在进行人机验证...", { duration: 0 });
-    const token = await signCaptchaInstance.verify();
-    message.destroyAll();
-    await handleSignCaptchaSolve(token);
-  } catch (error) {
-    message.destroyAll();
-    message.error("人机验证失败，请重试");
-  }
-};
-
-// 处理签到验证成功
-const handleSignCaptchaSolve = async (token: string) => {
-  signCaptchaToken.value = token;
-
-  // 自动执行签到
-  await performSign();
-};
-
-// 执行签到
-const performSign = async () => {
-  if (!signCaptchaToken.value) {
-    message.error("请先完成人机验证");
-    return;
-  }
-
-  if (isSigning.value) {
-    return;
-  }
-
-  isSigning.value = true;
-
-  try {
-    const responseText = await invoke("api_user_sign", {
-      captchaToken: signCaptchaToken.value,
-    });
-
-    const result = JSON.parse(responseText as string);
-
-    if (result.code === 200) {
-      // API 返回格式: { code: 200, data: { extraTraffic: 7 }, message: "签到成功，获得 7 GB 流量" }
-      // extraTraffic 单位是 GB
-      const trafficGB = result.data?.extraTraffic || 0;
-
-      let successMessage = "签到成功！";
-      if (trafficGB > 0) {
-        successMessage = `签到成功，获得 ${trafficGB} GB 流量！`;
-      } else if (result.message) {
-        // 如果没有 extraTraffic 字段，使用 API 返回的 message
-        successMessage = result.message;
-      }
-
-      message.success(successMessage, {
-        duration: 5000,
-      });
-
-      signCaptchaToken.value = "";
-      // 刷新用户信息
-      await userStore.refreshUserInfo();
-    } else {
-      message.error(result.message || "签到失败");
-    }
-  } catch (error) {
-    const errorMessage = handleApiError(error, "签到失败", "签到失败");
-    message.error(errorMessage);
-  } finally {
-    isSigning.value = false;
-  }
-};
 
 // 跳转到操作日志页面
 const goToOperationLog = () => {
@@ -1173,7 +1084,6 @@ onBeforeUnmount(() => {
   });
   
   // 清理验证码实例
-  signCaptchaInstance.destroy();
   cdkCaptchaInstance.destroy();
 });
 </script>

@@ -26,13 +26,24 @@
                   {{ userInfo.friendlyGroup }}
                 </n-tag>
                 <n-tag :bordered="false" type="info">
-                  ID: {{ userInfo.userId }}
+                  #{{ userInfo.userId }}
                 </n-tag>
                 <n-tag
                   :bordered="false"
                   :type="userInfo.isRealname ? 'success' : 'error'"
                 >
                   {{ userInfo.isRealname ? "已实名" : "未实名" }}
+                </n-tag>
+                <n-tag
+                  :bordered="false"
+                  :type="props.userInfo?.todaySigned ? 'success' : 'primary'"
+                  :loading="isSigning"
+                  :disabled="props.userInfo?.todaySigned || props.userInfoLoading"
+                  @click="showSignDialog"
+                  style="cursor: pointer"
+                  class="sign-tag"
+                >
+                  {{ props.userInfo?.todaySigned ? "已签到" : "签到" }}
                 </n-tag>
               </div>
             </div>
@@ -118,30 +129,16 @@
     <template v-if="$slots.footer" #footer>
       <slot name="footer" :user-info="userInfo"></slot>
     </template>
-    <template #footer>
-      <div class="sign-in-section">
-        <n-button
-          type="primary"
-          size="large"
-          block
-          :loading="props.isSigning"
-          :disabled="userInfo?.todaySigned || props.userInfoLoading"
-          @click="showSignDialog"
-        >
-          {{ userInfo?.todaySigned ? "今日已签到" : "每日签到" }}
-        </n-button>
-      </div>
-    </template>
   </n-card>
 </template>
 
 <script setup lang="ts">
-import { NCard, NSkeleton, NText, NTag, NProgress, NIcon } from "naive-ui";
+import { ref } from "vue";
+import { NCard, NSkeleton, NText, NTag, NIcon, useMessage } from "naive-ui";
+import { invoke } from "@tauri-apps/api/core";
 import {
   Mail,
   Clock,
-  CheckCircle,
-  Circle,
   Database,
   ArrowDown,
   ArrowUp,
@@ -152,6 +149,7 @@ import {
   formatBandwidth,
   formatTraffic,
 } from "@/utils/timeFormatter";
+import { createCaptcha } from "@/utils/captcha";
 
 interface UserInfo {
   username: string;
@@ -174,7 +172,6 @@ interface Props {
   loading?: boolean;
   title?: string;
   bordered?: boolean;
-  isSigning?: boolean;
   userInfoLoading?: boolean;
 }
 
@@ -182,18 +179,81 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   title: "用户信息",
   bordered: true,
-  isSigning: false,
   userInfoLoading: false,
 });
 
-// 定义 emits
+// 定义 emits - 用于通知父组件刷新用户信息
 const emit = defineEmits<{
-  (e: 'sign'): void;
+  (e: "refresh"): void;
 }>();
 
+const message = useMessage();
+
+// 签到状态
+const isSigning = ref(false);
+
 // 签到处理函数
-const showSignDialog = () => {
-  emit('sign');
+const showSignDialog = async () => {
+  if (isSigning.value) {
+    return;
+  }
+
+  if (props.userInfo?.todaySigned) {
+    message.warning("今天已经签到过了");
+    return;
+  }
+
+  isSigning.value = true;
+  message.loading("正在进行人机验证...", { duration: 0, key: "signing" });
+
+  try {
+    // 创建签到验证码实例
+    const signCaptchaInstance = createCaptcha({
+      onProgress: (progress) => console.log(`签到验证进度: ${progress}%`),
+      onError: (error) => {
+        console.error("签到验证错误:", error);
+        message.destroyAll();
+        message.error("人机验证失败，请重试");
+      },
+    });
+
+    // 执行人机验证
+    const token = await signCaptchaInstance.verify();
+    message.destroyAll();
+    message.loading("正在签到...", { duration: 0, key: "signing" });
+
+    // 使用 token 进行签到
+    const responseText = await invoke("api_user_sign", {
+      captchaToken: token,
+    });
+
+    const result = JSON.parse(responseText as string);
+
+    if (result.code === 200) {
+      const trafficGB = result.data?.extraTraffic || 0;
+      let successMessage = "签到成功！";
+      if (trafficGB > 0) {
+        successMessage = `签到成功，获得 ${trafficGB} GB 流量！`;
+      } else if (result.message) {
+        successMessage = result.message;
+      }
+
+      message.destroyAll();
+      message.success(successMessage, { duration: 5000 });
+
+      // 通知父组件刷新用户信息
+      emit("refresh");
+    } else {
+      message.destroyAll();
+      message.error(result.message || "签到失败");
+    }
+  } catch (error) {
+    console.error("签到失败:", error);
+    message.destroyAll();
+    message.error("签到失败，请重试");
+  } finally {
+    isSigning.value = false;
+  }
 };
 
 // 根据用户组返回标签类型
@@ -205,8 +265,7 @@ const getUserGroupType = (
     return "warning";
   if (groupLower.includes("正式") || groupLower.includes("贡献"))
     return "success";
-  if (groupLower.includes("未实名") )
-    return "error";
+  if (groupLower.includes("未实名")) return "error";
   return "info";
 };
 </script>
@@ -261,6 +320,21 @@ const getUserGroupType = (
 
 .user-group-tag {
   font-weight: 500;
+}
+
+.sign-tag {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sign-tag:not([disabled]):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(52, 159, 244, 0.3);
+}
+
+.sign-tag[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .user-id {

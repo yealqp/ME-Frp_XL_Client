@@ -582,11 +582,13 @@ const loadTunnels = async () => {
     const responseText = await invoke("api_get_tunnel_list");
     const result = JSON.parse(responseText as string);
 
-    if (result.code === 200 && Array.isArray(result.data)) {
-      tunnels.value = result.data;
+    if (result.code === 200) {
+      // 确保 data 是数组，如果不是则使用空数组
+      const tunnelData = Array.isArray(result.data) ? result.data : [];
+      tunnels.value = tunnelData;
 
       // 清理无效的自启动隧道ID
-      const validTunnelIds = result.data.map(
+      const validTunnelIds = tunnelData.map(
         (tunnel: Tunnel) => tunnel.proxyId,
       );
       const originalCount = settings.value.autoStartTunnels.length;
@@ -603,11 +605,11 @@ const loadTunnels = async () => {
       }
 
       // 更新隧道选项（保留兼容性）
-      tunnelOptions.value = result.data.map((tunnel: Tunnel) => ({
+      tunnelOptions.value = tunnelData.map((tunnel: Tunnel) => ({
         label: `${tunnel.proxyName} (ID: ${tunnel.proxyId})`,
         value: tunnel.proxyId,
       }));
-      console.log(`成功加载 ${result.data.length} 个隧道`);
+      console.log(`成功加载 ${tunnelData.length} 个隧道`);
     } else {
       console.error("获取隧道列表失败:", result.message);
       message.error(result.message || "获取隧道列表失败");

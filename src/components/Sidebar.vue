@@ -15,7 +15,7 @@
       <div class="sidebar-header">
         <h2 class="app-title">
           <img src="../assets/icon.png" alt="logo" class="logo" />
-          <span v-show="!sidebarCollapsed" class="title-text">ME-Frp XL</span>
+          <span v-show="!sidebarCollapsed" class="title-text">ME-Frp</span>
         </h2>
       </div>
 
@@ -75,6 +75,7 @@ import {
   HelpCircle,
   Info,
   LogOut,
+  Activity,
 } from "lucide-vue-next";
 
 const router = useRouter();
@@ -91,14 +92,14 @@ watch(sidebarWidth, (newWidth, oldWidth) => {
 });
 
 // 处理收缩
-const handleCollapse = () => {
-  uiStore.setSidebarCollapsed(true);
+const handleCollapse = async () => {
+  await uiStore.setSidebarCollapsed(true);
   emit('toggle-sidebar', true);
 };
 
 // 处理展开
-const handleExpand = () => {
-  uiStore.setSidebarCollapsed(false);
+const handleExpand = async () => {
+  await uiStore.setSidebarCollapsed(false);
   emit('toggle-sidebar', false);
 };
 
@@ -148,6 +149,7 @@ const activeNav = computed(() => {
     "/create-tunnel": "create-tunnel",
     "/tunnel-config": "create-tunnel",
     "/tunnel-management": "tunnel-management",
+    "/node-status": "node-status",
     "/user-center": "user-center",
     "/operation-log": "", // 操作日志页面不高亮任何菜单项
     "/settings": "settings",
@@ -163,6 +165,7 @@ const navItems = [
   { id: "dashboard", name: "面板首页", icon: Home },
   { id: "create-tunnel", name: "创建隧道", icon: PlusCircle },
   { id: "tunnel-management", name: "隧道管理", icon: SettingsIcon },
+  { id: "node-status", name: "节点监控", icon: Activity },
   { id: "user-center", name: "用户中心", icon: User },
   { id: "help-center", name: "帮助中心", icon: HelpCircle },
   { id: "settings", name: "选项设置", icon: SettingsIcon },
@@ -207,6 +210,7 @@ function handleMenuSelect(key: string) {
     dashboard: "/dashboard",
     "create-tunnel": "/create-tunnel",
     "tunnel-management": "/tunnel-management",
+    "node-status": "/node-status",
     "user-center": "/user-center",
     settings: "/settings",
     "help-center": "/help-center",

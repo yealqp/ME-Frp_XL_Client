@@ -70,7 +70,7 @@ async fn api_login(
     username: String,
     password: String,
     captcha_token: Option<String>,
-) -> Result<Config, String> {
+) -> Result<UnifiedConfig, String> {
     // 调用api::auth模块的login函数
     let (user_token, frp_token, login_data) =
         api::auth::login(username.clone(), password, captcha_token).await?;
@@ -87,21 +87,8 @@ async fn api_login(
     // 保存统一配置
     config::save_unified_config(&unified_config).await?;
 
-    // 返回兼容的Config结构体（用于前端）
-    let config = Config {
-        api_status: "connected".to_string(),
-        login_time: chrono::Utc::now().to_rfc3339(),
-        user_token: user_token.clone(),
-        frp_token: frp_token.clone(),
-        username: username.clone(),
-        user_info: UserInfo {
-            group: Some(login_data.group),
-            token: Some(user_token),
-            username: Some(login_data.username),
-        },
-    };
-
-    Ok(config)
+    // 直接返回 UnifiedConfig
+    Ok(unified_config)
 }
 
 // 获取用户信息API命令
