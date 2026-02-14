@@ -16,6 +16,10 @@ export interface UnifiedConfig {
   startupDelay: number;
   minimizeToTray: boolean;
   showAd: boolean;
+  
+  // UI 设置
+  sidebarWidth?: number;
+  sidebarCollapsible?: boolean;
 }
 
 // 旧的用户信息类型（保留用于向后兼容）
@@ -45,4 +49,6 @@ export interface AppSettings {
   theme: string;
   minimizeToTray: boolean;
   showAd: boolean;
+  sidebarWidth?: number;
+  sidebarCollapsible?: boolean;
 }

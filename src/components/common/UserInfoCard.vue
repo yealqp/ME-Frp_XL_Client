@@ -201,11 +201,11 @@ const getUserGroupType = (
   group: string,
 ): "default" | "success" | "warning" | "error" | "info" => {
   const groupLower = group.toLowerCase();
-  if (groupLower.includes("vip") || groupLower.includes("专业"))
+  if (groupLower.includes("管理员") || groupLower.includes("高级"))
     return "warning";
-  if (groupLower.includes("高级") || groupLower.includes("premium"))
+  if (groupLower.includes("正式") || groupLower.includes("贡献"))
     return "success";
-  if (groupLower.includes("免费") || groupLower.includes("free"))
+  if (groupLower.includes("未实名") )
     return "default";
   return "info";
 };

@@ -1,10 +1,21 @@
 <template>
-  <div class="sidebar">
+  <n-layout-sider
+    :class="['sidebar']"
+    bordered
+    collapse-mode="width"
+    :collapsed-width="64"
+    :width="sidebarWidth"
+    :collapsed="sidebarCollapsed"
+    :show-trigger="sidebarCollapsible ? 'arrow-circle' : false"
+    :native-scrollbar="false"
+    @collapse="handleCollapse"
+    @expand="handleExpand"
+  >
     <n-config-provider :theme="customTheme">
       <div class="sidebar-header">
         <h2 class="app-title">
           <img src="../assets/icon.png" alt="logo" class="logo" />
-          ME-Frp
+          <span v-show="!sidebarCollapsed" class="title-text">ME-Frp</span>
         </h2>
       </div>
 
@@ -13,22 +24,17 @@
           :options="menuOptions"
           :value="activeNav"
           @update:value="handleMenuSelect"
-          :collapsed="false"
+          :collapsed="sidebarCollapsed"
           :collapsed-width="64"
-          :collapsed-icon-size="22"
-          :render-extra="() => null"
+          :collapsed-icon-size="20"
+          :indent="24"
         />
       </div>
 
       <div class="sidebar-footer">
-        <div class="logout-item" @click="handleNavClick('logout')">
-          <LogOut :size="18" class="logout-icon" />
-          <span class="logout-text">退出登录</span>
-        </div>
-
         <!-- 仙林云计算广告 -->
         <a
-          v-if="showAd"
+          v-if="showAd && !sidebarCollapsed"
           href="https://www.idcxl.cn"
           target="_blank"
           rel="noopener noreferrer"
@@ -50,18 +56,17 @@
         </a>
       </div>
     </n-config-provider>
-  </div>
+  </n-layout-sider>
 </template>
 
 <script setup lang="ts">
-import { h, onMounted, computed } from "vue";
+import { h, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { darkTheme } from "naive-ui";
+import { darkTheme, NIcon, NLayoutSider, useDialog } from "naive-ui";
 import type { MenuOption } from "naive-ui";
-import { invoke } from "@tauri-apps/api/core";
-import type { UnifiedConfig } from "../types/config";
 import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
+import { useUIStore } from "../stores/ui";
 import {
   Home,
   PlusCircle,
@@ -74,6 +79,28 @@ import {
 
 const router = useRouter();
 const route = useRoute();
+const dialog = useDialog();
+
+// UI Store
+const uiStore = useUIStore();
+const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
+
+// 监听侧栏宽度变化，确保动画生效
+watch(sidebarWidth, (newWidth, oldWidth) => {
+  console.log(`侧栏宽度从 ${oldWidth}px 变化到 ${newWidth}px`);
+});
+
+// 处理收缩
+const handleCollapse = () => {
+  uiStore.setSidebarCollapsed(true);
+  emit('toggle-sidebar', true);
+};
+
+// 处理展开
+const handleExpand = () => {
+  uiStore.setSidebarCollapsed(false);
+  emit('toggle-sidebar', false);
+};
 
 // 使用 Settings store 中的广告显示状态
 const settingsStore = useSettingsStore();
@@ -111,6 +138,7 @@ const customTheme = {
 
 const emit = defineEmits<{
   logout: [];
+  'toggle-sidebar': [collapsed: boolean];
 }>();
 
 // 从路由计算当前激活的导航项
@@ -141,14 +169,39 @@ const navItems = [
   { id: "about", name: "关于面板", icon: Info },
 ];
 
-// 创建菜单选项
-const menuOptions: MenuOption[] = navItems.map((item) => ({
-  label: item.name,
-  key: item.id,
-  icon: () => h(item.icon, { size: 18 }),
-}));
+// 创建菜单选项 - 使用 NIcon 包裹图标以支持 Naive UI 的收缩功能
+const menuOptions: MenuOption[] = [
+  ...navItems.map((item) => ({
+    label: item.name,
+    key: item.id,
+    icon: () => h(NIcon, { size: 18 }, { default: () => h(item.icon) }),
+  })),
+  {
+    type: 'divider',
+    key: 'divider-before-logout',
+  },
+  {
+    label: () => h('span', { style: { color: '#e74c3c' } }, '退出登录'),
+    key: 'logout',
+    icon: () => h(NIcon, { size: 18, color: '#e74c3c' }, { default: () => h(LogOut) }),
+  },
+];
 
 function handleMenuSelect(key: string) {
+  if (key === 'logout') {
+    // 显示二次确认对话框
+    dialog.error({
+      title: '退出登录',
+      content: '确定要退出登录吗？',
+      positiveText: '确定',
+      negativeText: '取消',
+      onPositiveClick: () => {
+        emit('logout');
+      }
+    });
+    return;
+  }
+
   // 路由映射
   const navToPath: Record<string, string> = {
     dashboard: "/dashboard",
@@ -166,69 +219,42 @@ function handleMenuSelect(key: string) {
   }
 }
 
-function handleNavClick(navId: string) {
-  if (navId === "logout") {
-    emit("logout");
-  } else {
-    handleMenuSelect(navId);
-  }
-}
-
-// 隐藏 Menu 的 tooltip
-onMounted(() => {
+// 隐藏 Menu 的 tooltip（收缩时会自动显示）
+onMounted(async () => {
   // 加载广告设置
   loadAdSettings();
   
-  // 使用 MutationObserver 监听 DOM 变化，移除 popover
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.addedNodes.forEach((node) => {
-        if (node instanceof HTMLElement) {
-          // 查找并隐藏 n-popover 元素
-          if (
-            node.classList &&
-            (node.classList.contains("n-popover") ||
-              node.classList.contains("n-popover-shared"))
-          ) {
-            node.style.display = "none";
-          }
-          // 也检查子元素
-          const popovers = node.querySelectorAll(
-            ".n-popover, .n-popover-shared",
-          );
-          popovers.forEach((popover) => {
-            if (popover instanceof HTMLElement) {
-              popover.style.display = "none";
-            }
-          });
-        }
-      });
-    });
-  });
-
-  // 监听 body 的变化
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  // 加载 UI 设置
+  await uiStore.loadSidebarSettings();
 });
 </script>
 
 <style scoped>
 .sidebar {
-  width: 250px;
-  background-color: #18181c;
+  background-color: #18181c !important;
   color: white;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  border-right: 1px solid #29292c;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1000;
-  overflow-y: auto;
-  overflow-x: hidden;
+  border-right: 1px solid #29292c !important;
+}
+
+/* 侧边栏收缩动画 - 应用到 Naive UI 的内部元素 */
+:deep(.n-layout-sider) {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: width;
+}
+
+:deep(.n-layout-sider--collapsed) {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:deep(.n-layout-sider__border) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+:deep(.n-layout-sider-scroll-container) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-header {
@@ -236,16 +262,58 @@ onMounted(() => {
   border-bottom: 1px solid #29292c;
   background-color: #18181c;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 68px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* 收缩状态下调整 header padding */
+:deep(.n-layout-sider--collapsed) .sidebar-header {
+  padding: 20px 8px;
 }
 
 .app-title {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   margin: 0;
   color: #349ff4;
   display: flex;
   align-items: center;
   gap: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.title-text {
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* 收缩状态下隐藏文字 */
+:deep(.n-layout-sider--collapsed) .title-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+.logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 收缩状态下 logo 保持居中 */
+:deep(.n-layout-sider--collapsed) .logo {
+  margin: 0 auto;
 }
 
 .nav-content {
@@ -254,6 +322,7 @@ onMounted(() => {
   background-color: #18181c;
   overflow-y: auto;
   overflow-x: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-footer {
@@ -262,18 +331,34 @@ onMounted(() => {
   border-top: 1px solid #29292c;
   background-color: #18181c;
   flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* 收缩状态下调整 footer padding */
+:deep(.n-layout-sider--collapsed) .sidebar-footer {
+  padding: 20px 8px;
 }
 
 /* 广告横幅样式 */
 .ad-banner {
   display: block;
-  margin-top: 16px;
   padding: 16px;
   background: #1e3a8a;
   border-radius: 8px;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  opacity: 1;
+}
+
+/* 收缩状态下隐藏广告 */
+:deep(.n-layout-sider--collapsed) .ad-banner {
+  opacity: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
 }
 
 .ad-banner:hover {
@@ -323,37 +408,6 @@ onMounted(() => {
   color: #ffffff;
 }
 
-.logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
-
-.logout-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  border-radius: 6px;
-  color: #e74c3c;
-  margin: 0 12px;
-}
-
-.logout-item:hover {
-  background-color: rgba(231, 76, 60, 0.1);
-}
-
-.logout-icon {
-  flex-shrink: 0;
-  margin-right: 12px;
-}
-
-.logout-text {
-  font-size: 14px;
-  font-weight: 500;
-}
-
 /* 自定义Naive UI Menu样式 */
 :deep(.n-menu) {
   background-color: transparent !important;
@@ -362,9 +416,21 @@ onMounted(() => {
 :deep(.n-menu .n-menu-item) {
   margin: 4px 12px;
   border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
 }
 
+/* 收缩状态下的菜单项 - 减少边距让背景更宽 */
+:deep(.n-menu--collapsed .n-menu-item) {
+  margin: 4px 8px;
+  min-height: 42px;
+}
+
+/* 选中状态 - 持久蓝色背景 */
 :deep(.n-menu .n-menu-item--selected) {
   background-color: #349ff4 !important;
   color: white !important;
@@ -374,6 +440,11 @@ onMounted(() => {
   color: white !important;
 }
 
+:deep(.n-menu .n-menu-item--selected .n-icon) {
+  color: white !important;
+}
+
+/* hover 状态 - 浅蓝色背景 */
 :deep(.n-menu .n-menu-item:hover:not(.n-menu-item--selected)) {
   background-color: rgba(52, 159, 244, 0.1) !important;
 }
@@ -382,15 +453,37 @@ onMounted(() => {
   padding: 12px 16px !important;
   display: flex !important;
   align-items: center !important;
+  background: transparent !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  min-height: 42px;
+}
+
+/* 收缩状态下的菜单项内容居中 - 保持相同的垂直 padding */
+:deep(.n-menu--collapsed .n-menu-item-content) {
+  padding: 12px !important;
+  justify-content: center !important;
+  min-height: 42px;
 }
 
 :deep(.n-menu .n-menu-item-content__icon) {
-  margin-right: 12px !important;
   font-size: 18px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
+  margin-right: 12px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+/* 收缩状态下图标居中 - 移除右边距并确保居中 */
+:deep(.n-menu--collapsed .n-menu-item-content__icon) {
+  margin-right: 0 !important;
+  width: 18px;
+  height: 18px;
 }
 
 :deep(.n-menu .n-menu-item-content-header) {
@@ -398,10 +491,41 @@ onMounted(() => {
   font-weight: 500 !important;
   display: flex !important;
   align-items: center !important;
+  opacity: 1;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 隐藏菜单项的 tooltip，避免显示两个悬浮框 */
-:deep(.n-menu .n-menu-item .n-tooltip) {
+/* 收缩状态下隐藏文字 */
+:deep(.n-menu--collapsed .n-menu-item-content-header) {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+/* 分割线样式 */
+:deep(.n-menu .n-menu-divider) {
+  margin: 8px 12px !important;
+  background-color: #29292c !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 收缩状态下的分割线 */
+:deep(.n-menu--collapsed .n-menu-divider) {
+  margin: 8px 8px !important;
+}
+
+/* 移除所有伪元素蒙层 */
+:deep(.n-menu-item-content::before),
+:deep(.n-menu-item-content::after),
+:deep(.n-menu-item::before),
+:deep(.n-menu-item::after) {
+  display: none !important;
+}
+
+/* 移除 Naive UI 的波纹和加载效果 */
+:deep(.n-base-wave),
+:deep(.n-base-loading),
+:deep(.n-base-select-option__check) {
   display: none !important;
 }
 </style>

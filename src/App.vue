@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -7,6 +7,7 @@ import { darkTheme, NDialogProvider, createDiscreteApi } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
 import { useCreateTunnelStore } from "./stores/createTunnel";
+import { useUIStore } from "./stores/ui";
 import Sidebar from "./components/Sidebar.vue";
 import Login from "./components/Login.vue";
 import type { UnifiedConfig } from "./types/config";
@@ -17,6 +18,7 @@ const route = useRoute();
 // Initialize stores
 const authStore = useAuthStore();
 const createTunnelStore = useCreateTunnelStore();
+const uiStore = useUIStore();
 
 // Use storeToRefs for state/getters to maintain reactivity
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
@@ -320,14 +322,14 @@ onMounted(async () => {
             <Login @login-success="handleLoginSuccess" />
           </div>
 
-          <!-- 主应用界面 -->
-          <template v-else>
-            <!-- 左侧导航栏组件 -->
+          <!-- 主应用界面 - 使用 NLayout -->
+          <n-layout v-else has-sider position="absolute" class="main-layout">
+            <!-- 左侧导航栏 -->
             <Sidebar @logout="handleLogout" />
 
             <!-- 右侧内容区域 -->
-            <main class="main-content">
-              <div class="content-body">
+            <n-layout class="content-layout">
+              <n-layout-content class="content-body">
                 <router-view v-slot="{ Component }">
                   <!-- 只渲染非登录页面的组件 -->
                   <component
@@ -339,9 +341,9 @@ onMounted(async () => {
                     }"
                   />
                 </router-view>
-              </div>
-            </main>
-          </template>
+              </n-layout-content>
+            </n-layout>
+          </n-layout>
         </n-dialog-provider>
       </n-message-provider>
     </n-config-provider>
@@ -374,6 +376,22 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+}
+
+.main-layout {
+  width: 100%;
+  height: 100vh;
+}
+
+.content-layout {
+  background-color: #101014;
+}
+
+.content-body {
+  padding: 30px;
+  background-color: #101014;
+  min-height: 100%;
+  overflow-y: auto;
 }
 
 .loading-container {
@@ -409,23 +427,6 @@ body {
   width: 100vw;
   height: 100vh;
   z-index: 9999;
-}
-
-.main-content {
-  width: calc(100vw - 250px);
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: #101014;
-  margin-left: 250px;
-  overflow-y: auto;
-}
-
-.content-body {
-  flex: 1;
-  padding: 30px;
-  background-color: #101014;
-  min-height: calc(100vh - 60px);
 }
 
 .fa-spinner {

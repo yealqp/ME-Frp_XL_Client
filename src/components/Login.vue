@@ -398,56 +398,28 @@ async function handleLogin() {
       // 普通登录模式 - 先进行人机验证
       message.loading("正在进行人机验证...", { duration: 0 });
       
-      try {
-        // 确保验证码实例已创建
-        if (!captchaInstance) {
-          captchaInstance = createCaptcha({
-            onProgress: (progress) => {
-              console.log(`验证进度: ${progress}%`);
-            },
-            onError: (error) => {
-              console.error("验证错误:", error);
-            },
-          });
-        }
+      // 确保验证码实例已创建
+      if (!captchaInstance) {
+        captchaInstance = createCaptcha({
+          onProgress: (progress) => {
+            console.log(`验证进度: ${progress}%`);
+          },
+          onError: (error) => {
+            console.error("验证错误:", error);
+          },
+        });
+      }
 
-        // 触发隐式验证
-        const captchaToken = await captchaInstance.verify();
+      // 触发隐式验证
+      let captchaToken: string;
+      try {
+        captchaToken = await captchaInstance.verify();
         console.log("获取到的 captchaToken:", captchaToken, "类型:", typeof captchaToken);
         
         // 确保 token 是字符串
         if (typeof captchaToken !== 'string') {
           throw new Error(`验证 token 类型错误: ${typeof captchaToken}`);
         }
-        
-        loginForm.value.captchaToken = captchaToken;
-        
-        message.destroyAll();
-        message.loading("正在登录中，请稍候...");
-        
-        console.log("开始登录:", loginForm.value.username, "captchaToken:", loginForm.value.captchaToken);
-
-        // 调用后端登录API命令
-        const config = await invoke<UnifiedConfig>("api_login", {
-          username: loginForm.value.username,
-          password: loginForm.value.password,
-          captchaToken: loginForm.value.captchaToken,
-        });
-
-        console.log("登录成功，配置已保存:", config);
-        message.success("登录成功");
-
-        // Call auth store login action with user info
-        authStore.login({
-          userToken: config.userToken,
-          username: config.username,
-          group: config.group,
-          frpToken: config.frpToken,
-        });
-
-        // 立即触发登录成功事件
-        console.log("触发login-success事件");
-        emit("login-success");
       } catch (captchaError) {
         message.destroyAll();
         console.error("人机验证失败:", captchaError);
@@ -455,8 +427,38 @@ async function handleLogin() {
         isLogging.value = false;
         return;
       }
+      
+      loginForm.value.captchaToken = captchaToken;
+      
+      message.destroyAll();
+      message.loading("正在登录中，请稍候...");
+      
+      console.log("开始登录:", loginForm.value.username, "captchaToken:", loginForm.value.captchaToken);
+
+      // 调用后端登录API命令
+      const config = await invoke<UnifiedConfig>("api_login", {
+        username: loginForm.value.username,
+        password: loginForm.value.password,
+        captchaToken: loginForm.value.captchaToken,
+      });
+
+      console.log("登录成功，配置已保存:", config);
+      message.success("登录成功");
+
+      // Call auth store login action with user info
+      authStore.login({
+        userToken: config.userToken,
+        username: config.username,
+        group: config.group,
+        frpToken: config.frpToken,
+      });
+
+      // 立即触发登录成功事件
+      console.log("触发login-success事件");
+      emit("login-success");
     }
   } catch (error) {
+    message.destroyAll(); // 清除所有加载消息
     console.error("登录失败:", error);
     // 显示完整的错误信息
     const errorMessage =
@@ -466,11 +468,6 @@ async function handleLogin() {
           ? (error as any).message
           : "登录失败，请检查用户名和密码";
     message.error(errorMessage);
-
-    if (!isTokenMode.value) {
-      // 普通登录失败提示
-      message.warning("登录失败，请检查用户名、密码和验证码");
-    }
   } finally {
     isLogging.value = false;
   }

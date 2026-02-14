@@ -60,6 +60,51 @@
         </n-space>
       </n-card>
 
+      <!-- 外观设置 -->
+      <n-card :bordered="true" class="settings-section">
+        <template #header>
+          <div class="section-header">
+            <Palette :size="18" />
+            <span>外观设置</span>
+          </div>
+        </template>
+
+        <n-space vertical :size="24">
+          <!-- 侧边栏宽度 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>侧边栏宽度</h4>
+              <p>调整侧边栏的宽度（150-300px）</p>
+            </div>
+            <div class="slider-control">
+              <n-slider
+                v-model:value="uiSettings.sidebarWidth"
+                :min="150"
+                :max="300"
+                :step="10"
+                :tooltip="true"
+                :format-tooltip="(value) => `${value}px`"
+                @update:value="handleSidebarWidthChange"
+                style="width: 200px"
+              />
+              <span class="slider-value">{{ uiSettings.sidebarWidth }}px</span>
+            </div>
+          </div>
+
+          <!-- 侧边栏收缩功能 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>侧边栏收缩功能</h4>
+              <p>开启后，可以点击按钮收缩侧边栏</p>
+            </div>
+            <n-switch
+              v-model:value="uiSettings.sidebarCollapsible"
+              @update:value="handleSidebarCollapsibleChange"
+            />
+          </div>
+        </n-space>
+      </n-card>
+
       <n-card :bordered="true" class="settings-section">
         <template #header>
           <div class="section-header">
@@ -262,16 +307,19 @@ import {
   NSpace,
   NCheckbox,
   NTag,
+  NSlider,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
 import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
+import { useUIStore } from "../stores/ui";
 import {
   Settings as SettingsIcon,
   Rocket,
   ArrowUp,
   ArrowDown,
+  Palette,
 } from "lucide-vue-next";
 
 // 使用导入的AppSettings类型
@@ -294,6 +342,16 @@ interface Tunnel {
 }
 
 const message = useMessage();
+
+// UI Store
+const uiStore = useUIStore();
+const uiSettings = ref({
+  sidebarWidth: 200,
+  sidebarCollapsible: true,
+});
+
+// 防抖定时器
+let sidebarWidthDebounceTimer: number | null = null;
 
 // 设置数据
 const settings = ref<Settings>({
@@ -410,6 +468,47 @@ const handleShowAdChange = async (value: boolean) => {
   const settingsStore = useSettingsStore();
   await settingsStore.updateSetting('showAd', value);
   message.success(value ? "已开启侧边栏广告" : "已关闭侧边栏广告");
+};
+
+// 处理侧边栏宽度变化（带防抖）
+const handleSidebarWidthChange = (value: number) => {
+  // 立即更新本地显示和 store（触发动画）
+  uiSettings.value.sidebarWidth = value;
+  // 直接更新 store 的响应式值，触发 Sidebar 组件立即响应
+  if (value >= 150 && value <= 300) {
+    uiStore.$patch({ sidebarWidth: value });
+  }
+  
+  // 清除之前的定时器
+  if (sidebarWidthDebounceTimer !== null) {
+    clearTimeout(sidebarWidthDebounceTimer);
+  }
+  
+  // 设置新的定时器，500ms 后保存到配置文件
+  sidebarWidthDebounceTimer = window.setTimeout(async () => {
+    try {
+      // 只保存，不再更新 store（已经更新过了）
+      await uiStore.saveSidebarSettings();
+      message.success(`侧边栏宽度已设置为 ${value}px`);
+    } catch (error) {
+      message.error('保存侧边栏宽度失败');
+      console.error('保存侧边栏宽度失败:', error);
+      // 保存失败时回滚
+      await uiStore.loadSidebarSettings();
+      uiSettings.value.sidebarWidth = uiStore.sidebarWidth;
+    }
+  }, 500);
+};
+
+// 处理侧边栏收缩功能变化
+const handleSidebarCollapsibleChange = async (value: boolean) => {
+  try {
+    await uiStore.updateSidebarCollapsible(value);
+    message.success(value ? "已开启侧边栏收缩功能" : "已关闭侧边栏收缩功能");
+  } catch (error) {
+    message.error('保存侧边栏收缩设置失败');
+    console.error('保存侧边栏收缩设置失败:', error);
+  }
 };
 
 // 保存设置
@@ -591,9 +690,14 @@ const removeDeletedTunnelConfig = (tunnelId: number) => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   loadSettings();
   loadTunnels();
+  
+  // 加载 UI 设置
+  await uiStore.loadSidebarSettings();
+  uiSettings.value.sidebarWidth = uiStore.sidebarWidth;
+  uiSettings.value.sidebarCollapsible = uiStore.sidebarCollapsible;
 });
 </script>
 
@@ -782,6 +886,21 @@ onMounted(() => {
 
 .tunnel-port {
   font-family: "Courier New", monospace;
+}
+
+/* 滑块控制样式 */
+.slider-control {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.slider-value {
+  color: #349ff4;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 60px;
+  text-align: right;
 }
 
 /* 隧道项内容布局 */

@@ -48,10 +48,8 @@
         <UserInfoCard
           :user-info="userInfo"
           :loading="userInfoLoading"
-          :is-signing="isSigning"
           :user-info-loading="userInfoLoading"
           title="用户信息"
-          @sign="handleSign"
         />
 
         <!-- 统计信息卡片 -->
@@ -78,9 +76,6 @@
             class="announcement-card"
             :class="getAnnouncementCardClass(announcement)"
           >
-            <template #header-extra>
-              <span class="announcement-date">{{ announcement.date }}</span>
-            </template>
             <div v-html="parseMarkdown(announcement.content)"></div>
           </n-card>
         </template>
@@ -98,6 +93,7 @@ import { useUserStore } from "../stores/user";
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
 import { handleApiError } from "@/utils/errorHandler";
+import { createCaptcha } from "@/utils/captcha";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import StatisticsCard from "./common/StatisticsCard.vue";
 
@@ -143,9 +139,6 @@ const popupNoticeLoading = ref(false);
 // 加载状态
 const announcementsLoading = ref(true);
 const message = useMessage();
-
-// 签到状态
-const isSigning = ref(false);
 
 // 缓存相关
 const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存时间
@@ -389,27 +382,90 @@ const closeImportantNotice = () => {
   // 不再记录到 localStorage，每次进入页面都会显示
 };
 
-// 处理签到
-const handleSign = async () => {
-  isSigning.value = true;
+// 自动签到标志（确保只执行一次）
+const hasAutoSigned = ref(false);
+
+// 自动签到的函数
+const autoSign = async () => {
+  // 如果已经执行过自动签到，跳过
+  if (hasAutoSigned.value) {
+    return;
+  }
+
+  // 如果用户信息还没加载，跳过
+  if (!userInfo.value) {
+    return;
+  }
+
+  // 如果今天已经签到过，跳过
+  if (userInfo.value.todaySigned) {
+    message.success("今天已经签到过了，跳过自动签到");
+    console.log("今天已经签到过了，跳过自动签到");
+    hasAutoSigned.value = true;
+    return;
+  }
+  message.success("正在尝试自动签到", {duration: 8000});
+  console.log("开始自动签到...");
+  hasAutoSigned.value = true;
+
   try {
-    // 调用签到 API
-    await invoke("api_user_sign");
-    message.success("签到成功！");
-    // 重新加载用户信息
-    await userStore.loadUserInfo();
+    // 创建签到验证码实例
+    const signCaptchaInstance = createCaptcha({
+      onProgress: (progress) => console.log(`自动签到验证进度: ${progress}%`),
+      onError: (error) => {
+        console.error("自动签到验证错误:", error);
+        // 错误不弹出 message
+      },
+    });
+
+    // 执行人机验证
+    const token = await signCaptchaInstance.verify();
+    
+    // 使用 token 进行签到
+    try {
+      const responseText = await invoke("api_user_sign", {
+        captchaToken: token,
+      });
+
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        const trafficGB = result.data?.extraTraffic || 0;
+        let successMessage = "自动签到成功！";
+        if (trafficGB > 0) {
+          successMessage = `自动签到成功，获得 ${trafficGB} GB 流量！`;
+        } else if (result.message) {
+          successMessage = result.message;
+        }
+
+        console.log(successMessage);
+        // 只在成功时显示消息
+        message.success(successMessage);
+        
+        // 刷新用户信息
+        await userStore.loadUserInfo();
+      } else {
+        console.log("自动签到失败:", result.message);
+        // 失败不弹出 message
+      }
+    } catch (error) {
+      console.error("自动签到失败:", error);
+      // 错误不弹出 message
+    }
   } catch (error) {
-    const errorMessage = handleApiError(error, "签到失败", "签到失败");
-    message.error(errorMessage);
-  } finally {
-    isSigning.value = false;
+    console.error("自动签到过程出错:", error);
+    // 错误不弹出 message
   }
 };
 
 // 组件挂载时获取用户信息和系统公告
-onMounted(() => {
+onMounted(async () => {
   fetchSystemStatus();
-  userStore.loadUserInfo();
+  await userStore.loadUserInfo();
+  
+  // 用户信息加载完成后，尝试自动签到
+  autoSign();
+  
   fetchAnnouncements();
   fetchPopupNotice(); // 获取重要公告
 });
