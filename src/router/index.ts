@@ -5,10 +5,6 @@ import type { UnifiedConfig } from "../types/config";
 // 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
   {
-    path: "/",
-    redirect: "/dashboard",
-  },
-  {
     path: "/login",
     name: "Login",
     component: () => import("../components/Login.vue"),
@@ -71,6 +67,12 @@ const router = createRouter({
 
 // 路由守卫 - 检查登录状态
 router.beforeEach(async (to, _from, next) => {
+  // 根路径重定向到 dashboard
+  if (to.path === "/") {
+    next("/dashboard");
+    return;
+  }
+
   // 登录页面直接放行
   if (to.path === "/login") {
     next();

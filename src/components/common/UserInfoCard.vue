@@ -30,7 +30,7 @@
                 </n-tag>
                 <n-tag
                   :bordered="false"
-                  :type="userInfo.isRealname ? 'success' : 'warning'"
+                  :type="userInfo.isRealname ? 'success' : 'error'"
                 >
                   {{ userInfo.isRealname ? "已实名" : "未实名" }}
                 </n-tag>
@@ -206,7 +206,7 @@ const getUserGroupType = (
   if (groupLower.includes("正式") || groupLower.includes("贡献"))
     return "success";
   if (groupLower.includes("未实名") )
-    return "default";
+    return "error";
   return "info";
 };
 </script>

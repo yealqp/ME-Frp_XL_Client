@@ -128,11 +128,11 @@ const checkAuthStatus = async (retryCount = 0): Promise<void> => {
   try {
     await authStore.checkAuthStatus(retryCount);
     
-    // 如果登录成功且当前在登录页，跳转到首页
-    if (authStore.isLoggedIn && (route.path === "/login" || route.path === "/")) {
+    // 只在登录页时跳转到首页，其他情况保持当前路由
+    if (authStore.isLoggedIn && route.path === "/login") {
       router.push("/dashboard");
-    } else if (!authStore.isLoggedIn) {
-      // 未登录，跳转到登录页
+    } else if (!authStore.isLoggedIn && route.path !== "/login") {
+      // 未登录且不在登录页，跳转到登录页
       router.push("/login");
     }
   } catch (error) {

@@ -213,7 +213,7 @@
           <n-input
             v-model:value="feedbackForm.content"
             type="textarea"
-            placeholder="请详细描述您遇到的问题或建议"
+            placeholder="请详细描述您遇到的问题或建议,请勿骚扰。"
             :rows="6"
             :maxlength="500"
             show-count

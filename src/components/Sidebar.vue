@@ -239,22 +239,18 @@ onMounted(async () => {
   border-right: 1px solid #29292c !important;
 }
 
-/* 侧边栏收缩动画 - 应用到 Naive UI 的内部元素 */
+/* 侧边栏宽度变化 - 移除过渡动画，让滑块调整时立即响应 */
 :deep(.n-layout-sider) {
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: none !important;
   will-change: width;
 }
 
-:deep(.n-layout-sider--collapsed) {
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-
 :deep(.n-layout-sider__border) {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: none !important;
 }
 
 :deep(.n-layout-sider-scroll-container) {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: none;
 }
 
 .sidebar-header {
@@ -266,7 +262,7 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   min-height: 68px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: none;
   overflow: hidden;
 }
 
@@ -283,7 +279,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: none;
   white-space: nowrap;
   justify-content: center;
   width: 100%;
@@ -308,7 +304,7 @@ onMounted(async () => {
   height: 28px;
   object-fit: contain;
   flex-shrink: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: none;
 }
 
 /* 收缩状态下 logo 保持居中 */
@@ -322,7 +318,7 @@ onMounted(async () => {
   background-color: #18181c;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: none;
 }
 
 .sidebar-footer {
@@ -331,7 +327,7 @@ onMounted(async () => {
   border-top: 1px solid #29292c;
   background-color: #18181c;
   flex-shrink: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: none;
   overflow: hidden;
 }
 
@@ -347,7 +343,7 @@ onMounted(async () => {
   background: #1e3a8a;
   border-radius: 8px;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
   opacity: 1;
 }
@@ -411,23 +407,32 @@ onMounted(async () => {
 /* 自定义Naive UI Menu样式 */
 :deep(.n-menu) {
   background-color: transparent !important;
+  padding: 0 !important;
 }
 
+/* 菜单项容器 - 使用固定的 margin 和 padding */
 :deep(.n-menu .n-menu-item) {
-  margin: 4px 12px;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  margin-left: 12px !important;
+  margin-right: 12px !important;
   border-radius: 6px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.2s ease;
   position: relative;
+  height: 44px;
   overflow: hidden;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
+  flex-shrink: 0;
 }
 
-/* 收缩状态下的菜单项 - 减少边距让背景更宽 */
+/* 收缩状态下的菜单项 - 只改变水平 margin */
 :deep(.n-menu--collapsed .n-menu-item) {
-  margin: 4px 8px;
-  min-height: 42px;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+  height: 44px;
 }
 
 /* 选中状态 - 持久蓝色背景 */
@@ -449,69 +454,123 @@ onMounted(async () => {
   background-color: rgba(52, 159, 244, 0.1) !important;
 }
 
+/* 菜单项内容 - 使用相对定位作为参考点 */
 :deep(.n-menu .n-menu-item-content) {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 44px !important;
   padding: 12px 16px !important;
   display: flex !important;
   align-items: center !important;
   background: transparent !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  min-height: 42px;
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 收缩状态下的菜单项内容居中 - 保持相同的垂直 padding */
+/* 收缩状态下的菜单项内容 - 保持相同的垂直 padding */
 :deep(.n-menu--collapsed .n-menu-item-content) {
   padding: 12px !important;
   justify-content: center !important;
-  min-height: 42px;
 }
 
+/* 图标容器 - 固定尺寸，强制锁定垂直位置 */
 :deep(.n-menu .n-menu-item-content__icon) {
+  width: 20px !important;
+  height: 20px !important;
   font-size: 18px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
   margin-right: 12px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  width: 18px;
-  height: 18px;
+  transform: translateY(0) !important;
+  line-height: 20px !important;
 }
 
-/* 收缩状态下图标居中 - 移除右边距并确保居中 */
+/* 收缩状态下图标居中 - 强制保持垂直位置 */
 :deep(.n-menu--collapsed .n-menu-item-content__icon) {
   margin-right: 0 !important;
-  width: 18px;
-  height: 18px;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  transform: translateY(0) !important;
 }
 
+/* NIcon 组件 - 锁定位置 */
+:deep(.n-menu .n-menu-item-content__icon .n-icon) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: translateY(0) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.n-menu--collapsed .n-menu-item-content__icon .n-icon) {
+  transform: translateY(0) !important;
+}
+
+/* 图标内部的 SVG - 确保不会移动 */
+:deep(.n-menu .n-menu-item-content__icon svg) {
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: translateY(0) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  vertical-align: baseline !important;
+}
+
+:deep(.n-menu--collapsed .n-menu-item-content__icon svg) {
+  transform: translateY(0) !important;
+}
+
+/* 文字标签 */
 :deep(.n-menu .n-menu-item-content-header) {
   font-size: 14px !important;
   font-weight: 500 !important;
-  display: flex !important;
-  align-items: center !important;
+  line-height: 20px !important;
+  flex: 1 !important;
   opacity: 1;
   transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* 收缩状态下隐藏文字 */
 :deep(.n-menu--collapsed .n-menu-item-content-header) {
   opacity: 0;
   width: 0;
-  overflow: hidden;
 }
 
-/* 分割线样式 */
+/* 分割线样式 - 固定高度和垂直边距，使用 flex 确保不影响布局 */
 :deep(.n-menu .n-menu-divider) {
-  margin: 8px 12px !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+  margin-left: 12px !important;
+  margin-right: 12px !important;
   background-color: #29292c !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 1px !important;
+  min-height: 1px !important;
+  max-height: 1px !important;
+  flex-shrink: 0 !important;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 收缩状态下的分割线 */
+/* 收缩状态下的分割线 - 只改变水平边距 */
 :deep(.n-menu--collapsed .n-menu-divider) {
-  margin: 8px 8px !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+  margin-left: 8px !important;
+  margin-right: 8px !important;
 }
 
 /* 移除所有伪元素蒙层 */

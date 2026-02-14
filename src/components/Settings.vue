@@ -81,7 +81,7 @@
                 v-model:value="uiSettings.sidebarWidth"
                 :min="150"
                 :max="300"
-                :step="10"
+                :step="1"
                 :tooltip="true"
                 :format-tooltip="(value) => `${value}px`"
                 @update:value="handleSidebarWidthChange"
@@ -118,7 +118,7 @@
           <div class="setting-item tunnel-selection">
             <div class="setting-info">
               <h4>自启动隧道</h4>
-              <p>选择应用启动时自动启动的隧道</p>
+              <p>选择应用启动时自动启动的隧道,由上至下依次启动</p>
             </div>
             <div class="tunnel-controls" v-if="tunnels.length > 0">
               <n-space>
@@ -484,7 +484,7 @@ const handleSidebarWidthChange = (value: number) => {
     clearTimeout(sidebarWidthDebounceTimer);
   }
   
-  // 设置新的定时器，500ms 后保存到配置文件
+  // 设置新的定时器，300ms 后保存到配置文件（与侧栏动画时长一致）
   sidebarWidthDebounceTimer = window.setTimeout(async () => {
     try {
       // 只保存，不再更新 store（已经更新过了）
@@ -497,7 +497,7 @@ const handleSidebarWidthChange = (value: number) => {
       await uiStore.loadSidebarSettings();
       uiSettings.value.sidebarWidth = uiStore.sidebarWidth;
     }
-  }, 500);
+  }, 300);
 };
 
 // 处理侧边栏收缩功能变化
