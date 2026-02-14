@@ -15,7 +15,7 @@
       <div class="sidebar-header">
         <h2 class="app-title">
           <img src="../assets/icon.png" alt="logo" class="logo" />
-          <span v-show="!sidebarCollapsed" class="title-text">ME-Frp</span>
+          <span v-show="!sidebarCollapsed" class="title-text">ME-Frp XL</span>
         </h2>
       </div>
 

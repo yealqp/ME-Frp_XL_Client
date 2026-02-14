@@ -61,7 +61,7 @@
                 style="cursor: pointer"
                 @click="openLink('https://pinia.vuejs.org/zh/')"
               >
-                Pinna
+                Pinia
               </n-tag>
               <n-tag
                 :bordered="false"

@@ -399,7 +399,7 @@ const autoSign = async () => {
 
   // 如果今天已经签到过，跳过
   if (userInfo.value.todaySigned) {
-    message.success("今天已经签到过了，跳过自动签到");
+    message.success("已签到，跳过自动签到");
     console.log("今天已经签到过了，跳过自动签到");
     hasAutoSigned.value = true;
     return;
