@@ -43,7 +43,7 @@ pub mod webui;
 // 导入模块中的类型
 use models::api::VersionCheckResult;
 use models::auth::UserDetailInfo;
-use models::config::{AppSettings, Config, UnifiedConfig};
+use models::config::{Config, UnifiedConfig};
 use models::tunnel::{CreateTunnelRequest, FreePortRequest, UpdateTunnelRequest};
 use tunnel::ProcessManager;
 
@@ -509,26 +509,16 @@ async fn api_get_tunnel_config(
     api::tunnel::get_tunnel_config(&config.user_token, proxy_id, format).await
 }
 
-// 保存应用设置
-#[tauri::command]
-async fn save_settings(
-    _app_handle: tauri::AppHandle,
-    settings: AppSettings,
-) -> Result<String, String> {
-    config::save_settings(&settings).await?;
-    Ok("设置保存成功".to_string())
-}
-
-// 加载应用设置
-#[tauri::command]
-async fn load_settings(_app_handle: tauri::AppHandle) -> Result<AppSettings, String> {
-    config::load_settings().await
-}
-
 // 设置开机自启动
 #[tauri::command]
-async fn set_auto_start(enable: bool) -> Result<String, String> {
-    system::startup::set_auto_start(enable).await
+async fn set_auto_start(app: tauri::AppHandle, enable: bool) -> Result<String, String> {
+    system::startup::set_auto_start(app, enable).await
+}
+
+// 检查开机自启动状态
+#[tauri::command]
+async fn is_auto_start_enabled(app: tauri::AppHandle) -> Result<bool, String> {
+    system::startup::is_auto_start_enabled(app).await
 }
 
 // 设置窗口置顶
@@ -781,6 +771,10 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]), // 添加启动参数，表示是开机自启动
+        ))
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 当检测到已有实例运行时，显示现有窗口
             if let Some(window) = app.get_webview_window("main") {
@@ -956,12 +950,11 @@ pub fn run() {
             save_config_file,
             delete_config_file,
             check_tunnel_config_files,
-            save_settings,
-            load_settings,
             save_unified_config,
             load_unified_config,
             migrate_old_configs,
             set_auto_start,
+            is_auto_start_enabled,
             set_always_on_top,
             show_window,
             hide_window,

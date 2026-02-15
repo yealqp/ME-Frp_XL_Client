@@ -25,6 +25,7 @@ export const useSettingsStore = defineStore('settings', () => {
     theme: 'light',
     minimizeToTray: true,
     showAd: true,
+    hideWebuiEntry: false,
   });
 
   const loading = ref(false);
@@ -74,6 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
         theme: 'light', // Theme is not stored in UnifiedConfig
         minimizeToTray: config.minimizeToTray ?? true,
         showAd: config.showAd ?? true,
+        hideWebuiEntry: config.hideWebuiEntry ?? false,
       };
 
       // Sync showAd to eventBus
@@ -109,6 +111,7 @@ export const useSettingsStore = defineStore('settings', () => {
         startupDelay: settings.value.startupDelay,
         minimizeToTray: settings.value.minimizeToTray,
         showAd: settings.value.showAd,
+        hideWebuiEntry: settings.value.hideWebuiEntry,
       };
 
       await invoke('save_unified_config', { config: updatedConfig });

@@ -387,6 +387,7 @@ const settings = ref<Settings>({
   theme: "dark",
   minimizeToTray: false,
   showAd: true,
+  hideWebuiEntry: false,
   webuiAddr: "127.0.0.1",
   webuiPort: 1201,
   webuiPass: "admin",
@@ -563,6 +564,7 @@ const saveSettings = async () => {
       startupDelay: settings.value.startupDelay,
       minimizeToTray: settings.value.minimizeToTray,
       showAd: settings.value.showAd,
+      hideWebuiEntry: settings.value.hideWebuiEntry,
     };
 
     await invoke("save_unified_config", { config: updatedConfig });
@@ -595,7 +597,23 @@ const loadSettings = async () => {
             : true,
         showAd:
           unifiedConfig.showAd !== undefined ? unifiedConfig.showAd : true,
+        hideWebuiEntry:
+          unifiedConfig.hideWebuiEntry !== undefined
+            ? unifiedConfig.hideWebuiEntry
+            : false,
       };
+    }
+
+    // 同步开机自启动状态
+    try {
+      const isEnabled = await invoke<boolean>("is_auto_start_enabled");
+      settings.value.autoStart = isEnabled;
+      // 如果配置文件中的状态与实际状态不一致，更新配置文件
+      if (unifiedConfig && unifiedConfig.autoStart !== isEnabled) {
+        saveSettings();
+      }
+    } catch (error) {
+      console.error("检查开机自启动状态失败:", error);
     }
 
     // 同步最小化到托盘设置到后端

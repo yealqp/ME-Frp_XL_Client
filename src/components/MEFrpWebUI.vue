@@ -131,7 +131,7 @@
           <div class="section-header">
             <Monitor :size="18" />
             <span>MEFrpc WebUI </span
-            ><n-tag type="success">如退出登录无响应 请重启WebUI</n-tag>
+            ><n-tag type="success">如退出登录无响应/拒绝连接 请重启WebUI</n-tag>
             <n-button
               text
               type="info"
@@ -198,6 +198,9 @@ const message = useMessage();
 const webuiStore = useWebuiStore();
 let statusCheckInterval: number | null = null;
 
+// 防抖定时器
+let saveSettingsDebounceTimer: number | null = null;
+
 // 全屏状态
 const isFullscreen = ref(false);
 
@@ -232,12 +235,20 @@ const handleStop = async () => {
 };
 
 const handleSaveSettings = async () => {
-  const result = await webuiStore.saveSettings();
-  if (result.success) {
-    message.success(result.message);
-  } else {
-    message.error(result.message);
+  // 清除之前的定时器
+  if (saveSettingsDebounceTimer !== null) {
+    clearTimeout(saveSettingsDebounceTimer);
   }
+  
+  // 设置新的定时器，500ms 后保存
+  saveSettingsDebounceTimer = window.setTimeout(async () => {
+    const result = await webuiStore.saveSettings();
+    if (result.success) {
+      message.success(result.message);
+    } else {
+      message.error(result.message);
+    }
+  }, 500);
 };
 
 const handleOpenInBrowser = async () => {
@@ -266,6 +277,11 @@ onMounted(() => {
 // 组件卸载时停止定时器
 onUnmounted(() => {
   stopStatusCheck();
+  // 清理防抖定时器
+  if (saveSettingsDebounceTimer !== null) {
+    clearTimeout(saveSettingsDebounceTimer);
+    saveSettingsDebounceTimer = null;
+  }
 });
 
 // 启动状态检查定时器

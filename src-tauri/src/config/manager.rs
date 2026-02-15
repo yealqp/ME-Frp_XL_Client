@@ -212,21 +212,10 @@ pub async fn read_config() -> Result<Option<Config>, String> {
     Ok(Some(config))
 }
 
-/// 保存应用设置（向后兼容）
-pub async fn save_settings(settings: &AppSettings) -> Result<(), String> {
-    let current_dir = env::current_dir().map_err(|e| format!("获取当前目录失败: {e}"))?;
-
-    let settings_path = current_dir.join("settings.json");
-    let settings_json =
-        serde_json::to_string_pretty(&settings).map_err(|e| format!("序列化设置失败: {e}"))?;
-
-    fs::write(&settings_path, settings_json).map_err(|e| format!("写入设置文件失败: {e}"))?;
-
-    Ok(())
-}
-
-/// 加载应用设置（向后兼容）
-pub async fn load_settings() -> Result<AppSettings, String> {
+/// 加载应用设置（内部使用，用于迁移）
+///
+/// 此函数仅在迁移过程中使用，不应在新代码中调用
+pub(crate) async fn load_settings() -> Result<AppSettings, String> {
     let current_dir = env::current_dir().map_err(|e| format!("获取当前目录失败: {e}"))?;
 
     let settings_path = current_dir.join("settings.json");

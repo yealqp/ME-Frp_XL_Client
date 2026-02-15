@@ -39,6 +39,8 @@ pub struct UnifiedConfig {
     pub minimize_to_tray: bool,
     #[serde(rename = "showAd")]
     pub show_ad: bool,
+    #[serde(rename = "hideWebuiEntry")]
+    pub hide_webui_entry: bool,
     
     // UI 设置
     #[serde(rename = "sidebarWidth", skip_serializing_if = "Option::is_none")]
@@ -66,6 +68,7 @@ impl Default for UnifiedConfig {
             startup_delay: 5,
             minimize_to_tray: true,
             show_ad: true,
+            hide_webui_entry: false,
             
             // UI 设置默认值
             sidebar_width: Some(200),
@@ -95,6 +98,8 @@ pub struct AppSettings {
     pub minimize_to_tray: bool,
     #[serde(rename = "showAd")]
     pub show_ad: bool,
+    #[serde(rename = "hideWebuiEntry")]
+    pub hide_webui_entry: bool,
     #[serde(rename = "sidebarWidth", skip_serializing_if = "Option::is_none")]
     pub sidebar_width: Option<i32>,
     #[serde(rename = "sidebarCollapsible", skip_serializing_if = "Option::is_none")]
@@ -114,6 +119,7 @@ impl Default for AppSettings {
             theme: "dark".to_string(),
             minimize_to_tray: true,
             show_ad: true,
+            hide_webui_entry: false,
             sidebar_width: Some(200),
             sidebar_collapsible: Some(true),
             sidebar_collapsed: Some(false),

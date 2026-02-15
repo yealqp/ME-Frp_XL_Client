@@ -276,6 +276,43 @@ const autoStartTunnels = async () => {
   }
 };
 
+// 自动检查更新的函数
+const autoCheckForUpdates = async () => {
+  try {
+    // 从统一配置读取自动更新设置
+    const unifiedConfig = await invoke<UnifiedConfig>("load_unified_config");
+
+    // 如果未开启自动更新，则跳过
+    if (!unifiedConfig || unifiedConfig.autoUpdate === false) {
+      console.log("自动更新已关闭，跳过检查");
+      return;
+    }
+
+    console.log("开始自动检查更新...");
+
+    interface UpdateCheckResult {
+      has_update: boolean;
+      latest_version: string;
+      current_version: string;
+      update_info: string[];
+    }
+
+    const result = await invoke<UpdateCheckResult>("check_for_updates");
+
+    if (result.has_update) {
+      console.log(`发现新版本: ${result.latest_version}`);
+      message.info(`发现新版本 ${result.latest_version}，请前往关于页面查看详情`, {
+        duration: 5000,
+      });
+    } else {
+      console.log(`当前已是最新版本: ${result.current_version}`);
+    }
+  } catch (error) {
+    console.error("自动检查更新失败:", error);
+    // 静默失败，不打扰用户
+  }
+};
+
 // 组件挂载时检查登录状态
 onMounted(async () => {
   console.log(`    __  _________   ______              _  __ __       _________            __ 
@@ -296,10 +333,14 @@ onMounted(async () => {
 
   checkAuthStatus();
 
-  // 等待登录完成后再启动自启动隧道
+  // 等待登录完成后再启动自启动隧道和检查更新
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
       autoStartTunnels();
+      // 延迟3秒后检查更新，避免与自启动隧道冲突
+      setTimeout(() => {
+        autoCheckForUpdates();
+      }, 3000);
     } else {
       // 每500ms检查一次登录状态
       setTimeout(waitForLogin, 500);
