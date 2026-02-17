@@ -51,6 +51,10 @@ import "@/styles/markdown.css";
 - `Dashboard.vue` - 系统公告、重要公告
 - `About.vue` - 更新日志、更新内容
 
+## 系统通知
+
+系统通知（notification.txt）使用纯文本渲染，不使用 Markdown 样式。
+
 ## 样式特性
 
 - 标题层级样式（h1-h6）

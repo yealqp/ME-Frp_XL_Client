@@ -467,23 +467,16 @@ const fetchAndShowNotification = async () => {
   try {
     // 使用 Tauri 的 HTTP 客户端获取通知内容
     const response = await invoke("api_request", {
-      url: "https://check.yealqp.cn/notification.md",
+      url: "https://check.yealqp.cn/notification.txt",
       method: "GET",
+      data: ""
     }) as string;
 
     if (response && response.trim()) {
-      // 解析 Markdown 内容
-      const htmlContent = parseMarkdown(response);
-      
-      // 显示通知
-      notification.create({
+      // 显示通知（纯文本，不解析 Markdown）
+      notification.info({
         title: "系统通知",
-        content: () => {
-          const div = document.createElement('div');
-          div.innerHTML = htmlContent;
-          div.className = 'notification-content';
-          return div;
-        },
+        content: response.trim(),
         duration: 10000, // 10秒后自动关闭
         closable: true,
         keepAliveOnHover: true,
@@ -846,94 +839,5 @@ onMounted(async () => {
 
 :deep(.n-dialog cap-widget div) {
   max-width: 100% !important;
-}
-
-/* 通知内容样式 */
-:deep(.notification-content) {
-  line-height: 1.8;
-  font-size: 14px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-:deep(.notification-content h1),
-:deep(.notification-content h2),
-:deep(.notification-content h3),
-:deep(.notification-content h4),
-:deep(.notification-content h5),
-:deep(.notification-content h6) {
-  margin: 12px 0 8px 0;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-:deep(.notification-content h1) {
-  font-size: 18px;
-}
-
-:deep(.notification-content h2) {
-  font-size: 16px;
-}
-
-:deep(.notification-content h3) {
-  font-size: 15px;
-}
-
-:deep(.notification-content p) {
-  margin: 8px 0;
-  line-height: 1.8;
-}
-
-:deep(.notification-content ul),
-:deep(.notification-content ol) {
-  margin: 10px 0;
-  padding-left: 20px;
-}
-
-:deep(.notification-content li) {
-  margin: 4px 0;
-  line-height: 1.6;
-}
-
-:deep(.notification-content code.inline-code) {
-  background: rgba(0, 0, 0, 0.3);
-  color: #ff6b6b;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-}
-
-:deep(.notification-content pre) {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 10px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 10px 0;
-}
-
-:deep(.notification-content a) {
-  color: #4da8f5;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-:deep(.notification-content a:hover) {
-  color: #6bb8f7;
-  text-decoration: underline;
-}
-
-:deep(.notification-content strong) {
-  font-weight: 600;
-}
-
-:deep(.notification-content blockquote.custom-blockquote) {
-  border-left: 4px solid #4da8f5;
-  margin: 10px 0;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0 4px 4px 0;
 }
 </style>
