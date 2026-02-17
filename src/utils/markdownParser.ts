@@ -32,7 +32,7 @@ class MarkdownParser {
    * Configure custom rendering rules
    */
   private configureRenderer(): void {
-    // Add target="_blank" to all links
+    // Add target="_blank" to all links and handle relative URLs
     const defaultRender = this.md.renderer.rules.link_open ||
       function (tokens: any, idx: any, options: any, _env: any, self: any) {
         return self.renderToken(tokens, idx, options);
@@ -50,6 +50,17 @@ class MarkdownParser {
         tokens[idx].attrPush(['target', '_blank']);
         tokens[idx].attrPush(['rel', 'noopener noreferrer']);
       }
+
+      // Handle relative URLs starting with /
+      const hrefIndex = tokens[idx].attrIndex('href');
+      if (hrefIndex >= 0) {
+        const href = tokens[idx].attrs[hrefIndex][1];
+        // If href starts with /, prepend the base URL
+        if (href.startsWith('/')) {
+          tokens[idx].attrs[hrefIndex][1] = 'https://www.mefrp.com' + href;
+        }
+      }
+
       return defaultRender(tokens, idx, options, _env, self);
     };
   }

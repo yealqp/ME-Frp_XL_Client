@@ -22,6 +22,7 @@
 import { ref, type Ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { ApiResponse } from '@/types/api';
+import { startLoading, finishLoading, errorLoading } from './useLoadingBar';
 
 /**
  * Options for configuring the API call
@@ -34,6 +35,8 @@ export interface ApiOptions<T> {
   params?: Record<string, any>;
   /** Whether to automatically parse JSON responses (default: true) */
   parseResponse?: boolean;
+  /** Whether to show loading bar (default: true) */
+  showLoadingBar?: boolean;
   /** Callback function called on successful response */
   onSuccess?: (data: T) => void;
   /** Callback function called on error */
@@ -93,6 +96,12 @@ export function useApi<T = any>(options: ApiOptions<T>): ApiResult<T> {
     loading.value = true;
     error.value = null;
 
+    // Show loading bar by default unless explicitly disabled
+    const shouldShowLoadingBar = options.showLoadingBar !== false;
+    if (shouldShowLoadingBar) {
+      startLoading();
+    }
+
     try {
       // Invoke the Tauri command
       const response = await invoke(options.command, options.params);
@@ -109,6 +118,9 @@ export function useApi<T = any>(options: ApiOptions<T>): ApiResult<T> {
         if (apiResponse.code === 200) {
           data.value = apiResponse.data;
           options.onSuccess?.(apiResponse.data);
+          if (shouldShowLoadingBar) {
+            finishLoading();
+          }
           return apiResponse.data;
         } else {
           throw new Error(apiResponse.message || 'API request failed');
@@ -118,12 +130,18 @@ export function useApi<T = any>(options: ApiOptions<T>): ApiResult<T> {
       // If not standard format, return parsed data directly
       data.value = parsedData as T;
       options.onSuccess?.(parsedData as T);
+      if (shouldShowLoadingBar) {
+        finishLoading();
+      }
       return parsedData as T;
     } catch (err) {
       // Normalize error to Error object
       const apiError = err instanceof Error ? err : new Error(String(err));
       error.value = apiError;
       options.onError?.(apiError);
+      if (shouldShowLoadingBar) {
+        errorLoading();
+      }
       throw apiError;
     } finally {
       loading.value = false;

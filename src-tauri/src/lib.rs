@@ -762,6 +762,57 @@ async fn close_webui_window(app_handle: tauri::AppHandle) -> Result<(), String> 
     Ok(())
 }
 
+/// 登录 WebUI
+#[tauri::command]
+async fn webui_login(
+    password: String,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::webui_login(password, webui_manager.inner()).await
+}
+
+/// 获取 WebUI 隧道列表
+#[tauri::command]
+async fn webui_get_tunnels(
+    session: String,
+    user_token: String,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::webui_get_tunnels(session, user_token, webui_manager.inner()).await
+}
+
+/// 启动 WebUI 隧道
+#[tauri::command]
+async fn webui_start_tunnel(
+    session: String,
+    proxy_id: u32,
+    frp_token: String,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::webui_start_tunnel(session, proxy_id, frp_token, webui_manager.inner()).await
+}
+
+/// 停止 WebUI 隧道
+#[tauri::command]
+async fn webui_stop_tunnel(
+    session: String,
+    proxy_id: u32,
+    frp_token: String,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::webui_stop_tunnel(session, proxy_id, frp_token, webui_manager.inner()).await
+}
+
+/// 获取 WebUI 运行日志
+#[tauri::command]
+async fn webui_get_logs(
+    session: String,
+    frp_token: String,
+    webui_manager: tauri::State<'_, webui::WebUIManager>,
+) -> Result<String, String> {
+    webui::webui_get_logs(session, frp_token, webui_manager.inner()).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_manager: ProcessManager = Arc::new(Mutex::new(HashMap::new()));
@@ -970,7 +1021,12 @@ pub fn run() {
             get_webui_logs,
             open_url,
             open_webui_window,
-            close_webui_window
+            close_webui_window,
+            webui_login,
+            webui_get_tunnels,
+            webui_start_tunnel,
+            webui_stop_tunnel,
+            webui_get_logs
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

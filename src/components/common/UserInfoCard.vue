@@ -2,9 +2,6 @@
   <n-card :title="title" :bordered="bordered" class="user-info-card">
     <div class="user-profile">
       <template v-if="loading">
-        <div class="profile-header">
-          <n-skeleton text :repeat="2" style="width: 60%" />
-        </div>
         <div class="resource-specs">
           <n-skeleton text :repeat="4" style="width: 100%; height: 60px" />
         </div>

@@ -49,6 +49,14 @@ pub struct UnifiedConfig {
     pub sidebar_collapsible: Option<bool>,
     #[serde(rename = "sidebarCollapsed", skip_serializing_if = "Option::is_none")]
     pub sidebar_collapsed: Option<bool>,
+
+    // WebUI 设置
+    #[serde(rename = "webuiAddr", skip_serializing_if = "Option::is_none")]
+    pub webui_addr: Option<String>,
+    #[serde(rename = "webuiPort", skip_serializing_if = "Option::is_none")]
+    pub webui_port: Option<u16>,
+    #[serde(rename = "webuiPass", skip_serializing_if = "Option::is_none")]
+    pub webui_pass: Option<String>,
 }
 
 impl Default for UnifiedConfig {
@@ -74,6 +82,11 @@ impl Default for UnifiedConfig {
             sidebar_width: Some(200),
             sidebar_collapsible: Some(true),
             sidebar_collapsed: Some(false),
+
+            // WebUI 设置默认值
+            webui_addr: Some("localhost".to_string()),
+            webui_port: Some(1201),
+            webui_pass: Some("admin".to_string()),
         }
     }
 }

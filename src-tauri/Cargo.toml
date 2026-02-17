@@ -1,6 +1,6 @@
 [package]
 name = "me-frp_desktop_unoffical"
-version = "2.0.1"
+version = "2.0.2"
 description = "ME-FrpXLDesktop"
 authors = ["yealqp"]
 edition = "2021"
@@ -28,6 +28,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml = "0.9"
 reqwest = { version = "0.11", features = ["json"] }
+urlencoding = "2.1"
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 

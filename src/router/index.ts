@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig } from "../types/config";
+import { startLoading, finishLoading, errorLoading } from "../composables/useLoadingBar";
 
 // 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
@@ -79,6 +80,9 @@ const router = createRouter({
 
 // 路由守卫 - 检查登录状态
 router.beforeEach(async (to, _from, next) => {
+  // Start loading bar
+  startLoading();
+
   // 根路径重定向到 dashboard
   if (to.path === "/") {
     next("/dashboard");
@@ -104,11 +108,22 @@ router.beforeEach(async (to, _from, next) => {
       }
     } catch (error) {
       console.error("路由守卫检查登录状态失败:", error);
+      errorLoading();
       next("/login");
     }
   } else {
     next();
   }
+});
+
+// Finish loading bar after navigation
+router.afterEach(() => {
+  finishLoading();
+});
+
+// Handle navigation errors
+router.onError(() => {
+  errorLoading();
 });
 
 export default router;

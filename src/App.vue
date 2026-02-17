@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { darkTheme, NDialogProvider, createDiscreteApi } from "naive-ui";
+import { darkTheme, NDialogProvider, createDiscreteApi, type LoadingBarProviderInst } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
 import { useCreateTunnelStore } from "./stores/createTunnel";
-import { useUIStore } from "./stores/ui";
+import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
 import Login from "./components/Login.vue";
 import type { UnifiedConfig } from "./types/config";
@@ -18,7 +18,9 @@ const route = useRoute();
 // Initialize stores
 const authStore = useAuthStore();
 const createTunnelStore = useCreateTunnelStore();
-const uiStore = useUIStore();
+
+// Loading bar ref
+const loadingBar = ref<LoadingBarProviderInst | null>(null);
 
 // Use storeToRefs for state/getters to maintain reactivity
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
@@ -322,6 +324,11 @@ onMounted(async () => {
 /_/  /_/_____/  /_/   /_/  / .___/   /_/|_/_____/   \\____/_/_/\\___/_/ /_/\\__/  
                           /_/                                                  `);
 
+  // Set loading bar instance
+  if (loadingBar.value) {
+    setLoadingBar(loadingBar.value);
+  }
+
   // 监听系统托盘退出事件
   await listen("quit-app", async () => {
     try {
@@ -355,9 +362,10 @@ onMounted(async () => {
 <template>
   <div class="app-container">
     <n-config-provider :theme="customTheme">
-      <n-message-provider :container-style="{ zIndex: 100000 }">
-        <n-dialog-provider>
-          <n-notification-provider>
+      <n-loading-bar-provider ref="loadingBar">
+        <n-message-provider :container-style="{ zIndex: 100000 }">
+          <n-dialog-provider>
+            <n-notification-provider>
             <!-- 加载状态 -->
             <div v-if="isCheckingAuth" class="loading-container"></div>
 
@@ -388,9 +396,10 @@ onMounted(async () => {
                 </n-layout-content>
               </n-layout>
             </n-layout>
-          </n-notification-provider>
-        </n-dialog-provider>
-      </n-message-provider>
+            </n-notification-provider>
+          </n-dialog-provider>
+        </n-message-provider>
+      </n-loading-bar-provider>
     </n-config-provider>
   </div>
 </template>
