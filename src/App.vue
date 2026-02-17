@@ -357,36 +357,38 @@ onMounted(async () => {
     <n-config-provider :theme="customTheme">
       <n-message-provider :container-style="{ zIndex: 100000 }">
         <n-dialog-provider>
-          <!-- 加载状态 -->
-          <div v-if="isCheckingAuth" class="loading-container"></div>
+          <n-notification-provider>
+            <!-- 加载状态 -->
+            <div v-if="isCheckingAuth" class="loading-container"></div>
 
-          <!-- 登录页面 -->
-          <div v-else-if="!isLoggedIn" class="login-fullscreen">
-            <Login @login-success="handleLoginSuccess" />
-          </div>
+            <!-- 登录页面 -->
+            <div v-else-if="!isLoggedIn" class="login-fullscreen">
+              <Login @login-success="handleLoginSuccess" />
+            </div>
 
-          <!-- 主应用界面 - 使用 NLayout -->
-          <n-layout v-else has-sider position="absolute" class="main-layout">
-            <!-- 左侧导航栏 -->
-            <Sidebar @logout="handleLogout" />
+            <!-- 主应用界面 - 使用 NLayout -->
+            <n-layout v-else has-sider position="absolute" class="main-layout">
+              <!-- 左侧导航栏 -->
+              <Sidebar @logout="handleLogout" />
 
-            <!-- 右侧内容区域 -->
-            <n-layout class="content-layout">
-              <n-layout-content class="content-body">
-                <router-view v-slot="{ Component }">
-                  <!-- 只渲染非登录页面的组件 -->
-                  <component
-                    v-if="Component && (Component as any).__name !== 'Login'"
-                    :is="Component"
-                    v-bind="{
-                      ...getComponentProps(Component),
-                      ...getComponentListeners(Component),
-                    }"
-                  />
-                </router-view>
-              </n-layout-content>
+              <!-- 右侧内容区域 -->
+              <n-layout class="content-layout">
+                <n-layout-content class="content-body">
+                  <router-view v-slot="{ Component }">
+                    <!-- 只渲染非登录页面的组件 -->
+                    <component
+                      v-if="Component && (Component as any).__name !== 'Login'"
+                      :is="Component"
+                      v-bind="{
+                        ...getComponentProps(Component),
+                        ...getComponentListeners(Component),
+                      }"
+                    />
+                  </router-view>
+                </n-layout-content>
+              </n-layout>
             </n-layout>
-          </n-layout>
+          </n-notification-provider>
         </n-dialog-provider>
       </n-message-provider>
     </n-config-provider>

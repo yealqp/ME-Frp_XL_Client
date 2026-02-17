@@ -33,13 +33,27 @@
                 show-password-on="mousedown"
               />
             </n-form-item>
+
+            <!-- 登录提示 -->
+            <n-alert type="warning" :show-icon="false">
+                如果无法点击/输入 请重装webview运行时(
+                  <n-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openWebWievPage"
+                  style="padding: 0; font-size: 14px"
+                >
+                  Openlist
+                </n-button>内有安装包)后重启应用
+            </n-alert>
           </template>
 
           <!-- Token登录模式 -->
           <template v-else>
             <!-- Token说明提示 -->
-            <div class="token-hint">
-              <n-text depth="3" style="font-size: 14px; line-height: 1.5">
+            <n-alert type="info" :show-icon="false">
+             
                 Token即为用户令牌/访问秘钥，请在
                 <n-button
                   text
@@ -51,8 +65,7 @@
                   官网用户中心
                 </n-button>
                 最底部复制您的token
-              </n-text>
-            </div>
+            </n-alert>
 
             <n-form-item path="userToken">
               <n-input
@@ -221,6 +234,17 @@ async function openTokenPage() {
     console.error("打开链接失败:", error);
     message.error(
       "无法打开链接，请手动访问 https://www.mefrp.com/dashboard/profile",
+    );
+  }
+}
+
+async function openWebWievPage() {
+  try {
+    await openUrl("https://alist.yealqp.cn/mefrp-desktop/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF");
+  } catch (error) {
+    console.error("打开链接失败:", error);
+    message.error(
+      "无法打开链接，请手动访问 https://alist.yealqp.cn/mefrp-desktop/ME-Frp XL客户端",
     );
   }
 }
@@ -557,15 +581,6 @@ onUnmounted(() => {
 
 .vaptcha-section {
   margin: 15px 0;
-}
-
-/* Token提示样式 */
-.token-hint {
-  margin-bottom: 16px;
-  padding: 12px;
-  background-color: rgba(52, 159, 244, 0.1);
-  border: 1px solid rgba(52, 159, 244, 0.2);
-  border-radius: 6px;
 }
 
 /* 模式切换按钮容器 */

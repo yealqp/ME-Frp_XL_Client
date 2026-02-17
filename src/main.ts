@@ -6,6 +6,9 @@ import router from "./router";
 // Naive UI
 import naive from "naive-ui";
 
+// 全局样式
+import "@/styles/markdown.css";
+
 // Add FontAwesome via CDN to avoid font loading issues
 const link = document.createElement("link");
 link.rel = "stylesheet";

@@ -6,6 +6,22 @@
 use crate::models::config::{AppSettings, Config, UnifiedConfig};
 use std::env;
 use std::fs;
+use std::path::PathBuf;
+
+/// 获取配置文件所在目录
+///
+/// 优先使用可执行文件所在目录，确保开机自启动时也能正确找到配置文件
+fn get_config_dir() -> Result<PathBuf, String> {
+    // 尝试获取可执行文件所在目录
+    if let Ok(exe_path) = env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            return Ok(exe_dir.to_path_buf());
+        }
+    }
+    
+    // 如果获取失败，回退到当前工作目录
+    env::current_dir().map_err(|e| format!("获取配置目录失败: {e}"))
+}
 
 /// 保存统一配置到 config.yaml（使用新格式）
 ///
@@ -17,8 +33,8 @@ use std::fs;
 ///
 /// 并将 user_info.group 提升到顶层作为 group 字段
 pub async fn save_unified_config(config: &UnifiedConfig) -> Result<(), String> {
-    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
-    let config_path = current_dir.join("config.yaml");
+    let config_dir = get_config_dir()?;
+    let config_path = config_dir.join("config.yaml");
 
     let yaml_content = serde_yaml::to_string(&config).map_err(|e| e.to_string())?;
     fs::write(&config_path, yaml_content).map_err(|e| e.to_string())?;
@@ -31,8 +47,8 @@ pub async fn save_unified_config(config: &UnifiedConfig) -> Result<(), String> {
 /// 如果 config.yaml 存在，直接加载
 /// 如果不存在，尝试从旧配置文件迁移
 pub async fn load_unified_config() -> Result<UnifiedConfig, String> {
-    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
-    let config_path = current_dir.join("config.yaml");
+    let config_dir = get_config_dir()?;
+    let config_path = config_dir.join("config.yaml");
 
     if config_path.exists() {
         // 如果统一配置文件存在，直接加载
@@ -88,9 +104,9 @@ pub async fn migrate_old_configs() -> Result<UnifiedConfig, String> {
     save_unified_config(&unified_config).await?;
 
     // 删除旧配置文件
-    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
-    let old_config_path = current_dir.join("config.json");
-    let old_settings_path = current_dir.join("settings.json");
+    let config_dir = get_config_dir()?;
+    let old_config_path = config_dir.join("config.json");
+    let old_settings_path = config_dir.join("settings.json");
 
     if old_config_path.exists() {
         let _ = fs::remove_file(old_config_path);
@@ -107,21 +123,21 @@ pub async fn migrate_old_configs() -> Result<UnifiedConfig, String> {
 ///
 /// 删除 config.yaml、config.json 和 settings.json
 pub async fn clear_config() -> Result<(), String> {
-    let current_dir = env::current_dir().map_err(|e| e.to_string())?;
+    let config_dir = get_config_dir()?;
 
     // 删除新配置文件
-    let config_yaml_path = current_dir.join("config.yaml");
+    let config_yaml_path = config_dir.join("config.yaml");
     if config_yaml_path.exists() {
         fs::remove_file(&config_yaml_path).map_err(|e| format!("删除 config.yaml 失败: {e}"))?;
     }
 
     // 删除旧配置文件
-    let config_json_path = current_dir.join("config.json");
+    let config_json_path = config_dir.join("config.json");
     if config_json_path.exists() {
         fs::remove_file(&config_json_path).map_err(|e| format!("删除 config.json 失败: {e}"))?;
     }
 
-    let settings_path = current_dir.join("settings.json");
+    let settings_path = config_dir.join("settings.json");
     if settings_path.exists() {
         fs::remove_file(&settings_path).map_err(|e| format!("删除 settings.json 失败: {e}"))?;
     }
@@ -137,9 +153,8 @@ pub async fn clear_config() -> Result<(), String> {
 ///
 /// 保留此函数用于向后兼容，但建议使用 save_unified_config
 pub async fn save_config(config: &Config) -> Result<(), String> {
-    let current_dir = env::current_dir().map_err(|e| format!("Failed to get current dir: {e}"))?;
-
-    let config_path = current_dir.join("config.json");
+    let config_dir = get_config_dir()?;
+    let config_path = config_dir.join("config.json");
 
     // 将配置转换为YAML格式
     let yaml_content = format!(
@@ -164,9 +179,8 @@ pub async fn save_config(config: &Config) -> Result<(), String> {
 ///
 /// 保留此函数用于迁移旧配置，但建议使用 load_unified_config
 pub async fn read_config() -> Result<Option<Config>, String> {
-    let current_dir = env::current_dir().map_err(|e| format!("Failed to get current dir: {e}"))?;
-
-    let config_path = current_dir.join("config.json");
+    let config_dir = get_config_dir()?;
+    let config_path = config_dir.join("config.json");
 
     if !config_path.exists() {
         return Ok(None);
@@ -216,9 +230,8 @@ pub async fn read_config() -> Result<Option<Config>, String> {
 ///
 /// 此函数仅在迁移过程中使用，不应在新代码中调用
 pub(crate) async fn load_settings() -> Result<AppSettings, String> {
-    let current_dir = env::current_dir().map_err(|e| format!("获取当前目录失败: {e}"))?;
-
-    let settings_path = current_dir.join("settings.json");
+    let config_dir = get_config_dir()?;
+    let settings_path = config_dir.join("settings.json");
 
     if !settings_path.exists() {
         return Ok(AppSettings::default());

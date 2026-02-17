@@ -1,0 +1,218 @@
+/**
+ * 统一的 Markdown 渲染样式
+ * 用于系统公告、普通公告、更新日志、系统消息等
+ * 
+ * 使用方法：
+ * 1. 在组件中导入：import '@/styles/markdown.css'
+ * 2. 在需要渲染 markdown 的元素上添加 class="markdown-content"
+ */
+
+/* 基础样式 */
+.markdown-content {
+  line-height: 1.8;
+  font-size: 14px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Markdown 标题样式 */
+.markdown-content :deep(h1),
+.markdown-content :deep(h2),
+.markdown-content :deep(h3),
+.markdown-content :deep(h4),
+.markdown-content :deep(h5),
+.markdown-content :deep(h6) {
+  margin: 16px 0 10px 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.markdown-content :deep(h1) {
+  font-size: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.markdown-content :deep(h2) {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.markdown-content :deep(h3) {
+  font-size: 16px;
+}
+
+.markdown-content :deep(h4) {
+  font-size: 15px;
+}
+
+/* h2下的分割线 */
+.markdown-content :deep(.h2-divider) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 0 0 12px 0;
+}
+
+/* 段落样式 */
+.markdown-content :deep(p) {
+  margin: 10px 0;
+  line-height: 1.8;
+}
+
+/* 列表样式 */
+.markdown-content :deep(ul),
+.markdown-content :deep(ol) {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.markdown-content :deep(li) {
+  margin: 0;
+  line-height: 1.8;
+  padding-left: 8px;
+}
+
+.markdown-content :deep(ul li) {
+  list-style-type: disc;
+}
+
+.markdown-content :deep(ul li::marker) {
+  font-size: 0.8em;
+}
+
+.markdown-content :deep(ol li) {
+  list-style-type: decimal;
+}
+
+.markdown-content :deep(ol li::marker) {
+  font-weight: 600;
+}
+
+.markdown-content :deep(ul ul),
+.markdown-content :deep(ol ol),
+.markdown-content :deep(ul ol),
+.markdown-content :deep(ol ul) {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.markdown-content :deep(li p) {
+  margin: 2px 0;
+}
+
+/* 行内代码样式 */
+.markdown-content :deep(code.inline-code) {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ff6b6b;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 代码块样式 */
+.markdown-content :deep(pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.markdown-content :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  border: none;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 引用块样式 */
+.markdown-content :deep(blockquote.custom-blockquote) {
+  border-left: 4px solid #4da8f5;
+  margin: 12px 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 4px 4px 0;
+}
+
+.markdown-content :deep(blockquote.custom-blockquote p) {
+  margin: 4px 0;
+}
+
+/* 链接样式 - 全局统一为 #4da8f5 */
+.markdown-content :deep(a) {
+  color: #4da8f5;
+  text-decoration: none;
+  transition: color 0.2s;
+  font-weight: 500;
+  position: relative;
+}
+
+.markdown-content :deep(a::after) {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 0;
+  height: 1px;
+  background-color: #6bb8f7;
+  transition: width 0.3s ease;
+}
+
+.markdown-content :deep(a:hover) {
+  color: #6bb8f7;
+}
+
+.markdown-content :deep(a:hover::after) {
+  width: 100%;
+}
+
+/* 强调文本 */
+.markdown-content :deep(strong) {
+  font-weight: 600;
+}
+
+.markdown-content :deep(em) {
+  font-style: italic;
+}
+
+/* 删除线 */
+.markdown-content :deep(del) {
+  text-decoration: line-through;
+}
+
+/* 水平分割线 */
+.markdown-content :deep(hr) {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 16px 0;
+}
+
+/* 表格样式 */
+.markdown-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.markdown-content :deep(table th),
+.markdown-content :deep(table td) {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: left;
+}
+
+.markdown-content :deep(table th) {
+  background: rgba(0, 0, 0, 0.3);
+  font-weight: 600;
+}
+
+.markdown-content :deep(table tr:hover) {
+  background: rgba(255, 255, 255, 0.05);
+}

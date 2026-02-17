@@ -21,7 +21,7 @@
           <template #header>
             <span class="alert-title">重要公告</span>
           </template>
-          <div v-html="parseMarkdown(popupNoticeContent)"></div>
+          <div class="markdown-content" v-html="parseMarkdown(popupNoticeContent)"></div>
         </n-alert>
 
         <!-- 系统状态卡片 -->
@@ -77,7 +77,7 @@
             class="announcement-card"
             :class="getAnnouncementCardClass(announcement)"
           >
-            <div v-html="parseMarkdown(announcement.content)"></div>
+            <div class="markdown-content" v-html="parseMarkdown(announcement.content)"></div>
           </n-card>
         </template>
       </div>
@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { useMessage } from "naive-ui";
+import { useMessage, useNotification } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle } from "lucide-vue-next";
@@ -101,6 +101,9 @@ import StatisticsCard from "./common/StatisticsCard.vue";
 // Initialize User Store
 const userStore = useUserStore();
 const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
+
+// Initialize notification
+const notification = useNotification();
 
 interface Announcement {
   id: number;
@@ -459,6 +462,41 @@ const autoSign = async () => {
   }
 };
 
+// 获取并显示通知
+const fetchAndShowNotification = async () => {
+  try {
+    // 使用 Tauri 的 HTTP 客户端获取通知内容
+    const response = await invoke("api_request", {
+      url: "https://check.yealqp.cn/notification.md",
+      method: "GET",
+    }) as string;
+
+    if (response && response.trim()) {
+      // 解析 Markdown 内容
+      const htmlContent = parseMarkdown(response);
+      
+      // 显示通知
+      notification.create({
+        title: "系统通知",
+        content: () => {
+          const div = document.createElement('div');
+          div.innerHTML = htmlContent;
+          div.className = 'notification-content';
+          return div;
+        },
+        duration: 10000, // 10秒后自动关闭
+        closable: true,
+        keepAliveOnHover: true,
+      });
+      
+      console.log("通知已显示");
+    }
+  } catch (error) {
+    console.error("获取通知失败:", error);
+    // 静默失败，不影响用户体验
+  }
+};
+
 // 组件挂载时获取用户信息和系统公告
 onMounted(async () => {
   fetchSystemStatus();
@@ -469,6 +507,9 @@ onMounted(async () => {
   
   fetchAnnouncements();
   fetchPopupNotice(); // 获取重要公告
+  
+  // 获取并显示通知
+  fetchAndShowNotification();
 });
 </script>
 
@@ -485,259 +526,6 @@ onMounted(async () => {
 .important-notice-alert .alert-title {
   font-size: 16px;
   font-weight: 600;
-}
-
-/* 通用 Markdown 渲染样式 - 用于重要公告和普通公告 */
-.important-notice-alert :deep(.n-alert__content),
-.announcement-card :deep(.n-card__content) {
-  line-height: 1.8;
-  font-size: 14px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-/* Markdown 标题样式 */
-.important-notice-alert :deep(h1),
-.important-notice-alert :deep(h2),
-.important-notice-alert :deep(h3),
-.important-notice-alert :deep(h4),
-.important-notice-alert :deep(h5),
-.important-notice-alert :deep(h6),
-.announcement-card :deep(h1),
-.announcement-card :deep(h2),
-.announcement-card :deep(h3),
-.announcement-card :deep(h4),
-.announcement-card :deep(h5),
-.announcement-card :deep(h6) {
-  margin: 16px 0 10px 0;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.important-notice-alert :deep(h1),
-.announcement-card :deep(h1) {
-  font-size: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding-bottom: 8px;
-}
-
-.important-notice-alert :deep(h2),
-.announcement-card :deep(h2) {
-  font-size: 18px;
-  margin-bottom: 4px;
-}
-
-.important-notice-alert :deep(h3),
-.announcement-card :deep(h3) {
-  font-size: 16px;
-}
-
-.important-notice-alert :deep(h4),
-.announcement-card :deep(h4) {
-  font-size: 15px;
-}
-
-/* h2下的分割线 */
-.important-notice-alert :deep(.h2-divider),
-.announcement-card :deep(.h2-divider) {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 0 0 12px 0;
-}
-
-/* 段落样式 */
-.important-notice-alert :deep(p),
-.announcement-card :deep(p) {
-  margin: 10px 0;
-  line-height: 1.8;
-}
-
-/* 列表样式 */
-.important-notice-alert :deep(ul),
-.important-notice-alert :deep(ol),
-.announcement-card :deep(ul),
-.announcement-card :deep(ol) {
-  margin: 12px 0;
-  padding-left: 24px;
-}
-
-.important-notice-alert :deep(li),
-.announcement-card :deep(li) {
-  margin: 0;
-  line-height: 1.8;
-  padding-left: 8px;
-}
-
-.important-notice-alert :deep(ul li),
-.announcement-card :deep(ul li) {
-  list-style-type: disc;
-}
-
-.important-notice-alert :deep(ul li::marker),
-.announcement-card :deep(ul li::marker) {
-  font-size: 0.8em;
-}
-
-.important-notice-alert :deep(ol li),
-.announcement-card :deep(ol li) {
-  list-style-type: decimal;
-}
-
-.important-notice-alert :deep(ol li::marker),
-.announcement-card :deep(ol li::marker) {
-  font-weight: 600;
-}
-
-.important-notice-alert :deep(ul ul),
-.important-notice-alert :deep(ol ol),
-.important-notice-alert :deep(ul ol),
-.important-notice-alert :deep(ol ul),
-.announcement-card :deep(ul ul),
-.announcement-card :deep(ol ol),
-.announcement-card :deep(ul ol),
-.announcement-card :deep(ol ul) {
-  margin: 0;
-  padding-left: 24px;
-}
-
-.important-notice-alert :deep(li p),
-.announcement-card :deep(li p) {
-  margin: 2px 0;
-}
-
-/* 行内代码样式 */
-.important-notice-alert :deep(code.inline-code),
-.announcement-card :deep(code.inline-code) {
-  background: rgba(0, 0, 0, 0.3);
-  color: #ff6b6b;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* 代码块样式 */
-.important-notice-alert :deep(pre),
-.announcement-card :deep(pre) {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.important-notice-alert :deep(pre code),
-.announcement-card :deep(pre code) {
-  background: transparent;
-  padding: 0;
-  border: none;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-/* 引用块样式 */
-.important-notice-alert :deep(blockquote.custom-blockquote),
-.announcement-card :deep(blockquote.custom-blockquote) {
-  border-left: 4px solid #4da8f5;
-  margin: 12px 0;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0 4px 4px 0;
-}
-
-.important-notice-alert :deep(blockquote.custom-blockquote p),
-.announcement-card :deep(blockquote.custom-blockquote p) {
-  margin: 4px 0;
-}
-
-/* 链接样式 - 全局统一为 #4da8f5 */
-.important-notice-alert :deep(a),
-.announcement-card :deep(a) {
-  color: #4da8f5;
-  text-decoration: none;
-  transition: color 0.2s;
-  font-weight: 500;
-  position: relative;
-}
-
-.important-notice-alert :deep(a::after),
-.announcement-card :deep(a::after) {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 0;
-  height: 1px;
-  background-color: #6bb8f7;
-  transition: width 0.3s ease;
-}
-
-.important-notice-alert :deep(a:hover),
-.announcement-card :deep(a:hover) {
-  color: #6bb8f7;
-}
-
-.important-notice-alert :deep(a:hover::after),
-.announcement-card :deep(a:hover::after) {
-  width: 100%;
-}
-
-/* 强调文本 */
-.important-notice-alert :deep(strong),
-.announcement-card :deep(strong) {
-  font-weight: 600;
-}
-
-.important-notice-alert :deep(em),
-.announcement-card :deep(em) {
-  font-style: italic;
-}
-
-/* 删除线 */
-.important-notice-alert :deep(del),
-.announcement-card :deep(del) {
-  text-decoration: line-through;
-}
-
-/* 水平分割线 */
-.important-notice-alert :deep(hr),
-.announcement-card :deep(hr) {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 16px 0;
-}
-
-/* 表格样式 */
-.important-notice-alert :deep(table),
-.announcement-card :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 12px 0;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.important-notice-alert :deep(table th),
-.important-notice-alert :deep(table td),
-.announcement-card :deep(table th),
-.announcement-card :deep(table td) {
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  text-align: left;
-}
-
-.important-notice-alert :deep(table th),
-.announcement-card :deep(table th) {
-  background: rgba(0, 0, 0, 0.3);
-  font-weight: 600;
-}
-
-.important-notice-alert :deep(table tr:hover),
-.announcement-card :deep(table tr:hover) {
-  background: rgba(255, 255, 255, 0.05);
 }
 
 /* 系统状态卡片 */
@@ -1058,5 +846,94 @@ onMounted(async () => {
 
 :deep(.n-dialog cap-widget div) {
   max-width: 100% !important;
+}
+
+/* 通知内容样式 */
+:deep(.notification-content) {
+  line-height: 1.8;
+  font-size: 14px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+:deep(.notification-content h1),
+:deep(.notification-content h2),
+:deep(.notification-content h3),
+:deep(.notification-content h4),
+:deep(.notification-content h5),
+:deep(.notification-content h6) {
+  margin: 12px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+:deep(.notification-content h1) {
+  font-size: 18px;
+}
+
+:deep(.notification-content h2) {
+  font-size: 16px;
+}
+
+:deep(.notification-content h3) {
+  font-size: 15px;
+}
+
+:deep(.notification-content p) {
+  margin: 8px 0;
+  line-height: 1.8;
+}
+
+:deep(.notification-content ul),
+:deep(.notification-content ol) {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+:deep(.notification-content li) {
+  margin: 4px 0;
+  line-height: 1.6;
+}
+
+:deep(.notification-content code.inline-code) {
+  background: rgba(0, 0, 0, 0.3);
+  color: #ff6b6b;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 13px;
+}
+
+:deep(.notification-content pre) {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+:deep(.notification-content a) {
+  color: #4da8f5;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+:deep(.notification-content a:hover) {
+  color: #6bb8f7;
+  text-decoration: underline;
+}
+
+:deep(.notification-content strong) {
+  font-weight: 600;
+}
+
+:deep(.notification-content blockquote.custom-blockquote) {
+  border-left: 4px solid #4da8f5;
+  margin: 10px 0;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 0 4px 4px 0;
 }
 </style>

@@ -190,7 +190,7 @@
 
         <div v-if="updateInfo.length > 0" class="update-info">
           <p class="update-info-title">更新内容：</p>
-          <div class="update-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
+          <div class="markdown-content update-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
         </div>
       </div>
 
@@ -227,7 +227,7 @@
         </div>
 
         <div v-if="updateInfo.length > 0" class="changelog-info">
-          <div class="changelog-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
+          <div class="markdown-content changelog-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
         </div>
         <div v-else class="no-changelog">
           <p>暂无更新日志信息</p>
