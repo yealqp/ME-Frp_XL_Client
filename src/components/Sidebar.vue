@@ -12,7 +12,7 @@
     @expand="handleExpand"
   >
     <n-config-provider :theme="customTheme">
-      <div class="sidebar-header">
+      <div class="sidebar-header" @click="handleLogoClick">
         <h2 class="app-title">
           <img src="../assets/icon.png" alt="logo" class="logo" />
           <span v-show="!sidebarCollapsed" class="title-text">ME-Frp</span>
@@ -49,7 +49,7 @@
               />
             </div>
             <div class="ad-text">
-              <div class="ad-title">仙林云计算</div>
+              <div class="ad-title">仙林云</div>
               <div class="ad-subtitle">推荐服务商 价格低廉</div>
             </div>
           </div>
@@ -62,6 +62,7 @@
 <script setup lang="ts">
 import { h, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { invoke } from "@tauri-apps/api/core";
 import { darkTheme, NIcon, NLayoutSider, useDialog } from "naive-ui";
 import type { MenuOption } from "naive-ui";
 import { storeToRefs } from "pinia";
@@ -204,6 +205,17 @@ const menuOptions = computed<MenuOption[]>(() => [
   },
 ]);
 
+// 点击 Logo 在浏览器中打开官网首页
+async function handleLogoClick() {
+  try {
+    await invoke('open_url', {
+      url: 'https://www.mefrp.com/dashboard/home'
+    });
+  } catch (error) {
+    console.error('打开官网失败:', error);
+  }
+}
+
 function handleMenuSelect(key: string) {
   if (key === 'logout') {
     // 显示二次确认对话框
@@ -281,8 +293,17 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   min-height: 68px;
-  transition: none;
+  transition: all 0.3s ease;
   overflow: hidden;
+  cursor: pointer;
+}
+
+.sidebar-header:hover {
+  background-color: #202024;
+}
+
+.sidebar-header:active {
+  background-color: #28282c;
 }
 
 /* 收缩状态下调整 header padding */

@@ -134,7 +134,11 @@ export const useWebuiStore = defineStore('webui', () => {
   // 在新窗口中打开 WebUI
   const openInWindow = async () => {
     try {
-      await invoke('open_webui_window', { url: webuiUrl.value });
+      await invoke('open_webview_window', { 
+        url: webuiUrl.value,
+        windowId: 'webui',
+        title: 'MEFrp WebUI'
+      });
       return { success: true };
     } catch (error) {
       console.error('打开 WebUI 窗口失败:', error);
@@ -145,7 +149,7 @@ export const useWebuiStore = defineStore('webui', () => {
   // 关闭 WebUI 窗口
   const closeWindow = async () => {
     try {
-      await invoke('close_webui_window');
+      await invoke('close_webview_window', { windowId: 'webui' });
       return { success: true };
     } catch (error) {
       console.error('关闭 WebUI 窗口失败:', error);

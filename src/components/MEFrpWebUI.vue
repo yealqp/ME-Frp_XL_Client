@@ -12,7 +12,7 @@
 
         <div class="settings-row">
           <div class="setting-item-inline">
-            <span class="setting-label">地址<n-tag size="medium" type="info">非必要不更改</n-tag></span>
+            <span class="setting-label">地址</span>
             <n-input
               v-model:value="webuiStore.settings.addr"
               placeholder="localhost"
@@ -23,7 +23,7 @@
           </div>
 
           <div class="setting-item-inline">
-            <span class="setting-label">端口<n-tag size="medium" type="info">非必要不更改</n-tag></span>
+            <span class="setting-label">端口</span>
             <n-input-number
               v-model:value="webuiStore.settings.port"
               :min="1"
@@ -37,7 +37,7 @@
           </div>
 
           <div class="setting-item-inline">
-            <span class="setting-label">密码<n-tag size="medium" type="warning">必须修改</n-tag></span>
+            <span class="setting-label">密码</span>
             <n-input
               v-model:value="webuiStore.settings.pass"
               type="password"

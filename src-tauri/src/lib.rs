@@ -578,6 +578,29 @@ async fn download_and_install_update(version: String) -> Result<String, String> 
     system::update::download_and_install_update(version).await
 }
 
+// 获取隐私政策
+#[tauri::command]
+async fn fetch_privacy_policy() -> Result<String, String> {
+    let client = utils::create_http_client();
+    
+    let response = client
+        .get("https://check.yealqp.cn/privacy.md")
+        .send()
+        .await
+        .map_err(|e| format!("请求隐私政策失败: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("获取隐私政策失败，状态码: {}", response.status()));
+    }
+    
+    let text = response
+        .text()
+        .await
+        .map_err(|e| format!("读取隐私政策内容失败: {}", e))?;
+    
+    Ok(text)
+}
+
 // 统一配置管理函数
 #[tauri::command]
 async fn save_unified_config(
@@ -720,17 +743,19 @@ async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), Strin
         .map_err(|e| format!("打开 URL 失败: {}", e))
 }
 
-/// 打开 WebUI 窗口
+/// 打开 WebView 窗口（通用）
 #[tauri::command]
-async fn open_webui_window(
+async fn open_webview_window(
     app_handle: tauri::AppHandle,
     url: String,
+    window_id: String,
+    title: String,
 ) -> Result<(), String> {
     use tauri::WebviewUrl;
     use tauri::WebviewWindowBuilder;
 
     // 检查窗口是否已存在
-    if let Some(window) = app_handle.get_webview_window("webui") {
+    if let Some(window) = app_handle.get_webview_window(&window_id) {
         // 如果窗口已存在，显示并聚焦
         window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
         window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;
@@ -738,26 +763,42 @@ async fn open_webui_window(
     }
 
     // 创建新的 WebView 窗口
-    WebviewWindowBuilder::new(
+    let window = WebviewWindowBuilder::new(
         &app_handle,
-        "webui",
+        &window_id,
         WebviewUrl::External(url.parse().map_err(|e| format!("URL 解析失败: {}", e))?)
     )
-    .title("MEFrp WebUI")
+    .title(&title)
     .inner_size(1200.0, 800.0)
     .min_inner_size(800.0, 600.0)
     .resizable(true)
+    .visible(false) // 先创建为不可见，避免闪烁
     .build()
     .map_err(|e| format!("创建窗口失败: {}", e))?;
+
+    // 窗口创建后再显示
+    window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+    window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;
 
     Ok(())
 }
 
-/// 关闭 WebUI 窗口
+/// 关闭 WebView 窗口（通用）
 #[tauri::command]
-async fn close_webui_window(app_handle: tauri::AppHandle) -> Result<(), String> {
-    if let Some(window) = app_handle.get_webview_window("webui") {
-        window.close().map_err(|e| format!("关闭窗口失败: {}", e))?;
+async fn close_webview_window(
+    app_handle: tauri::AppHandle,
+    window_id: String,
+) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window(&window_id) {
+        // 先隐藏窗口，然后关闭，避免 UI 线程阻塞
+        let _ = window.hide();
+        
+        // 使用 tokio 延迟关闭，给 Windows 时间清理资源
+        let window_clone = window.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            let _ = window_clone.close();
+        });
     }
     Ok(())
 }
@@ -861,7 +902,7 @@ pub fn run() {
             // 创建系统托盘
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("ME-Frp XL客户端")
+                .tooltip("ME-Frp XL Client")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(move |app, event| {
@@ -1014,14 +1055,15 @@ pub fn run() {
             get_app_version,
             check_for_updates,
             download_and_install_update,
+            fetch_privacy_policy,
             api_send_feedback,
             start_webui,
             stop_webui,
             is_webui_running,
             get_webui_logs,
             open_url,
-            open_webui_window,
-            close_webui_window,
+            open_webview_window,
+            close_webview_window,
             webui_login,
             webui_get_tunnels,
             webui_start_tunnel,

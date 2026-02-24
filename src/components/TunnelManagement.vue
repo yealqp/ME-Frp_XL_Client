@@ -362,84 +362,66 @@
     v-model:show="showDetails"
     preset="card"
     title="隧道详情"
-    style="width: 80%; max-width: 600px"
+    style="width: 90%; max-width: 600px"
   >
     <div v-if="currentTunnelDetails" class="details-container">
-      <div class="detail-item">
-        <span class="detail-label">状态：</span>
-        <n-tag
-          :type="currentTunnelDetails.isOnline ? 'success' : 'default'"
-          size="small"
-        >
-          {{ currentTunnelDetails.isOnline ? "在线" : "离线" }}
-        </n-tag>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">隧道名称：</span>
-        <span class="detail-value">{{ currentTunnelDetails.proxyName }}</span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">协议类型：</span>
-        <span class="detail-value">{{
-          currentTunnelDetails.proxyType.toUpperCase()
-        }}</span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">本地端口：</span>
-        <span class="detail-value">{{ currentTunnelDetails.localPort }}</span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">本地地址：</span>
-        <span class="detail-value">{{ currentTunnelDetails.localIp }}</span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">节点名称：</span>
-        <span class="detail-value"
-          >#{{ currentTunnelDetails.nodeId }} -
-          {{ nodeNameMap[currentTunnelDetails.nodeId] || "未知节点" }}</span
-        >
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">链接地址：</span>
-        <span
-          class="detail-value"
-          v-if="
-            currentTunnelDetails.proxyType === 'tcp' ||
-            currentTunnelDetails.proxyType === 'udp'
-          "
-        >
-          {{ getNodeAddress(currentTunnelDetails.proxyId) }}:{{
-            currentTunnelDetails.remotePort || "未分配"
-          }}
-        </span>
-        <span
-          class="detail-value"
-          v-else-if="currentTunnelDetails.proxyType === 'http'"
-        >
-          http://{{ currentTunnelDetails.domain || "未配置域名" }}
-        </span>
-        <span
-          class="detail-value"
-          v-else-if="currentTunnelDetails.proxyType === 'https'"
-        >
-          https://{{ currentTunnelDetails.domain || "未配置域名" }}
-        </span>
-        <span class="detail-value" v-else>
-          {{ currentTunnelDetails.domain || "未配置域名" }}
-        </span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">上次启动时间：</span>
-        <span class="detail-value">{{
-          formatTimestamp(currentTunnelDetails.lastStartTime)
-        }}</span>
-      </div>
-      <div class="detail-item">
-        <span class="detail-label">上次关闭时间：</span>
-        <span class="detail-value">{{
-          formatTimestamp(currentTunnelDetails.lastCloseTime)
-        }}</span>
-      </div>
+      <n-descriptions :column="2" bordered label-placement="left">
+        <n-descriptions-item label="状态">
+          <n-tag
+            :type="currentTunnelDetails.isOnline ? 'success' : 'default'"
+            size="small"
+            :bordered="false"
+          >
+            {{ currentTunnelDetails.isOnline ? "在线" : "离线" }}
+          </n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item label="协议类型">
+          <n-tag size="small" :bordered="false">
+            {{ currentTunnelDetails.proxyType.toUpperCase() }}
+          </n-tag>
+        </n-descriptions-item>
+        <n-descriptions-item label="隧道名称" :span="2">
+          {{ currentTunnelDetails.proxyName }}
+        </n-descriptions-item>
+        <n-descriptions-item label="节点" :span="2">
+          #{{ currentTunnelDetails.nodeId }} - {{ nodeNameMap[currentTunnelDetails.nodeId] || "未知节点" }}
+        </n-descriptions-item>
+        <n-descriptions-item label="本地地址">
+          {{ currentTunnelDetails.localIp }}
+        </n-descriptions-item>
+        <n-descriptions-item label="本地端口">
+          {{ currentTunnelDetails.localPort }}
+        </n-descriptions-item>
+        <n-descriptions-item label="链接地址" :span="2">
+          <span class="link-value">
+            <span
+              v-if="
+                currentTunnelDetails.proxyType === 'tcp' ||
+                currentTunnelDetails.proxyType === 'udp'
+              "
+            >
+              {{ getNodeAddress(currentTunnelDetails.proxyId) }}:{{
+                currentTunnelDetails.remotePort || "未分配"
+              }}
+            </span>
+            <span v-else-if="currentTunnelDetails.proxyType === 'http'">
+              http://{{ currentTunnelDetails.domain || "未配置域名" }}
+            </span>
+            <span v-else-if="currentTunnelDetails.proxyType === 'https'">
+              https://{{ currentTunnelDetails.domain || "未配置域名" }}
+            </span>
+            <span v-else>
+              {{ currentTunnelDetails.domain || "未配置域名" }}
+            </span>
+          </span>
+        </n-descriptions-item>
+        <n-descriptions-item label="上次启动">
+          {{ formatTimestamp(currentTunnelDetails.lastStartTime) }}
+        </n-descriptions-item>
+        <n-descriptions-item label="上次关闭">
+          {{ formatTimestamp(currentTunnelDetails.lastCloseTime) }}
+        </n-descriptions-item>
+      </n-descriptions>
     </div>
   </n-modal>
 
@@ -673,7 +655,7 @@
 
 <script setup lang="ts">
 import { h, ref, onMounted, onUnmounted, watch, nextTick } from "vue";
-import { useMessage, useDialog, NIcon } from "naive-ui";
+import { useMessage, useDialog, NIcon, NDescriptions, NDescriptionsItem } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import {
   RefreshCw,
@@ -2237,32 +2219,16 @@ defineExpose({
 }
 
 /* 详情模态框样式 */
+/* 详情模态框样式 */
 .details-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  padding: 4px 0;
 }
 
-.detail-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--n-border-color);
-}
-
-.detail-item:last-child {
-  border-bottom: none;
-}
-
-.detail-label {
-  font-weight: 600;
-  min-width: 120px;
-  color: var(--n-text-color-depth-2);
-}
-
-.detail-value {
-  flex: 1;
-  color: var(--n-text-color);
+.link-value {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  color: #4da8f5;
+  font-weight: 500;
+  word-break: break-all;
 }
 
 /* 编辑模态框样式 */

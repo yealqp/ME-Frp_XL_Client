@@ -1,6 +1,6 @@
 [package]
 name = "me-frp_desktop_unoffical"
-version = "2.0.2"
+version = "2.0.3"
 description = "ME-FrpXLDesktop"
 authors = ["yealqp"]
 edition = "2021"

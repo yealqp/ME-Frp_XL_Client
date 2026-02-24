@@ -15,6 +15,13 @@ let activeRequests = 0;
  */
 export function setLoadingBar(instance: LoadingBarProviderInst) {
   loadingBarInstance = instance;
+  
+  // If there are pending requests, finish them immediately
+  // This handles the case where routes were navigated before the loading bar was initialized
+  if (activeRequests > 0) {
+    activeRequests = 0;
+    loadingBarInstance.finish();
+  }
 }
 
 /**
@@ -26,6 +33,10 @@ export function startLoading() {
     if (activeRequests === 1) {
       loadingBarInstance.start();
     }
+  } else {
+    // If loading bar is not initialized yet, just increment the counter
+    // It will be handled when the instance is set
+    activeRequests++;
   }
 }
 

@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { darkTheme, NDialogProvider, createDiscreteApi, type LoadingBarProviderInst } from "naive-ui";
+import { darkTheme, NDialogProvider, NSpin, createDiscreteApi, type LoadingBarProviderInst } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
 import { useCreateTunnelStore } from "./stores/createTunnel";
@@ -324,7 +324,9 @@ onMounted(async () => {
 /_/  /_/_____/  /_/   /_/  / .___/   /_/|_/_____/   \\____/_/_/\\___/_/ /_/\\__/  
                           /_/                                                  `);
 
-  // Set loading bar instance
+  // Set loading bar instance immediately - this must happen before any navigation
+  // Use nextTick to ensure the ref is available
+  await new Promise(resolve => setTimeout(resolve, 0));
   if (loadingBar.value) {
     setLoadingBar(loadingBar.value);
   }
@@ -382,16 +384,32 @@ onMounted(async () => {
               <!-- 右侧内容区域 -->
               <n-layout class="content-layout">
                 <n-layout-content class="content-body">
-                  <router-view v-slot="{ Component }">
-                    <!-- 只渲染非登录页面的组件 -->
-                    <component
-                      v-if="Component && (Component as any).__name !== 'Login'"
-                      :is="Component"
-                      v-bind="{
-                        ...getComponentProps(Component),
-                        ...getComponentListeners(Component),
-                      }"
-                    />
+                  <router-view v-slot="{ Component, route }">
+                    <transition :name="(route.meta.transition as string) || 'fade-slide'" mode="out-in">
+                      <div v-if="Component" :key="route.path" class="route-container">
+                        <Suspense>
+                          <template #default>
+                            <component
+                              :is="Component"
+                              v-bind="{
+                                ...getComponentProps(Component),
+                                ...getComponentListeners(Component),
+                              }"
+                            />
+                          </template>
+                          <template #fallback>
+                            <div class="route-loading">
+                              <n-spin size="medium" />
+                            </div>
+                          </template>
+                        </Suspense>
+                      </div>
+                      <div v-else :key="'empty-' + route.path" class="route-container">
+                        <div class="route-loading">
+                          <n-spin size="medium" />
+                        </div>
+                      </div>
+                    </transition>
                   </router-view>
                 </n-layout-content>
               </n-layout>
@@ -446,6 +464,19 @@ body {
   background-color: #101014;
   min-height: 100%;
   overflow-y: auto;
+}
+
+.route-container {
+  width: 100%;
+  height: 100%;
+}
+
+.route-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  width: 100%;
 }
 
 .loading-container {
@@ -579,6 +610,37 @@ body {
   background: #4e4e52;
 }
 
+/* 路由过渡动画 */
+/* 淡入淡出 + 滑动效果 */
+.fade-slide-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.fade-slide-leave-active {
+  transition: all 0.25s ease-in;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* 淡入淡出效果 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .content-body {
@@ -591,6 +653,12 @@ body {
 
   .loading-spinner p {
     font-size: 14px;
+  }
+  
+  /* 移动端使用更快的动画 */
+  .fade-slide-enter-active,
+  .fade-slide-leave-active {
+    transition: all 0.2s ease;
   }
 }
 </style>

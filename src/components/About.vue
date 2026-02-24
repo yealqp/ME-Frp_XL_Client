@@ -5,12 +5,12 @@
         <template #header>
           <img src="../assets/icon.png" alt="logo" class="logo" />
         </template>
-        <div class="app-logo">ME-Frp XL客户端</div>
+        <div class="app-logo">ME-Frp XL Client</div>
         <p class="description"></p>
       </n-card>
 
       <n-card :bordered="true" class="tech-stack">
-        <template #header>关于ME-Frp XL客户端</template>
+        <template #header>关于ME-Frp XL Client</template>
         <n-descriptions label-placement="left" bordered :column="2">
           <n-descriptions-item label="版本">
             <n-tag
@@ -122,48 +122,96 @@
         </div>
       </n-card>
 
-      <!-- 桌面版反馈卡片 -->
+      <!-- 帮助与反馈卡片 -->
       <n-card :bordered="true" class="feedback-card">
         <template #header>
           <div class="section-header">
-            <MessageCircle :size="18" />
-            <span>桌面版反馈</span>
+            <MessageCircle :size="20" />
+            <span>帮助与反馈</span>
           </div>
         </template>
-        <p class="card-description">
-          如果发现图形化客户端的BUG 或者有任何建议 欢迎点击反馈按钮和发送邮件。
-        </p>
-        <div class="card-actions">
-          <n-button type="primary" @click="showFeedbackModal = true">
-            <template #icon>
-              <Edit :size="16" />
-            </template>
-            填写反馈
-          </n-button>
-          <n-button type="primary" @click="sendyEmail">
-            <template #icon>
-              <Mail :size="16" />
-            </template>
-            发送邮件
-          </n-button>
-          <n-button type="primary" @click="OpenDownloadpage">
-            <template #icon>
-              <Download :size="16" />
-            </template>
-            查看下载页
-          </n-button>
-          <n-button type="primary" @click="checkForUpdates">
-            <template #icon>
-              <Download :size="16" />
-            </template>
-            {{ updateChecking ? "检查中..." : "检查更新" }}
-          </n-button>
-          <n-button type="primary" @click="viewChangelog">
-            <template #icon>
-              <FileText :size="16" />
-            </template>
-            {{ changelogLoading ? "加载中..." : "查看更新日志" }}
-          </n-button>
+        
+        <div class="feedback-content">
+          <!-- 反馈区域 -->
+          <div class="feedback-section">
+            <div class="section-title">
+              <MessageSquare :size="16" />
+              <span>问题反馈</span>
+            </div>
+            <p class="section-description">
+              发现 BUG 或有改进建议？我们期待您的反馈，帮助我们做得更好。
+            </p>
+            <n-space :size="12">
+              <n-button type="primary" @click="showFeedbackModal = true">
+                <template #icon>
+                  <Edit :size="16" />
+                </template>
+                在线反馈
+              </n-button>
+              <n-button type="primary" @click="sendyEmail">
+                <template #icon>
+                  <Mail :size="16" />
+                </template>
+                邮件联系
+              </n-button>
+            </n-space>
+          </div>
+
+          <n-divider style="margin: 20px 0" />
+
+          <!-- 资源区域 -->
+          <div class="feedback-section">
+            <div class="section-title">
+              <BookOpen :size="16" />
+              <span>资源与文档</span>
+            </div>
+            <p class="section-description">
+              查看下载页面、隐私政策和更新日志等相关资源。
+            </p>
+            <n-space :size="12" style="flex-wrap: wrap">
+              <n-button type="primary" @click="OpenDownloadpage">
+                <template #icon>
+                  <Download :size="16" />
+                </template>
+                下载页面
+              </n-button>
+              <n-button type="primary" @click="openPrivacyPolicy">
+                <template #icon>
+                  <Shield :size="16" />
+                </template>
+                隐私政策
+              </n-button>
+              <n-button type="primary" @click="viewChangelog" :loading="changelogLoading">
+                <template #icon>
+                  <FileText :size="16" />
+                </template>
+                更新日志
+              </n-button>
+            </n-space>
+          </div>
+
+          <n-divider style="margin: 20px 0" />
+
+          <!-- 更新区域 -->
+          <div class="feedback-section">
+            <div class="section-title">
+              <RefreshCw :size="16" />
+              <span>版本更新</span>
+            </div>
+            <p class="section-description">
+              当前版本 v{{ appVersion }}，点击检查是否有新版本可用。
+            </p>
+            <n-button 
+              type="primary" 
+              @click="checkForUpdates" 
+              :loading="updateChecking"
+            >
+              <template #icon>
+                <Download :size="16" />
+              </template>
+              {{ updateChecking ? "检查中..." : "检查更新" }}
+            </n-button>
+          </div>
         </div>
       </n-card>
     </div>
@@ -279,6 +327,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   useMessage,
   NCard,
@@ -291,11 +340,13 @@ import {
   NForm,
   NFormItem,
   NInput,
+  NDivider,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   MessageCircle,
+  MessageSquare,
   Edit,
   Mail,
   Download,
@@ -303,6 +354,8 @@ import {
   RefreshCw,
   Quote,
   FileText,
+  BookOpen,
+  Shield,
 } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
 
@@ -320,6 +373,7 @@ interface Hitokoto {
   type: string;
 }
 
+const router = useRouter();
 const message = useMessage();
 const updateChecking = ref(false);
 const showUpdateModal = ref(false);
@@ -480,10 +534,14 @@ const sendyEmail = async () => {
   }
 };
 
+const openPrivacyPolicy = () => {
+  router.push('/privacy-policy');
+};
+
 const OpenDownloadpage = async () => {
   try {
     await openUrl(
-      "https://alist.yealqp.cn/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF",
+      "https://alist.yealqp.cn/ME-Frp%20XL%20Client",
     );
     message.success("正在打开下载页面");
   } catch (error) {
@@ -787,7 +845,6 @@ const submitFeedback = async () => {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-  user-drag: none;
   -webkit-user-drag: none;
   pointer-events: none;
 }
@@ -824,23 +881,54 @@ const submitFeedback = async () => {
   text-align: center;
 }
 
-/* 桌面版反馈卡片样式 */
+/* 帮助与反馈卡片样式 */
 .feedback-card {
   background: #18181c;
   border: 1px solid #29292c;
 }
 
-.feedback-card .card-description {
+.feedback-content {
+  padding: 8px 0;
+}
+
+.feedback-section {
+  margin-bottom: 0;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.section-title :deep(svg) {
+  color: #349ff4;
+  flex-shrink: 0;
+}
+
+.section-description {
   color: #a0a0a0;
   font-size: 14px;
   line-height: 1.6;
-  margin-bottom: 16px;
+  margin: 0 0 12px 0;
 }
 
-.feedback-card .card-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+.feedback-card :deep(.n-divider) {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* 按钮样式优化 */
+.feedback-card :deep(.n-button) {
+  transition: all 0.3s ease;
+}
+
+.feedback-card :deep(.n-button:not(.n-button--disabled):hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 159, 244, 0.3);
 }
 
 /* 仙林云计算卡片样式 */

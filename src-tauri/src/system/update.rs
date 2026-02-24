@@ -35,7 +35,7 @@ pub async fn check_for_updates() -> Result<VersionCheckResult, String> {
 
     // 请求远程版本信息
     let response = client
-        .get("https://check.yealqp.cn/version.json")
+        .get("https://check.yealqp.cn/xl.json")
         .send()
         .await
         .map_err(|e| format!("请求版本信息失败: {e}"))?;
@@ -83,7 +83,7 @@ pub async fn download_and_install_update(version: String) -> Result<String, Stri
 
     // 构建下载URL
     let download_url = format!(
-        "https://alist.yealqp.cn/download/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF/ME-Frp%20XL%E5%AE%A2%E6%88%B7%E7%AB%AF_{version}_x64-setup.exe"
+        "https://alist.yealqp.cn/download/ME-Frp%20XL%20Client/ME-Frp%20XL%20Client_{version}_x64-setup.exe"
     );
 
     // 获取临时目录

@@ -71,6 +71,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("../components/About.vue"),
     meta: { requiresAuth: true },
   },
+  {
+    path: "/privacy-policy",
+    name: "PrivacyPolicy",
+    component: () => import("../components/PrivacyPolicy.vue"),
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
@@ -80,7 +86,7 @@ const router = createRouter({
 
 // 路由守卫 - 检查登录状态
 router.beforeEach(async (to, _from, next) => {
-  // Start loading bar
+  // Start loading bar (will be handled gracefully even if instance is not ready)
   startLoading();
 
   // 根路径重定向到 dashboard
@@ -108,7 +114,6 @@ router.beforeEach(async (to, _from, next) => {
       }
     } catch (error) {
       console.error("路由守卫检查登录状态失败:", error);
-      errorLoading();
       next("/login");
     }
   } else {
@@ -118,7 +123,10 @@ router.beforeEach(async (to, _from, next) => {
 
 // Finish loading bar after navigation
 router.afterEach(() => {
-  finishLoading();
+  // Use a small delay to ensure the loading bar instance is ready
+  setTimeout(() => {
+    finishLoading();
+  }, 50);
 });
 
 // Handle navigation errors
