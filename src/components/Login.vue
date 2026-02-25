@@ -1,9 +1,8 @@
 <template>
   <div class="login-container">
-    <n-config-provider :theme="customTheme">
-      <n-card class="login-card" :bordered="true">
-        <!-- 登录标题 -->
-        <h1 class="login-title">登录到ME-Frp XL客户端</h1>
+    <n-card class="login-card" :bordered="true">
+      <!-- 登录标题 -->
+      <h1 class="login-title">登录到ME-Frp XL客户端</h1>
 
         <!-- 登录表单 -->
         <n-form
@@ -107,39 +106,18 @@
             {{ isTokenMode ? "账号登录" : "Token登录" }}
           </n-button>
         </div>
-      </n-card>
-    </n-config-provider>
+    </n-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { darkTheme, useMessage } from "naive-ui";
+import { useMessage } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
 import { createCaptcha } from "../utils/captcha";
 import type { UnifiedConfig } from "../types/config";
-
-// 自定义主题配置
-const customTheme = {
-  ...darkTheme,
-  common: {
-    ...darkTheme.common,
-    bodyColor: "#101014",
-    cardColor: "#18181c",
-    modalColor: "#18181c",
-    popoverColor: "#18181c",
-    tableHeaderColor: "#18181c",
-    inputColor: "#303033",
-    inputColorDisabled: "#303033",
-    primaryColor: "#349ff4",
-    primaryColorHover: "#4da8f5",
-    primaryColorPressed: "#2891f3",
-    borderColor: "#29292c",
-    dividerColor: "#29292c",
-  },
-};
 
 const emit = defineEmits(["login-success"]);
 const message = useMessage();

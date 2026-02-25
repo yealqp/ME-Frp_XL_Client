@@ -260,6 +260,12 @@ async fn api_get_statistics(_app_handle: tauri::AppHandle) -> Result<String, Str
     api::system::get_statistics().await
 }
 
+// 获取系统通知API命令
+#[tauri::command]
+async fn api_get_system_notification(_app_handle: tauri::AppHandle) -> Result<String, String> {
+    api::system::get_system_notification().await
+}
+
 // 获取节点列表API命令
 #[tauri::command]
 async fn api_get_node_list(_app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -910,9 +916,10 @@ pub fn run() {
                 }
             });
 
-            // 创建系统托盘菜单
+            // 创建托盘菜单项
+            let show_main = MenuItem::with_id(app, "show_main", "显示主页面", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&quit])?;
+            let menu = Menu::with_items(app, &[&show_main, &quit])?;
 
             // 创建系统托盘
             let _tray = TrayIconBuilder::new()
@@ -921,16 +928,27 @@ pub fn run() {
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(move |app, event| {
-                    if event.id().as_ref() == "quit" {
-                        // 调用quit_app命令来确保停止所有隧道进程
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.emit("quit-app", ());
+                    match event.id().as_ref() {
+                        "show_main" => {
+                            // 显示主窗口
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                                let _ = window.unminimize();
+                            }
                         }
-                        // 延迟退出以确保隧道进程有时间停止
-                        std::thread::spawn(move || {
-                            std::thread::sleep(std::time::Duration::from_millis(500));
-                            std::process::exit(0);
-                        });
+                        "quit" => {
+                            // 调用quit_app命令来确保停止所有隧道进程
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.emit("quit-app", ());
+                            }
+                            // 延迟退出以确保隧道进程有时间停止
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_millis(500));
+                                std::process::exit(0);
+                            });
+                        }
+                        _ => {}
                     }
                 })
                 .on_tray_icon_event(|tray, event| match event {
@@ -1036,6 +1054,7 @@ pub fn run() {
             api_get_system_status,
             api_get_popup_notice,
             api_get_statistics,
+            api_get_system_notification,
             api_get_node_list,
             api_get_create_proxy_data,
             api_get_node_status,

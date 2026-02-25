@@ -275,3 +275,28 @@ pub async fn get_statistics() -> Result<String, String> {
 
     Ok(response_text)
 }
+
+/// 获取系统通知（公开API，无需token）
+///
+/// # 返回
+/// 成功返回系统通知文本内容
+pub async fn get_system_notification() -> Result<String, String> {
+    let client = create_http_client();
+
+    let response = client
+        .get("https://check.yealqp.cn/notification.txt")
+        .send()
+        .await
+        .map_err(|e| format!("获取系统通知请求失败: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("获取系统通知失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析系统通知响应失败: {e}"))?;
+
+    Ok(response_text)
+}

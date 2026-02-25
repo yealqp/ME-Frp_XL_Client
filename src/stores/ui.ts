@@ -26,7 +26,8 @@ export const useUIStore = defineStore('ui', () => {
 
   // System notification (单实例)
   const systemNotification = ref<NotificationReactive | null>(null);
-  const notificationFetched = ref<boolean>(false); // 标记是否已获取过通知
+  const notificationTimer = ref<number | null>(null); // 定时器引用
+  let notificationApiInstance: any = null; // 保存 notification API 实例
 
   // Getters
   const currentTheme = computed(() => customTheme.value || theme.value);
@@ -153,28 +154,24 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   /**
-   * Fetch and show system notification (单实例)
+   * Fetch and show system notification (单实例，仅显示一次)
    * @param notificationApi - Naive UI notification API instance
    */
   async function fetchAndShowNotification(notificationApi: any) {
-    // 如果已经获取过通知，不再重复获取
-    if (notificationFetched.value) {
-      console.log('系统通知已获取，跳过重复请求');
+    // 保存 notification API 实例供后续使用
+    if (!notificationApiInstance) {
+      notificationApiInstance = notificationApi;
+    }
+
+    // 如果已有通知实例正在显示，不重复请求
+    if (systemNotification.value) {
+      console.log("系统通知正在显示中，跳过重复请求");
       return;
     }
 
-    // 如果已有通知实例，先销毁
-    if (systemNotification.value) {
-      systemNotification.value.destroy();
-      systemNotification.value = null;
-    }
-
     try {
-      const response = await invoke("api_request", {
-        url: "https://check.yealqp.cn/notification.txt",
-        method: "GET",
-        data: ""
-      }) as string;
+      // 使用后端 API 获取系统通知
+      const response = await invoke("api_get_system_notification") as string;
 
       if (response && response.trim()) {
         // 创建通知实例并保存引用
@@ -186,10 +183,14 @@ export const useUIStore = defineStore('ui', () => {
           keepAliveOnHover: true,
           onClose: () => {
             systemNotification.value = null;
+          },
+          onAfterLeave: () => {
+            // 通知实例完全结束后，清空引用
+            systemNotification.value = null;
+            console.log("系统通知已关闭");
           }
         });
         
-        notificationFetched.value = true;
         console.log("系统通知已显示");
       }
     } catch (error) {
@@ -199,20 +200,22 @@ export const useUIStore = defineStore('ui', () => {
   }
 
   /**
-   * Close system notification manually
+   * Stop notification loop (清理通知)
    */
-  function closeSystemNotification() {
+  function stopNotificationLoop() {
+    // 清除定时器（如果有）
+    if (notificationTimer.value !== null) {
+      clearTimeout(notificationTimer.value);
+      notificationTimer.value = null;
+    }
+
+    // 销毁当前通知
     if (systemNotification.value) {
       systemNotification.value.destroy();
       systemNotification.value = null;
     }
-  }
 
-  /**
-   * Reset notification fetched flag (用于需要重新获取通知的场景)
-   */
-  function resetNotificationFlag() {
-    notificationFetched.value = false;
+    console.log("系统通知已清理");
   }
 
   return {
@@ -224,7 +227,6 @@ export const useUIStore = defineStore('ui', () => {
     sidebarCollapsible,
     sidebarCollapsed,
     systemNotification,
-    notificationFetched,
     // Getters
     currentTheme,
     isDarkMode,
@@ -240,7 +242,6 @@ export const useUIStore = defineStore('ui', () => {
     toggleSidebarCollapsed,
     setSidebarCollapsed,
     fetchAndShowNotification,
-    closeSystemNotification,
-    resetNotificationFlag,
+    stopNotificationLoop,
   };
 });
