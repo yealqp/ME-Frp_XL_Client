@@ -302,14 +302,45 @@
               />
             </n-form-item>
             <n-form-item
-              label="路径路由"
-              path="locations"
+              label="源协议"
               v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'"
             >
+              <n-radio-group v-model:value="tunnelForm.sourceProtocol">
+                <n-space>
+                  <n-radio value="http">HTTP</n-radio>
+                  <n-radio value="https">HTTPS</n-radio>
+                </n-space>
+              </n-radio-group>
+            </n-form-item>
+            <n-form-item 
+              label="TLS 证书路径" 
+              path="crtPath"
+              v-if="tunnelForm.type === 'https'"
+            >
               <n-input
-                v-model:value="tunnelForm.locations"
-                placeholder="多个路径以逗号分隔，例如: /api,/admin"
+                v-model:value="tunnelForm.crtPath"
+                placeholder="例如: /etc/crt/example.com.crt"
               />
+              <template #feedback>
+                <n-text depth="3" style="font-size: 12px;">
+                  用于HTTPS隧道的TLS证书
+                </n-text>
+              </template>
+            </n-form-item>
+            <n-form-item 
+              label="TLS 私钥路径" 
+              path="keyPath"
+              v-if="tunnelForm.type === 'https'"
+            >
+              <n-input
+                v-model:value="tunnelForm.keyPath"
+                placeholder="例如: /etc/crt/example.com.key"
+              />
+              <template #feedback>
+                <n-text depth="3" style="font-size: 12px;">
+                  用于HTTPS隧道的TLS私钥
+                </n-text>
+              </template>
             </n-form-item>
             <n-divider title-placement="left">
               高级配置
@@ -317,61 +348,73 @@
                 （可选，仅推荐技术用户使用）
               </n-text>
             </n-divider>
-            <n-form-item label="访问密钥" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
-              <n-input
-                v-model:value="tunnelForm.accessKey"
-                placeholder="用于身份验证"
-                type="password"
-                show-password-on="click"
-              />
+            <n-form-item 
+              label="安全选项" 
+              v-if="tunnelForm.type === 'http'"
+            >
+              <n-radio-group v-model:value="tunnelForm.securityMode">
+                <n-space>
+                  <n-radio
+                    v-for="option in securityModeOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </n-radio>
+                </n-space>
+              </n-radio-group>
             </n-form-item>
-            <n-form-item label="HTTP 插件" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
-              <n-select
-                v-model:value="tunnelForm.httpPlugin"
-                placeholder="请选择 HTTP 插件"
-                :options="httpPluginOptions"
-                clearable
-              />
-            </n-form-item>
-            <n-form-item label="TLS 证书路径" v-if="tunnelForm.httpPlugin === 'https2https' || tunnelForm.httpPlugin === 'https2http'">
-              <n-input
-                v-model:value="tunnelForm.crtPath"
-                placeholder="例如: /etc/crt/example.com.crt"
-              />
-            </n-form-item>
-            <n-form-item label="TLS 私钥路径" v-if="tunnelForm.httpPlugin === 'https2https' || tunnelForm.httpPlugin === 'https2http'">
-              <n-input
-                v-model:value="tunnelForm.keyPath"
-                placeholder="例如: /etc/crt/example.com.key"
-              />
-            </n-form-item>
-            <n-form-item label="HTTP 用户名" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+            <n-form-item 
+              label="用户名" 
+              v-if="tunnelForm.type === 'http' && tunnelForm.securityMode === 'basic'"
+              path="httpUser"
+            >
               <n-input
                 v-model:value="tunnelForm.httpUser"
-                placeholder="HTTP 基础认证用户名"
+                placeholder="请输入 HTTP 基础认证用户名"
               />
             </n-form-item>
-            <n-form-item label="HTTP 密码" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+            <n-form-item 
+              label="密码" 
+              v-if="tunnelForm.type === 'http' && tunnelForm.securityMode === 'basic'"
+              path="httpPassword"
+            >
               <n-input
                 v-model:value="tunnelForm.httpPassword"
-                placeholder="HTTP 基础认证密码"
+                placeholder="请输入 HTTP 基础认证密码"
                 type="password"
                 show-password-on="click"
               />
             </n-form-item>
-            <n-form-item label="Host Header Rewrite" v-if="tunnelForm.type === 'http' || tunnelForm.type === 'https'">
+            <n-form-item 
+              label="访问密钥" 
+              v-if="tunnelForm.type === 'http' && tunnelForm.securityMode === 'accessKey'"
+              path="accessKey"
+            >
               <n-input
-                v-model:value="tunnelForm.hostHeaderRewrite"
-                placeholder="请求 Host 头重写为目标主机"
+                v-model:value="tunnelForm.accessKey"
+                placeholder="请输入访问密钥用于身份验证"
+                type="password"
+                show-password-on="click"
               />
             </n-form-item>
-            <n-form-item label="传输层协议">
-              <n-select
-                v-model:value="tunnelForm.transportProtocol"
-                placeholder="请选择传输层协议"
-                :options="transportProtocolOptions"
-                clearable
-              />
+
+
+            <n-form-item 
+              label="传输协议" 
+              v-if="tunnelForm.type === 'tcp' || tunnelForm.type === 'http' || tunnelForm.type === 'https'"
+            >
+              <n-radio-group v-model:value="tunnelForm.transportProtocol">
+                <n-space>
+                  <n-radio
+                    v-for="option in transportProtocolOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </n-radio>
+                </n-space>
+              </n-radio-group>
             </n-form-item>
             <n-form-item label="Proxy Protocol">
               <n-select
@@ -449,13 +492,12 @@ interface TunnelForm {
   localPort: number | null;
   remotePort: number | null;
   customDomain: string;
-  locations: string;
-  hostHeaderRewrite: string;
+  sourceProtocol: string; // 'http' | 'https'
   proxyProtocolVersion: string;
   useEncryption: boolean;
   useCompression: boolean;
+  securityMode: string; // 'none' | 'basic' | 'accessKey'
   accessKey: string;
-  httpPlugin: string;
   crtPath: string;
   keyPath: string;
   httpUser: string;
@@ -489,18 +531,17 @@ const tunnelForm = ref<TunnelForm>({
   localPort: null,
   remotePort: null,
   customDomain: "",
-  locations: "",
-  hostHeaderRewrite: "",
+  sourceProtocol: "http",
   proxyProtocolVersion: "",
-  useEncryption: true,
-  useCompression: true,
+  useEncryption: false,
+  useCompression: false,
+  securityMode: "none",
   accessKey: "",
-  httpPlugin: "",
   crtPath: "",
   keyPath: "",
   httpUser: "",
   httpPassword: "",
-  transportProtocol: "",
+  transportProtocol: "tcp",
 });
 
 const creating = ref(false);
@@ -530,6 +571,46 @@ const formRules = computed(() => {
     };
   }
   
+  // HTTPS 隧道需要证书和私钥
+  if (tunnelForm.value.type === 'https') {
+    rules.crtPath = {
+      required: true,
+      message: "请输入 TLS 证书路径",
+      trigger: "blur",
+    };
+    rules.keyPath = {
+      required: true,
+      message: "请输入 TLS 私钥路径",
+      trigger: "blur",
+    };
+  }
+  
+  // HTTP 隧道的安全选项验证
+  if (tunnelForm.value.type === 'http') {
+    // Basic Auth 模式需要用户名和密码
+    if (tunnelForm.value.securityMode === 'basic') {
+      rules.httpUser = {
+        required: true,
+        message: "请输入 HTTP 基础认证用户名",
+        trigger: "blur",
+      };
+      rules.httpPassword = {
+        required: true,
+        message: "请输入 HTTP 基础认证密码",
+        trigger: "blur",
+      };
+    }
+    
+    // 访问密钥模式需要密钥
+    if (tunnelForm.value.securityMode === 'accessKey') {
+      rules.accessKey = {
+        required: true,
+        message: "请输入访问密钥",
+        trigger: "blur",
+      };
+    }
+  }
+  
   return rules;
 });
 
@@ -539,18 +620,15 @@ const proxyProtocolOptions = [
   { label: "v2", value: "v2" },
 ];
 
-const httpPluginOptions = [
-  { label: "不使用", value: "" },
-  { label: "http2https - 本地 HTTPS 使用 HTTP 隧道", value: "http2https" },
-  { label: "https2http - 本地 HTTP 使用 HTTPS 隧道", value: "https2http" },
-  { label: "https2https - 本地 HTTPS 使用 HTTPS 隧道", value: "https2https" },
+const transportProtocolOptions = [
+  { label: "TCP (常规)", value: "tcp" },
+  { label: "QUIC (部分场景可优化延迟)", value: "quic" },
 ];
 
-const transportProtocolOptions = [
-  { label: "默认", value: "" },
-  { label: "TCP", value: "tcp" },
-  { label: "KCP", value: "kcp" },
-  { label: "QUIC", value: "quic" },
+const securityModeOptions = [
+  { label: "禁用", value: "none" },
+  { label: "Basic Auth", value: "basic" },
+  { label: "访问密钥", value: "accessKey" },
 ];
 
 // 隧道类型选项
@@ -863,6 +941,17 @@ async function createTunnel() {
     creating.value = true;
     
     // 根据新版 API 文档构建请求数据
+    // 根据安全模式设置认证参数（httpUser & httpPassword 和 accessKey 不能同时存在）
+    // 根据源协议和隧道类型自动设置 httpPlugin
+    let httpPlugin = "";
+    if (tunnelForm.value.type === 'http' && tunnelForm.value.sourceProtocol === 'https') {
+      httpPlugin = "http2https";
+    } else if (tunnelForm.value.type === 'https' && tunnelForm.value.sourceProtocol === 'http') {
+      httpPlugin = "https2http";
+    } else if (tunnelForm.value.type === 'https' && tunnelForm.value.sourceProtocol === 'https') {
+      httpPlugin = "https2https";
+    }
+    
     const requestData = {
       nodeId: selectedNode.value?.nodeId,
       proxyName: tunnelForm.value.name,
@@ -871,19 +960,19 @@ async function createTunnel() {
       localPort: tunnelForm.value.localPort,
       remotePort: tunnelForm.value.remotePort || 0,
       domain: tunnelForm.value.customDomain || "",
-      locations: tunnelForm.value.locations || "",
-      accessKey: tunnelForm.value.accessKey || "",
-      hostHeaderRewrite: tunnelForm.value.hostHeaderRewrite || "",
+      locations: "",
+      accessKey: tunnelForm.value.securityMode === 'accessKey' ? tunnelForm.value.accessKey : "",
+      hostHeaderRewrite: "",
       useEncryption: tunnelForm.value.useEncryption,
       useCompression: tunnelForm.value.useCompression,
       proxyProtocolVersion: tunnelForm.value.proxyProtocolVersion || "",
-      httpPlugin: tunnelForm.value.httpPlugin || "",
+      httpPlugin: httpPlugin,
       crtPath: tunnelForm.value.crtPath || "",
       keyPath: tunnelForm.value.keyPath || "",
       requestHeaders: {},
       responseHeaders: {},
-      httpUser: tunnelForm.value.httpUser || "",
-      httpPassword: tunnelForm.value.httpPassword || "",
+      httpUser: tunnelForm.value.securityMode === 'basic' ? tunnelForm.value.httpUser : "",
+      httpPassword: tunnelForm.value.securityMode === 'basic' ? tunnelForm.value.httpPassword : "",
       transportProtocol: tunnelForm.value.transportProtocol || "",
     };
     
@@ -901,18 +990,17 @@ async function createTunnel() {
         localPort: null,
         remotePort: null,
         customDomain: "",
-        locations: "",
-        hostHeaderRewrite: "",
+        sourceProtocol: "http",
         proxyProtocolVersion: "",
-        useEncryption: true,
-        useCompression: true,
+        useEncryption: false,
+        useCompression: false,
+        securityMode: "none",
         accessKey: "",
-        httpPlugin: "",
         crtPath: "",
         keyPath: "",
         httpUser: "",
         httpPassword: "",
-        transportProtocol: "",
+        transportProtocol: "tcp",
       };
       selectedNode.value = null;
       currentStep.value = 1;

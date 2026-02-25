@@ -62,230 +62,22 @@
     <!-- 隧道卡片网格 -->
     <div v-else-if="tunnels.length > 0" class="tunnels-container">
       <div class="tunnels-grid">
-        <n-card
+        <TunnelCard
           v-for="tunnel in tunnels"
           :key="tunnel.proxyId"
-          :bordered="true"
-          class="tunnel-card"
-          hoverable
-        >
-          <!-- 卡片头部 -->
-          <template #header>
-            <div class="tunnel-header">
-              <div class="tunnel-title">
-                <h3 class="tunnel-name">{{ tunnel.proxyName }}</h3>
-                <div class="status-tags">
-                  <n-tag
-                    v-if="tunnel.isDisabled"
-                    type="warning"
-                    :bordered="false"
-                    size="small"
-                    class="disabled-tag"
-                  >
-                    已禁用
-                  </n-tag>
-                  <n-tag
-                    :type="tunnel.isOnline ? 'success' : 'default'"
-                    :bordered="false"
-                    size="small"
-                    class="status-tag"
-                  >
-                    {{ tunnel.isOnline ? "在线" : "离线" }}
-                  </n-tag>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- 卡片内容 -->
-          <div class="tunnel-content">
-            <div class="tunnel-info">
-              <div class="info-row">
-                <span class="info-label">ID:</span>
-                <n-tag type="info" :bordered="false" size="small">
-                  # {{ tunnel.proxyId }}
-                </n-tag>
-              </div>
-              <div class="info-row">
-                <span class="info-label">协议:</span>
-                <span class="info-value">{{
-                  tunnel.proxyType.toUpperCase()
-                }}</span>
-              </div>
-              <div
-                class="info-row"
-                v-if="tunnel.proxyType === 'tcp' || tunnel.proxyType === 'udp'"
-              >
-                <span class="info-label">远程端口:</span>
-                <span class="info-value">{{ tunnel.remotePort }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">节点:</span>
-                <span class="info-value">
-                  #{{ tunnel.nodeId }} -
-                  {{ nodeNameMap[tunnel.nodeId] || "未知节点" }}
-                </span>
-              </div>
-              <div class="info-row" v-if="tunnel.domain">
-                <span class="info-label">域名:</span>
-                <span class="info-value">{{ tunnel.domain }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 卡片底部操作 -->
-          <template #action>
-            <div class="tunnel-actions">
-              <!-- 未启动时：所有按钮在同一行 -->
-              <div v-if="!runningTunnels.has(tunnel.proxyId)" class="tunnel-actions-row">
-                <n-button
-                  type="primary"
-                  size="small"
-                  @click="startTunnel(tunnel.proxyId)"
-                  :loading="actionLoading[tunnel.proxyId]"
-                >
-                  <template #icon>
-                    <Play :size="14" />
-                  </template>
-                  启动
-                </n-button>
-                <n-button
-                  type="default"
-                  size="small"
-                  @click="copyRemoteAddress(tunnel.proxyId)"
-                >
-                  <template #icon>
-                    <Copy :size="14" />
-                  </template>
-                  复制地址
-                </n-button>
-                <n-button
-                  type="default"
-                  size="small"
-                  @click="viewTunnelDetails(tunnel.proxyId)"
-                >
-                  <template #icon>
-                    <Info :size="14" />
-                  </template>
-                  详情
-                </n-button>
-                <div class="more-dropdown-wrapper">
-                  <n-button
-                    type="default"
-                    size="small"
-                    @click="toggleMoreMenu(tunnel.proxyId, $event)"
-                  >
-                    <template #icon>
-                      <SettingsIcon :size="14" />
-                    </template>
-                    更多
-                  </n-button>
-                  <transition name="dropdown-fade">
-                    <div
-                      v-if="activeMoreMenu === tunnel.proxyId"
-                      :class="['more-dropdown-menu', menuPosition[tunnel.proxyId] === 'top' ? 'menu-top' : 'menu-bottom']"
-                      @click.stop
-                    >
-                      <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
-                        <div v-if="option.type === 'divider'" class="dropdown-divider"></div>
-                        <div
-                          v-else
-                          class="dropdown-item"
-                          @click="handleMoreActionClick(option.key, tunnel.proxyId)"
-                        >
-                          <component :is="option.icon" class="dropdown-icon" />
-                          <span class="dropdown-label">{{ option.label }}</span>
-                        </div>
-                      </template>
-                    </div>
-                  </transition>
-                </div>
-              </div>
-
-              <!-- 启动后：第一行4个按钮，第二行更多按钮独占 -->
-              <template v-else>
-                <div class="tunnel-actions-row">
-                  <n-button
-                    type="warning"
-                    size="small"
-                    @click="stopTunnel(tunnel.proxyId)"
-                    :loading="actionLoading[tunnel.proxyId]"
-                  >
-                    <template #icon>
-                      <Square :size="14" />
-                    </template>
-                    停止
-                  </n-button>
-                  <n-button
-                    type="info"
-                    size="small"
-                    @click="viewLogs(tunnel.proxyId)"
-                  >
-                    <template #icon>
-                      <FileText :size="14" />
-                    </template>
-                    日志
-                  </n-button>
-                  <n-button
-                    type="default"
-                    size="small"
-                    @click="copyRemoteAddress(tunnel.proxyId)"
-                  >
-                    <template #icon>
-                      <Copy :size="14" />
-                    </template>
-                    复制地址
-                  </n-button>
-                  <n-button
-                    type="default"
-                    size="small"
-                    @click="viewTunnelDetails(tunnel.proxyId)"
-                  >
-                    <template #icon>
-                      <Info :size="14" />
-                    </template>
-                    详情
-                  </n-button>
-                </div>
-
-                <div class="tunnel-actions-row tunnel-actions-row-second">
-                  <n-button
-                    type="default"
-                    size="small"
-                    @click="toggleMoreMenu(tunnel.proxyId, $event)"
-                    class="more-button-full"
-                  >
-                    <template #icon>
-                      <SettingsIcon :size="14" />
-                    </template>
-                    更多
-                  </n-button>
-                  <div class="more-dropdown-wrapper">
-                    <transition name="dropdown-fade">
-                      <div
-                        v-if="activeMoreMenu === tunnel.proxyId"
-                        :class="['more-dropdown-menu', menuPosition[tunnel.proxyId] === 'top' ? 'menu-top' : 'menu-bottom']"
-                        @click.stop
-                      >
-                        <template v-for="option in getMoreOptions(tunnel.proxyId)" :key="option.key">
-                          <div v-if="option.type === 'divider'" class="dropdown-divider"></div>
-                          <div
-                            v-else
-                            class="dropdown-item"
-                            @click="handleMoreActionClick(option.key, tunnel.proxyId)"
-                          >
-                            <component :is="option.icon" class="dropdown-icon" />
-                            <span class="dropdown-label">{{ option.label }}</span>
-                          </div>
-                        </template>
-                      </div>
-                    </transition>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </template>
-        </n-card>
+          :tunnel="tunnel"
+          :node-name-map="nodeNameMap"
+          :node-hostname-map="nodeHostnameMap"
+          :is-running="runningTunnels.has(tunnel.proxyId)"
+          :is-loading="actionLoading[tunnel.proxyId] || false"
+          :using-config-file="usingConfigFile.includes(tunnel.proxyId)"
+          @start="startTunnel"
+          @stop="stopTunnel"
+          @view-logs="viewLogs"
+          @view-details="viewTunnelDetails"
+          @copy-address="copyRemoteAddress"
+          @more-action="handleMoreAction"
+        />
       </div>
     </div>
 
@@ -305,352 +97,47 @@
   </div>
 
   <!-- 日志模态框 -->
-  <n-modal
+  <TunnelLogsModal
     v-model:show="showLogs"
-    preset="card"
-    title="隧道日志"
-    style="width: 80%; max-width: 800px"
-    @after-leave="stopAutoRefreshLogs"
-    :auto-focus="false"
-    :trap-focus="false"
-  >
-    <div class="log-container">
-      <div class="log-header">
-        <span>隧道 ID: {{ currentTunnelId }}</span>
-        <n-space :size="8">
-          <n-tag type="error">如果您截图分享此页面请打码红色字体内容</n-tag>
-          <n-button
-            size="small"
-            @click="copyLogs"
-            :autofocus="false"
-          >
-            <template #icon>
-              <Copy :size="14" />
-            </template>
-            复制日志
-          </n-button>
-          <n-button
-            size="small"
-            @click="viewLogs(currentTunnelId!)"
-            :loading="loadingLogs"
-            :autofocus="false"
-          >
-            刷新日志
-          </n-button>
-        </n-space>
-      </div>
-      <div class="log-content">
-        <div class="log-lines" ref="logLinesRef">
-          <!-- 启动提示 - 永久显示在日志内容顶部 -->
-          <div>
-            <span>正在尝试启动隧道...</span>
-          </div>
-          <!-- 日志内容 -->
-          <div
-            v-for="(log, index) in currentLogs"
-            :key="index"
-            class="log-line"
-            v-html="colorizeLog(log)"
-          ></div>
-        </div>
-      </div>
-    </div>
-  </n-modal>
+    :tunnel-id="currentTunnelId"
+    :logs="currentLogs"
+    :loading="loadingLogs"
+    @refresh="viewLogs"
+  />
 
   <!-- 隧道详情模态框 -->
-  <n-modal
+  <TunnelDetailsModal
     v-model:show="showDetails"
-    preset="card"
-    title="隧道详情"
-    style="width: 90%; max-width: 600px"
-  >
-    <div v-if="currentTunnelDetails" class="details-container">
-      <n-descriptions :column="2" bordered label-placement="left">
-        <n-descriptions-item label="状态">
-          <n-tag
-            :type="currentTunnelDetails.isOnline ? 'success' : 'default'"
-            size="small"
-            :bordered="false"
-          >
-            {{ currentTunnelDetails.isOnline ? "在线" : "离线" }}
-          </n-tag>
-        </n-descriptions-item>
-        <n-descriptions-item label="协议类型">
-          <n-tag size="small" :bordered="false">
-            {{ currentTunnelDetails.proxyType.toUpperCase() }}
-          </n-tag>
-        </n-descriptions-item>
-        <n-descriptions-item label="隧道名称" :span="2">
-          {{ currentTunnelDetails.proxyName }}
-        </n-descriptions-item>
-        <n-descriptions-item label="节点" :span="2">
-          #{{ currentTunnelDetails.nodeId }} - {{ nodeNameMap[currentTunnelDetails.nodeId] || "未知节点" }}
-        </n-descriptions-item>
-        <n-descriptions-item label="本地地址">
-          {{ currentTunnelDetails.localIp }}
-        </n-descriptions-item>
-        <n-descriptions-item label="本地端口">
-          {{ currentTunnelDetails.localPort }}
-        </n-descriptions-item>
-        <n-descriptions-item label="链接地址" :span="2">
-          <span class="link-value">
-            <span
-              v-if="
-                currentTunnelDetails.proxyType === 'tcp' ||
-                currentTunnelDetails.proxyType === 'udp'
-              "
-            >
-              {{ getNodeAddress(currentTunnelDetails.proxyId) }}:{{
-                currentTunnelDetails.remotePort || "未分配"
-              }}
-            </span>
-            <span v-else-if="currentTunnelDetails.proxyType === 'http'">
-              http://{{ currentTunnelDetails.domain || "未配置域名" }}
-            </span>
-            <span v-else-if="currentTunnelDetails.proxyType === 'https'">
-              https://{{ currentTunnelDetails.domain || "未配置域名" }}
-            </span>
-            <span v-else>
-              {{ currentTunnelDetails.domain || "未配置域名" }}
-            </span>
-          </span>
-        </n-descriptions-item>
-        <n-descriptions-item label="上次启动">
-          {{ formatTimestamp(currentTunnelDetails.lastStartTime) }}
-        </n-descriptions-item>
-        <n-descriptions-item label="上次关闭">
-          {{ formatTimestamp(currentTunnelDetails.lastCloseTime) }}
-        </n-descriptions-item>
-      </n-descriptions>
-    </div>
-  </n-modal>
+    :tunnel="currentTunnelDetails"
+    :node-name-map="nodeNameMap"
+    :node-hostname-map="nodeHostnameMap"
+  />
 
   <!-- 编辑隧道模态框 -->
-  <n-modal
+  <TunnelEditModal
     v-model:show="showEditModal"
-    preset="card"
-    title="编辑隧道"
-    style="width: 80%; max-width: 600px"
-  >
-    <div v-if="editingTunnel" class="edit-container">
-      <n-form :model="editForm" label-placement="left" label-width="120px">
-        <n-form-item label="隧道名称" required>
-          <n-input
-            v-model:value="editForm.proxyName"
-            placeholder="请输入隧道名称"
-          />
-        </n-form-item>
-
-        <n-form-item label="本地地址" required>
-          <n-input
-            v-model:value="editForm.localIp"
-            placeholder="请输入本地地址"
-          />
-        </n-form-item>
-
-        <n-form-item label="本地端口" required>
-          <n-input-number
-            v-model:value="editForm.localPort"
-            placeholder="请输入本地端口"
-            style="width: 100%"
-          />
-        </n-form-item>
-
-        <n-form-item
-          label="远程端口"
-          v-if="editForm.proxyType === 'tcp' || editForm.proxyType === 'udp'"
-        >
-          <div style="display: flex; gap: 8px; width: 100%">
-            <n-input-number
-              v-model:value="editForm.remotePort"
-              :min="1"
-              :max="65535"
-              placeholder="请输入远程端口"
-              style="flex: 1"
-            />
-            <n-button
-              type="primary"
-              @click="getFreePortForEdit"
-              :loading="gettingPortForEdit"
-            >
-              获取空闲端口
-            </n-button>
-          </div>
-        </n-form-item>
-
-        <n-form-item
-          label="域名"
-          v-if="editForm.proxyType === 'http' || editForm.proxyType === 'https'"
-        >
-          <n-input
-            v-model:value="editForm.domain"
-            placeholder="例如: example.com 或 subdomain.example.com"
-          />
-        </n-form-item>
-
-        <n-divider>高级配置</n-divider>
-
-        <n-form-item label="访问密钥">
-          <n-input
-            v-model:value="editForm.accessKey"
-            placeholder="请输入访问密钥"
-          />
-        </n-form-item>
-
-        <n-form-item label="Host Header Rewrite">
-          <n-input
-            v-model:value="editForm.hostHeaderRewrite"
-            placeholder="请输入 Host 请求头重写值"
-          />
-        </n-form-item>
-
-        <n-form-item label="X-From-Where">
-          <n-input
-            v-model:value="editForm.headerXFromWhere"
-            placeholder="请输入 X-From-Where 请求头值"
-          />
-        </n-form-item>
-
-        <n-form-item label="Proxy Protocol">
-          <n-select
-            v-model:value="editForm.proxyProtocolVersion"
-            placeholder="请选择 Proxy Protocol 版本"
-            :options="[
-              { value: '', label: '不启用' },
-              { value: 'v1', label: 'v1' },
-              { value: 'v2', label: 'v2' },
-            ]"
-          />
-        </n-form-item>
-
-        <n-form-item label="其他选项">
-          <n-space>
-            <n-switch v-model:value="editForm.useEncryption">
-              <template #checked>启用加密</template>
-              <template #unchecked>启用加密</template>
-            </n-switch>
-            <n-switch v-model:value="editForm.useCompression">
-              <template #checked>启用压缩</template>
-              <template #unchecked>启用压缩</template>
-            </n-switch>
-          </n-space>
-        </n-form-item>
-      </n-form>
-
-      <div class="edit-actions">
-        <n-space>
-          <n-button @click="cancelEdit">取消</n-button>
-          <n-button type="primary" @click="saveEdit">确定</n-button>
-        </n-space>
-      </div>
-    </div>
-  </n-modal>
+    :tunnel="editingTunnel"
+    :node-name-map="nodeNameMap"
+    :getting-port="gettingPortForEdit"
+    @save="saveEdit"
+    @cancel="cancelEdit"
+    @get-free-port="getFreePortForEdit"
+  />
 
   <!-- 配置文件模态框 -->
-  <n-modal
+  <TunnelConfigModal
     v-model:show="showConfigModal"
-    preset="card"
-    title="隧道配置文件"
-    style="width: 80%; max-width: 800px; height: 80vh"
-  >
-    <div v-if="currentConfigTunnelId" class="config-container">
-      <div class="config-header">
-        <span class="config-title">隧道 ID: {{ currentConfigTunnelId }}</span>
-        <n-space>
-          <template v-if="!isEditingConfig">
-            <n-button
-              type="primary"
-              size="small"
-              @click="startEditConfig"
-              :disabled="!configContents[activeConfigType]"
-            >
-              <template #icon>
-                <Edit :size="14" />
-              </template>
-              编辑配置
-            </n-button>
-            <n-button
-              type="success"
-              size="small"
-              @click="
-                saveConfigFile(
-                  currentConfigTunnelId!,
-                  activeConfigType,
-                  configContents[activeConfigType],
-                )
-              "
-              :disabled="!configContents[activeConfigType]"
-            >
-              <template #icon>
-                <Save :size="14" />
-              </template>
-              保存到本地
-            </n-button>
-          </template>
-
-          <template v-else>
-            <n-button type="success" size="small" @click="saveEditedConfig">
-              <template #icon>
-                <Check :size="14" />
-              </template>
-              保存修改
-            </n-button>
-            <n-button type="default" size="small" @click="cancelEditConfig">
-              <template #icon>
-                <X :size="14" />
-              </template>
-              取消
-            </n-button>
-          </template>
-        </n-space>
-      </div>
-
-      <div class="config-content">
-        <n-tabs
-          :value="activeConfigType"
-          @update:value="handleConfigTypeChange"
-          type="line"
-          placement="left"
-          tab-style="min-width: 80px;"
-        >
-          <n-tab-pane
-            v-for="format in configTypes"
-            :key="format"
-            :name="format"
-            :tab="format.toUpperCase()"
-            :disabled="!configContents[format]"
-          >
-            <div class="config-code-container">
-              <template v-if="configContents[format]">
-                <n-input
-                  v-if="isEditingConfig"
-                  v-model:value="editableConfigContents[format]"
-                  type="textarea"
-                  :rows="20"
-                  :autosize="{ minRows: 20, maxRows: 30 }"
-                  placeholder="请输入配置内容"
-                  :style="{
-                    fontFamily: 'Consolas, Monaco, Courier New, monospace',
-                    fontSize: '12px'
-                  }"
-                />
-                <n-code
-                  v-else
-                  :code="configContents[format]"
-                  :language="getLanguageForFormat(format)"
-                  show-line-numbers
-                  word-wrap
-                />
-              </template>
-              <div v-else class="no-config">
-                <n-empty description="该格式配置文件不可用" />
-              </div>
-            </div>
-          </n-tab-pane>
-        </n-tabs>
-      </div>
-    </div>
-  </n-modal>
+    :tunnel-id="currentConfigTunnelId"
+    :config-contents="configContents"
+    :editable-contents="editableConfigContents"
+    :is-editing="isEditingConfig"
+    :active-type="activeConfigType"
+    @start-edit="startEditConfig"
+    @save-to-local="saveConfigFile"
+    @save-edit="saveEditedConfig"
+    @cancel-edit="cancelEditConfig"
+    @change-type="handleConfigTypeChange"
+  />
 </template>
 
 <script setup lang="ts">
@@ -659,16 +146,7 @@ import { useMessage, useDialog, NIcon, NDescriptions, NDescriptionsItem } from "
 import { invoke } from "@tauri-apps/api/core";
 import {
   RefreshCw,
-  Play,
-  Square,
-  FileText,
-  Copy,
-  Info,
-  Settings as SettingsIcon,
   Edit,
-  Save,
-  Check,
-  X,
   Inbox,
   FileCode,
   Rocket,
@@ -678,6 +156,13 @@ import {
   LogOut,
   Trash2,
 } from "lucide-vue-next";
+
+// Import child components
+import TunnelCard from "./tunnel/TunnelCard.vue";
+import TunnelEditModal from "./tunnel/TunnelEditModal.vue";
+import TunnelLogsModal from "./tunnel/TunnelLogsModal.vue";
+import TunnelDetailsModal from "./tunnel/TunnelDetailsModal.vue";
+import TunnelConfigModal from "./tunnel/TunnelConfigModal.vue";
 
 interface Tunnel {
   proxyId: number;
@@ -703,6 +188,11 @@ interface Tunnel {
   accessKey: string;
   hostHeaderRewrite: string;
   headerXFromWhere: string;
+  httpUser?: string;
+  httpPassword?: string;
+  crtPath?: string;
+  keyPath?: string;
+  transportProtocol?: string;
 }
 
 interface ApiResponse {
@@ -730,54 +220,6 @@ const error = ref("");
 const actionLoading = ref<Record<number, boolean>>({});
 const nodeNameMap = ref<Record<number, string>>({});
 const nodeHostnameMap = ref<Record<number, string>>({});
-const activeMoreMenu = ref<number | null>(null);
-const menuPosition = ref<Record<number, 'top' | 'bottom'>>({});
-
-// 切换更多菜单
-function toggleMoreMenu(tunnelId: number, event: MouseEvent) {
-  event.stopPropagation();
-  
-  if (activeMoreMenu.value === tunnelId) {
-    activeMoreMenu.value = null;
-  } else {
-    // 计算菜单应该显示在上方还是下方
-    const button = event.currentTarget as HTMLElement;
-    const rect = button.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-    const menuHeight = 400; // 估算菜单高度
-    const spaceBelow = windowHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    
-    // 如果下方空间不足且上方空间更多，则显示在上方
-    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
-      menuPosition.value[tunnelId] = 'top';
-    } else {
-      menuPosition.value[tunnelId] = 'bottom';
-    }
-    
-    activeMoreMenu.value = tunnelId;
-  }
-}
-
-// 点击外部关闭菜单
-function handleClickOutside(event: MouseEvent) {
-  const target = event.target as HTMLElement;
-  if (!target.closest('.more-dropdown-wrapper')) {
-    activeMoreMenu.value = null;
-  }
-}
-
-// 监听点击外部事件和初始化
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-  loadTunnels();
-  loadRunningTunnels();
-});
-
-// 清理事件监听
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
 
 // 加载节点名称列表
 async function loadNodeNames() {
@@ -927,9 +369,6 @@ const showLogs = ref(false);
 const currentLogs = ref<string[]>([]);
 const currentTunnelId = ref<number | null>(null);
 const loadingLogs = ref(false);
-const autoRefreshLogs = ref(true); // 默认开启自动刷新
-const logRefreshTimer = ref<number | null>(null);
-const logLinesRef = ref<HTMLElement | null>(null);
 
 // 查看隧道详情
 const showDetails = ref(false);
@@ -939,19 +378,41 @@ const currentTunnelDetails = ref<Tunnel | null>(null);
 const showEditModal = ref(false);
 const editingTunnel = ref<Tunnel | null>(null);
 const gettingPortForEdit = ref(false);
+
+const proxyProtocolOptions = [
+  { label: "不使用", value: "" },
+  { label: "v1", value: "v1" },
+  { label: "v2", value: "v2" },
+];
+
+const transportProtocolOptions = [
+  { label: "TCP (常规)", value: "tcp" },
+  { label: "QUIC (部分场景可优化延迟)", value: "quic" },
+];
+
+const securityModeOptions = [
+  { label: "禁用", value: "none" },
+  { label: "Basic Auth", value: "basic" },
+  { label: "访问密钥", value: "accessKey" },
+];
+
 const editForm = ref({
   proxyName: "",
   localIp: "",
   localPort: 0,
   remotePort: 0,
   domain: "",
+  sourceProtocol: "http",
+  securityMode: "none",
   accessKey: "",
-  hostHeaderRewrite: "",
-  headerXFromWhere: "",
+  httpUser: "",
+  httpPassword: "",
+  crtPath: "",
+  keyPath: "",
   useEncryption: false,
   useCompression: false,
   proxyProtocolVersion: "",
-  location: "",
+  transportProtocol: "tcp",
   proxyType: "",
   nodeId: 0,
 });
@@ -961,179 +422,13 @@ const viewLogs = async (tunnelId: number) => {
     loadingLogs.value = true;
     currentTunnelId.value = tunnelId;
     const logs = await invoke("api_get_tunnel_logs", { proxyId: tunnelId });
-
-    // 检查是否在底部
-    const wasAtBottom = isScrolledToBottom();
-
     currentLogs.value = logs as string[];
     showLogs.value = true;
-
-    // 如果之前在底部，刷新后自动滚动到底部
-    if (wasAtBottom) {
-      nextTick(() => {
-        scrollToBottom();
-      });
-    }
-
-    // 启动自动刷新
-    startAutoRefreshLogs();
   } catch (error) {
     message.error(`获取日志失败: ${error}`);
   } finally {
     loadingLogs.value = false;
   }
-};
-
-// 复制日志
-const copyLogs = async () => {
-  try {
-    if (currentLogs.value.length === 0) {
-      message.warning("暂无日志内容");
-      return;
-    }
-    
-    // 清理日志中的 ANSI 转义序列和特殊字符
-    const cleanLogs = currentLogs.value.map(log => 
-      log.replace(/\x1b\[[0-9;]*m/g, "").replace(/▣/g, "")
-    ).join("\n");
-    
-    await navigator.clipboard.writeText(cleanLogs);
-    message.success("日志已复制到剪贴板");
-  } catch (error) {
-    console.error("复制日志失败:", error);
-    message.error("复制日志失败");
-  }
-};
-
-// 检查是否滚动到底部
-const isScrolledToBottom = (): boolean => {
-  if (!logLinesRef.value) return true;
-  const element = logLinesRef.value;
-  return element.scrollHeight - element.scrollTop - element.clientHeight < 50;
-};
-
-// 滚动到底部
-const scrollToBottom = () => {
-  if (logLinesRef.value) {
-    logLinesRef.value.scrollTop = logLinesRef.value.scrollHeight;
-  }
-};
-
-// 启动自动刷新日志
-const startAutoRefreshLogs = () => {
-  // 清除已存在的定时器
-  stopAutoRefreshLogs();
-
-  if (autoRefreshLogs.value && currentTunnelId.value) {
-    logRefreshTimer.value = window.setInterval(async () => {
-      if (currentTunnelId.value && showLogs.value && autoRefreshLogs.value) {
-        try {
-          const logs = await invoke("api_get_tunnel_logs", {
-            proxyId: currentTunnelId.value,
-          });
-
-          // 检查是否在底部
-          const wasAtBottom = isScrolledToBottom();
-
-          currentLogs.value = logs as string[];
-
-          // 如果之前在底部，自动滚动到底部
-          if (wasAtBottom) {
-            nextTick(() => {
-              scrollToBottom();
-            });
-          }
-        } catch (error) {
-          console.error("自动刷新日志失败:", error);
-        }
-      }
-    }, 300); // 每2秒刷新一次
-  }
-};
-
-// 停止自动刷新日志
-const stopAutoRefreshLogs = () => {
-  if (logRefreshTimer.value) {
-    clearInterval(logRefreshTimer.value);
-    logRefreshTimer.value = null;
-  }
-};
-
-// 监听自动刷新开关变化
-watch(autoRefreshLogs, (newValue) => {
-  if (newValue && showLogs.value && currentTunnelId.value) {
-    startAutoRefreshLogs();
-  } else {
-    stopAutoRefreshLogs();
-  }
-});
-
-// 为日志添加颜色
-const colorizeLog = (log: string): string => {
-  // 清理 ANSI 转义序列
-  let cleanLog = log.replace(/\x1b\[[0-9;]*m/g, "").replace(/▣/g, "");
-
-  // 时间戳 - 灰色
-  cleanLog = cleanLog.replace(
-    /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)/g,
-    '<span style="color: #888;">$1</span>',
-  );
-
-  // 日志级别 [I] - 蓝色
-  cleanLog = cleanLog.replace(
-    /\[I\]/g,
-    '<span style="color: #42a5f5;">[I]</span>',
-  );
-
-  // 日志级别 [W] - 黄色
-  cleanLog = cleanLog.replace(
-    /\[W\]/g,
-    '<span style="color: #ffc107;">[W]</span>',
-  );
-
-  // 日志级别 [E] - 红色
-  cleanLog = cleanLog.replace(
-    /\[E\]/g,
-    '<span style="color: #ff6b6b;">[E]</span>',
-  );
-
-  // 文件路径 [xxx.go:123] - 绿色（先处理，避免被后续规则匹配）
-  cleanLog = cleanLog.replace(
-    /(\[[^\]]+\.go:\d+\])/g,
-    '<span style="color: #7cb342;">$1</span>',
-  );
-
-  // HTTP/HTTPS URL - 红色加粗（在处理 IP 和域名之前）
-  cleanLog = cleanLog.replace(
-    /\b(https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(?::\d+)?(?:\/[^\s\]]*)?)\b/g,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>',
-  );
-
-  // IP地址:端口 - 红色加粗
-  cleanLog = cleanLog.replace(
-    /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+)\b/g,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>',
-  );
-
-  // 域名:端口 - 红色加粗（排除 .go: 文件路径）
-  cleanLog = cleanLog.replace(
-    /\b([a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+:\d+)\b(?!\.go)/g,
-    (match) => {
-      // 额外检查：如果匹配项以 .go: 结尾，则不高亮
-      if (/\.go:\d+$/.test(match)) {
-        return match;
-      }
-      return `<span style="color: #ff6b6b; font-weight: 600;">${match}</span>`;
-    },
-  );
-
-  // 访问密钥（32位十六进制字符串）- 红色加粗
-  cleanLog = cleanLog.replace(
-    /\b([0-9a-f]{32})\b/gi,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>',
-  );
-
-  return cleanLog;
 };
 
 // 查看隧道详情
@@ -1145,23 +440,8 @@ const viewTunnelDetails = async (tunnelId: number) => {
   }
 };
 
-// 格式化时间戳
-const formatTimestamp = (timestamp: number) => {
-  if (!timestamp) return "未知";
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-};
-
 // 获取节点地址
 const getNodeAddress = (proxyId: number): string => {
-  // 根据proxyId找到对应的隧道，然后获取其nodeId
   const tunnel = tunnels.value.find((t) => t.proxyId === proxyId);
   if (tunnel && nodeHostnameMap.value[tunnel.nodeId]) {
     return nodeHostnameMap.value[tunnel.nodeId];
@@ -1179,19 +459,35 @@ function editTunnel(id: number) {
     }
 
     editingTunnel.value = tunnel;
+    
+    // 根据accessKey和httpUser判断安全模式
+    let securityMode = "none";
+    if (tunnel.accessKey) {
+      securityMode = "accessKey";
+    } else if (tunnel.httpUser) {
+      securityMode = "basic";
+    }
+    
+    // 根据隧道类型和域名判断源协议（简化处理，默认http）
+    const sourceProtocol = "http";
+    
     editForm.value = {
       proxyName: tunnel.proxyName,
       localIp: tunnel.localIp,
       localPort: tunnel.localPort,
       remotePort: tunnel.remotePort,
       domain: tunnel.domain,
-      accessKey: tunnel.accessKey,
-      hostHeaderRewrite: tunnel.hostHeaderRewrite,
-      headerXFromWhere: tunnel.headerXFromWhere,
+      sourceProtocol: sourceProtocol,
+      securityMode: securityMode,
+      accessKey: tunnel.accessKey || "",
+      httpUser: "",
+      httpPassword: "",
+      crtPath: "",
+      keyPath: "",
       useEncryption: tunnel.useEncryption,
       useCompression: tunnel.useCompression,
-      proxyProtocolVersion: tunnel.proxyProtocolVersion,
-      location: tunnel.location,
+      proxyProtocolVersion: tunnel.proxyProtocolVersion || "",
+      transportProtocol: "tcp",
       proxyType: tunnel.proxyType,
       nodeId: tunnel.nodeId,
     };
@@ -1205,13 +501,20 @@ async function updateTunnel(tunnelId: number, updateData: any) {
     actionLoading.value[tunnelId] = true;
     const requestData = {
       proxyId: tunnelId,
-      ...updateData,
-      // 确保所有必需字段存在，如果为空则设置为空字符串
-      location: updateData.location || "",
-      headerXFromWhere: updateData.headerXFromWhere || "",
-      accessKey: updateData.accessKey || "",
-      hostHeaderRewrite: updateData.hostHeaderRewrite || "",
+      proxyName: updateData.proxyName,
+      localIp: updateData.localIp,
+      localPort: updateData.localPort,
+      remotePort: updateData.remotePort || null,
+      domain: updateData.domain || "",
+      location: "",
+      accessKey: updateData.securityMode === 'accessKey' ? updateData.accessKey : "",
+      hostHeaderRewrite: "",
+      headerXFromWhere: "",
+      useEncryption: updateData.useEncryption,
+      useCompression: updateData.useCompression,
       proxyProtocolVersion: updateData.proxyProtocolVersion || "",
+      proxyType: updateData.proxyType,
+      nodeId: updateData.nodeId,
     };
     const responseText = await invoke("api_update_tunnel", {
       data: JSON.stringify(requestData),
@@ -1771,18 +1074,27 @@ async function handleMoreAction(action: string, tunnelId: number) {
   }
 }
 
-// 处理更多菜单点击
-function handleMoreActionClick(action: string, tunnelId: number) {
-  // 关闭菜单
-  activeMoreMenu.value = null;
-  // 执行操作
-  handleMoreAction(action, tunnelId);
-}
+// 定时器引用
+let statusUpdateTimer: number | null = null;
 
-// 定期更新运行状态
-setInterval(() => {
+// 组件挂载时初始化
+onMounted(() => {
+  loadTunnels();
   loadRunningTunnels();
-}, 5000); // 每5秒更新一次
+  
+  // 定期更新运行状态
+  statusUpdateTimer = window.setInterval(() => {
+    loadRunningTunnels();
+  }, 5000);
+});
+
+// 组件卸载时清理
+onUnmounted(() => {
+  if (statusUpdateTimer) {
+    clearInterval(statusUpdateTimer);
+    statusUpdateTimer = null;
+  }
+});
 
 // 暴露给模板的变量和方法
 defineExpose({
@@ -1796,8 +1108,6 @@ defineExpose({
   currentTunnelDetails,
   showEditModal,
   editingTunnel,
-  editForm,
-  gettingPortForEdit,
   showConfigModal,
   currentConfigTunnelId,
   configTypes,
@@ -1820,8 +1130,6 @@ defineExpose({
   viewTunnelDetails,
   saveEdit,
   cancelEdit,
-  formatTimestamp,
-  getNodeAddress,
   getFreePortForEdit,
   getTunnelConfig,
   saveConfigFile,
@@ -1870,204 +1178,8 @@ defineExpose({
   position: relative;
 }
 
-/* 确保下拉框不被裁剪 */
-.tunnel-card {
-  overflow: visible !important;
-  position: relative;
-}
-
-.tunnel-card :deep(.n-card__content) {
-  overflow: visible !important;
-}
-
-.tunnel-card :deep(.n-card__action) {
-  overflow: visible !important;
-  position: relative;
-  z-index: 1;
-}
-
 .error-container {
   margin-bottom: 24px;
-}
-
-.tunnel-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tunnel-name {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.status-tags {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.disabled-tag {
-  background-color: #faad14 !important;
-  color: white !important;
-}
-
-.status-tag {
-  margin-left: 0;
-}
-
-.tunnel-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-}
-
-.info-label {
-  font-size: 13px;
-  min-width: 80px;
-}
-
-.info-value {
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  justify-content: flex-end;
-}
-
-.tunnel-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tunnel-actions-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: nowrap;
-  align-items: center;
-}
-
-.tunnel-actions-row-second {
-  width: 100%;
-  position: relative;
-}
-
-.tunnel-actions-row .n-button {
-  flex: 1;
-  min-width: 80px;
-}
-
-.tunnel-actions-row-second .n-button {
-  width: 100%;
-}
-
-.more-button-full {
-  width: 100% !important;
-  flex: none !important;
-}
-
-.tunnel-actions :deep(.n-button__content) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.tunnel-actions :deep(.n-button__icon) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-}
-
-/* 自定义下拉菜单 */
-.more-dropdown-wrapper {
-  position: relative;
-  display: inline-block;
-  flex: 1;
-  min-width: 80px;
-}
-
-.tunnel-actions-row-second .more-dropdown-wrapper {
-  width: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-}
-
-.more-dropdown-menu {
-  position: absolute;
-  right: 0;
-  min-width: 160px;
-  max-height: 400px;
-  overflow-y: auto;
-  background-color: rgb(72, 72, 78);
-  border-radius: 3px;
-  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
-  padding: 4px 0;
-  z-index: 9999;
-}
-
-.more-dropdown-menu.menu-bottom {
-  top: calc(100% + 4px);
-}
-
-.more-dropdown-menu.menu-top {
-  bottom: calc(100% + 4px);
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 14px;
-}
-
-.dropdown-item:hover {
-  background-color: rgba(255, 255, 255, 0.09);
-}
-
-.dropdown-divider {
-  height: 1px;
-  background-color: rgba(255, 255, 255, 0.09);
-  margin: 4px 0;
-}
-
-.dropdown-icon {
-  margin-right: 8px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
-
-.dropdown-label {
-  flex: 1;
-}
-
-/* 下拉菜单动画 */
-.dropdown-fade-enter-active,
-.dropdown-fade-leave-active {
-  transition: opacity 0.2s, transform 0.2s;
-}
-
-.dropdown-fade-enter-from,
-.dropdown-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
 }
 
 .empty-state {
@@ -2107,26 +1219,6 @@ defineExpose({
     align-items: stretch;
     padding: 0 16px;
   }
-
-  .tunnel-actions {
-    flex-direction: column;
-  }
-
-  .tunnel-actions-row {
-    width: 100%;
-  }
-
-  .tunnel-actions-row .n-button {
-    flex: none;
-  }
-
-  .tunnel-actions-row-second .n-button {
-    width: 100%;
-  }
-
-  .tunnel-card {
-    margin: 0 16px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -2134,171 +1226,12 @@ defineExpose({
     grid-template-columns: 1fr;
     gap: 12px;
   }
-
-  .tunnel-card {
-    margin: 0 12px;
-  }
-
-  .info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .info-value {
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 1200px) {
   .tunnels-grid {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   }
-}
-
-/* 日志模态框样式 */
-.log-container {
-  display: flex;
-  flex-direction: column;
-  height: 500px;
-}
-
-.log-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--n-border-color);
-  margin-bottom: 12px;
-}
-
-.log-content {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.no-logs {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--n-text-color-disabled);
-  font-size: 14px;
-}
-
-.log-lines {
-  flex: 1;
-  overflow-y: auto;
-  background: var(--n-color-embedded);
-  border: 1px solid var(--n-border-color);
-  border-radius: 6px;
-  padding: 12px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.log-line {
-  margin-bottom: 4px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-.starting-hint {
-  background: rgba(66, 165, 245, 0.1);
-  border-left: 3px solid #42a5f5;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-}
-
-.log-line:last-child {
-  margin-bottom: 0;
-}
-
-/* 详情模态框样式 */
-/* 详情模态框样式 */
-.details-container {
-  padding: 4px 0;
-}
-
-.link-value {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  color: #4da8f5;
-  font-weight: 500;
-  word-break: break-all;
-}
-
-/* 编辑模态框样式 */
-.edit-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 16px;
-  border-top: 1px solid var(--n-border-color);
-  margin-top: 16px;
-}
-
-/* 配置文件模态框样式 */
-.config-container {
-  display: flex;
-  flex-direction: column;
-  height: 70vh;
-}
-
-.config-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--n-border-color);
-  margin-bottom: 16px;
-}
-
-.config-title {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--n-text-color);
-}
-
-.config-content {
-  flex: 1;
-  overflow: hidden;
-}
-
-.config-code-container {
-  height: 100%;
-  overflow: auto;
-}
-
-.no-config {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  color: var(--n-text-color-disabled);
-}
-
-/* 配置文件标签页样式 */
-.config-content .n-tabs {
-  height: 100%;
-}
-
-.config-content .n-tabs .n-tabs-pane-wrapper {
-  height: calc(100% - 40px);
-  overflow: auto;
-}
-
-.config-content .n-code {
-  height: 100%;
-  max-height: none;
 }
 </style>
 
