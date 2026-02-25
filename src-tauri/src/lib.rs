@@ -275,6 +275,21 @@ async fn api_get_node_list(_app_handle: tauri::AppHandle) -> Result<String, Stri
     api::node::get_node_list(&config.user_token).await
 }
 
+// 获取创建隧道所需的所有数据API命令
+#[tauri::command]
+async fn api_get_create_proxy_data(_app_handle: tauri::AppHandle) -> Result<String, String> {
+    // 读取配置获取token
+    let config = config::load_unified_config()
+        .await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    api::node::get_create_proxy_data(&config.user_token).await
+}
+
 // 编辑隧道API命令
 #[tauri::command]
 async fn api_update_tunnel(_app_handle: tauri::AppHandle, data: String) -> Result<String, String> {
@@ -1022,6 +1037,7 @@ pub fn run() {
             api_get_popup_notice,
             api_get_statistics,
             api_get_node_list,
+            api_get_create_proxy_data,
             api_get_node_status,
             api_get_free_port,
             api_create_tunnel,

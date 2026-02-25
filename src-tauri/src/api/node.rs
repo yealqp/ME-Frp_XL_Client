@@ -140,3 +140,34 @@ pub async fn get_free_port(token: &str, request: &FreePortRequest) -> Result<Str
 
     Ok(response_text)
 }
+
+/// 获取创建隧道所需的所有数据
+///
+/// # 参数
+/// * `token` - 用户认证token
+///
+/// # 返回
+/// * `Ok(String)` - 包含节点列表、用户组信息和当前用户组的JSON字符串
+/// * `Err(String)` - 错误信息
+pub async fn get_create_proxy_data(token: &str) -> Result<String, String> {
+    let client = create_http_client();
+
+    let response = client
+        .get("https://api.mefrp.com/api/auth/createProxyData")
+        .header("authorization", format!("Bearer {token}"))
+        .header("Content-Type", "application/json")
+        .send()
+        .await
+        .map_err(|e| format!("获取创建隧道数据请求失败: {e}"))?;
+
+    if !response.status().is_success() {
+        return Err(format!("获取创建隧道数据失败，状态码: {}", response.status()));
+    }
+
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("解析创建隧道数据响应失败: {e}"))?;
+
+    Ok(response_text)
+}

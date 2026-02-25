@@ -91,6 +91,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useMessage, useNotification } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
+import { useUIStore } from "../stores/ui";
 import { CheckCircle, AlertTriangle, XCircle, HelpCircle } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
 import { handleApiError } from "@/utils/errorHandler";
@@ -101,6 +102,9 @@ import StatisticsCard from "./common/StatisticsCard.vue";
 // Initialize User Store
 const userStore = useUserStore();
 const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
+
+// Initialize UI Store
+const uiStore = useUIStore();
 
 // Initialize notification
 const notification = useNotification();
@@ -462,33 +466,8 @@ const autoSign = async () => {
   }
 };
 
-// 获取并显示通知
-const fetchAndShowNotification = async () => {
-  try {
-    // 使用 Tauri 的 HTTP 客户端获取通知内容
-    const response = await invoke("api_request", {
-      url: "https://check.yealqp.cn/notification.txt",
-      method: "GET",
-      data: ""
-    }) as string;
-
-    if (response && response.trim()) {
-      // 显示通知（纯文本，不解析 Markdown）
-      notification.info({
-        title: "系统通知",
-        content: response.trim(),
-        duration: 10000, // 10秒后自动关闭
-        closable: true,
-        keepAliveOnHover: true,
-      });
-      
-      console.log("通知已显示");
-    }
-  } catch (error) {
-    console.error("获取通知失败:", error);
-    // 静默失败，不影响用户体验
-  }
-};
+// 获取并显示通知（已移至 UI Store，此处仅保留注释）
+// 通知功能现在由 UI Store 统一管理，确保单实例
 
 // 组件挂载时获取用户信息和系统公告
 onMounted(async () => {
@@ -501,8 +480,8 @@ onMounted(async () => {
   fetchAnnouncements();
   fetchPopupNotice(); // 获取重要公告
   
-  // 获取并显示通知
-  fetchAndShowNotification();
+  // 使用 UI Store 获取并显示系统通知（单实例）
+  uiStore.fetchAndShowNotification(notification);
 });
 </script>
 

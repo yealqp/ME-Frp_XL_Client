@@ -85,20 +85,18 @@ const router = createRouter({
 });
 
 // 路由守卫 - 检查登录状态
-router.beforeEach(async (to, _from, next) => {
+router.beforeEach(async (to, _from) => {
   // Start loading bar (will be handled gracefully even if instance is not ready)
   startLoading();
 
   // 根路径重定向到 dashboard
   if (to.path === "/") {
-    next("/dashboard");
-    return;
+    return "/dashboard";
   }
 
   // 登录页面直接放行
   if (to.path === "/login") {
-    next();
-    return;
+    return true;
   }
 
   // 检查是否需要登录
@@ -108,16 +106,16 @@ router.beforeEach(async (to, _from, next) => {
       const isLoggedIn = config && config.userToken;
 
       if (isLoggedIn) {
-        next();
+        return true;
       } else {
-        next("/login");
+        return "/login";
       }
     } catch (error) {
       console.error("路由守卫检查登录状态失败:", error);
-      next("/login");
+      return "/login";
     }
   } else {
-    next();
+    return true;
   }
 });
 
