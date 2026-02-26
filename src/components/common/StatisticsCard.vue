@@ -137,8 +137,8 @@ onMounted(() => {
 }
 
 .stat-item {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -148,9 +148,10 @@ onMounted(() => {
 }
 
 .stat-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--app-card-color);
+  border-color: var(--app-primary-color);
   transform: translateY(-2px);
+  box-shadow: var(--app-box-shadow-1);
 }
 
 .stat-icon {
@@ -160,7 +161,8 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .stat-content {

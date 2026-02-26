@@ -82,6 +82,15 @@
         </template>
 
         <n-space vertical :size="24">
+          <!-- 主题切换 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>主题模式</h4>
+              <p>选择应用的主题模式（浅色、深色或跟随系统）</p>
+            </div>
+            <ThemeSwitcher mode="buttons" :show-label="true" />
+          </div>
+
           <!-- 侧边栏宽度 -->
           <div class="setting-item">
             <div class="setting-info">
@@ -338,6 +347,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
 import { useSettingsStore } from "../stores/settings";
 import { useUIStore } from "../stores/ui";
+import { useThemeStore } from "../stores/theme";
+import ThemeSwitcher from "./common/ThemeSwitcher.vue";
 import {
   Settings as SettingsIcon,
   Rocket,
@@ -373,6 +384,9 @@ const uiSettings = ref({
   sidebarWidth: 200,
   sidebarCollapsible: true,
 });
+
+// Theme Store
+const themeStore = useThemeStore();
 
 // 防抖定时器
 let sidebarWidthDebounceTimer: number | null = null;
@@ -771,8 +785,8 @@ onMounted(async () => {
 }
 
 .settings-section {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .section-header {
@@ -781,7 +795,7 @@ onMounted(async () => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .section-header :deep(svg) {
@@ -793,7 +807,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px 0;
-  border-bottom: 1px solid #29292c;
+  border-bottom: 1px solid var(--app-divider-color);
 }
 
 .setting-item:last-child {
@@ -808,13 +822,13 @@ onMounted(async () => {
   margin: 0 0 4px 0;
   font-size: 14px;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .setting-info p {
   margin: 0;
   font-size: 12px;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   line-height: 1.4;
 }
 
@@ -828,21 +842,21 @@ onMounted(async () => {
 .tunnel-controls {
   width: 100%;
   padding: 8px 0;
-  border-bottom: 1px solid #29292c;
+  border-bottom: 1px solid var(--app-divider-color);
 }
 
 .tunnel-list {
   width: 100%;
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid #29292c;
+  border: 1px solid var(--app-border-color);
   border-radius: 6px;
-  background: #1a1a1e;
+  background: var(--app-bg-color);
 }
 
 .loading-text,
 .empty-text {
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   font-size: 14px;
   padding: 20px;
   text-align: center;
@@ -856,8 +870,8 @@ onMounted(async () => {
 
 .tunnel-item {
   padding: 12px 16px;
-  border-bottom: 1px solid #29292c;
-  background: #1a1a1e;
+  border-bottom: 1px solid var(--app-divider-color);
+  background: var(--app-bg-color);
   transition: all 0.2s ease;
 }
 
@@ -866,7 +880,7 @@ onMounted(async () => {
 }
 
 .tunnel-item:hover {
-  background: #1e1e22;
+  background: var(--app-card-color);
 }
 
 .tunnel-item.tunnel-disabled {
@@ -915,7 +929,7 @@ onMounted(async () => {
 }
 
 .tunnel-name {
-  color: #ffffff;
+  color: var(--app-text-color);
   font-size: 14px;
   font-weight: 500;
 }
@@ -929,12 +943,12 @@ onMounted(async () => {
 .tunnel-id,
 .tunnel-type,
 .tunnel-port {
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   font-size: 12px;
 }
 
 .tunnel-type {
-  background: #29292c;
+  background: var(--app-card-color);
   padding: 2px 6px;
   border-radius: 3px;
   font-weight: 500;

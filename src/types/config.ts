@@ -27,6 +27,10 @@ export interface UnifiedConfig {
   webuiPort?: number;
   webuiPass?: string;
   hideWebuiEntry?: boolean;
+  
+  // 主题设置
+  themeMode?: 'light' | 'dark' | 'system';
+  enableThemeTransitions?: boolean;
 }
 
 // 旧的用户信息类型（保留用于向后兼容）

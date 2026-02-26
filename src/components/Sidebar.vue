@@ -11,10 +11,14 @@
     @collapse="handleCollapse"
     @expand="handleExpand"
   >
-    <n-config-provider :theme="customTheme">
+    <n-config-provider :theme="themeStore.naiveTheme">
       <div class="sidebar-header" @click="handleLogoClick">
         <h2 class="app-title">
-          <img src="../assets/icon.png" alt="logo" class="logo" />
+          <img 
+            src="../assets/icon.png" 
+            alt="logo" 
+            class="logo"
+          />
           <span v-show="!sidebarCollapsed" class="title-text">ME-Frp</span>
         </h2>
       </div>
@@ -63,11 +67,12 @@
 import { h, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
-import { darkTheme, NIcon, NLayoutSider, useDialog } from "naive-ui";
+import { NIcon, NLayoutSider, useDialog } from "naive-ui";
 import type { MenuOption } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
 import { useUIStore } from "../stores/ui";
+import { useThemeStore } from "../stores/theme";
 import {
   Home,
   PlusCircle,
@@ -87,6 +92,9 @@ const dialog = useDialog();
 // UI Store
 const uiStore = useUIStore();
 const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
+
+// Theme Store
+const themeStore = useThemeStore();
 
 // 监听侧栏宽度变化，确保动画生效
 watch(sidebarWidth, (newWidth, oldWidth) => {
@@ -117,26 +125,6 @@ const loadAdSettings = async () => {
   } catch (error) {
     console.error("加载广告设置失败:", error);
   }
-};
-
-// 自定义主题配置
-const customTheme = {
-  ...darkTheme,
-  common: {
-    ...darkTheme.common,
-    bodyColor: "#101014",
-    cardColor: "#18181c",
-    modalColor: "#18181c",
-    popoverColor: "#18181c",
-    tableHeaderColor: "#18181c",
-    inputColor: "#303033",
-    inputColorDisabled: "#303033",
-    primaryColor: "#349ff4",
-    primaryColorHover: "#4da8f5",
-    primaryColorPressed: "#2891f3",
-    borderColor: "#29292c",
-    dividerColor: "#29292c",
-  },
 };
 
 const emit = defineEmits<{
@@ -262,12 +250,13 @@ onMounted(async () => {
 
 <style scoped>
 .sidebar {
-  background-color: #18181c !important;
+  background-color: var(--app-card-color) !important;
   color: white;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  border-right: 1px solid #29292c !important;
+  border-right: 1px solid var(--app-border-color) !important;
+  transition: none;
 }
 
 /* 侧边栏宽度变化 - 移除过渡动画，让滑块调整时立即响应 */
@@ -286,24 +275,24 @@ onMounted(async () => {
 
 .sidebar-header {
   padding: 20px;
-  border-bottom: 1px solid #29292c;
-  background-color: #18181c;
+  border-bottom: 1px solid var(--app-border-color);
+  background-color: var(--app-card-color);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 68px;
-  transition: all 0.3s ease;
+  transition: none;
   overflow: hidden;
   cursor: pointer;
 }
 
 .sidebar-header:hover {
-  background-color: #202024;
+  background-color: var(--app-bg-color);
 }
 
 .sidebar-header:active {
-  background-color: #28282c;
+  background-color: var(--app-bg-color);
 }
 
 /* 收缩状态下调整 header padding */
@@ -315,7 +304,7 @@ onMounted(async () => {
   font-size: 20px;
   font-weight: 600;
   margin: 0;
-  color: #349ff4;
+  color: var(--app-primary-color);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -355,7 +344,7 @@ onMounted(async () => {
 .nav-content {
   flex: 1;
   padding: 10px 0;
-  background-color: #18181c;
+  background-color: var(--app-card-color);
   overflow-y: auto;
   overflow-x: hidden;
   transition: none;
@@ -364,11 +353,14 @@ onMounted(async () => {
 .sidebar-footer {
   margin-top: auto;
   padding: 20px;
-  border-top: 1px solid #29292c;
-  background-color: #18181c;
+  border-top: 1px solid var(--app-border-color);
+  background-color: var(--app-card-color);
   flex-shrink: 0;
   transition: none;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* 收缩状态下调整 footer padding */
@@ -377,14 +369,15 @@ onMounted(async () => {
 }
 
 /* 广告横幅样式 */
+/* 广告背景使用反向的颜色：浅色模式用浅蓝，深色模式用深蓝 */
 .ad-banner {
   display: block;
   padding: 16px;
-  background: #1e3a8a;
+  background: var(--ad-banner-bg, #349ff4);
   border-radius: 8px;
   text-decoration: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ad-banner-bg, #349ff4) 30%, transparent);
   opacity: 1;
 }
 
@@ -399,8 +392,8 @@ onMounted(async () => {
 
 .ad-banner:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.4);
-  background: #1e40af;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ad-banner-bg, #349ff4) 40%, transparent);
+  background: var(--ad-banner-bg-hover, #4da8f5);
 }
 
 .ad-content {
@@ -428,7 +421,6 @@ onMounted(async () => {
 
 .ad-text {
   flex: 1;
-  color: #ffffff;
 }
 
 .ad-title {
@@ -458,8 +450,7 @@ onMounted(async () => {
   margin-right: 12px !important;
   border-radius: 6px;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-              margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              background-color 0.2s ease;
+              margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   height: 44px;
   overflow: hidden;
@@ -477,7 +468,7 @@ onMounted(async () => {
 
 /* 选中状态 - 持久蓝色背景 */
 :deep(.n-menu .n-menu-item--selected) {
-  background-color: #349ff4 !important;
+  background-color: var(--app-primary-color) !important;
   color: white !important;
 }
 
@@ -491,7 +482,7 @@ onMounted(async () => {
 
 /* hover 状态 - 浅蓝色背景 */
 :deep(.n-menu .n-menu-item:hover:not(.n-menu-item--selected)) {
-  background-color: rgba(52, 159, 244, 0.1) !important;
+  background-color: color-mix(in srgb, var(--app-primary-color) 10%, transparent) !important;
 }
 
 /* 菜单项内容 - 使用相对定位作为参考点 */
@@ -590,13 +581,13 @@ onMounted(async () => {
   width: 0;
 }
 
-/* 分割线样式 - 固定高度和垂直边距，使用 flex 确保不影响布局 */
+/* 分割线样式 - 固定高度和垂直边距,使用 flex 确保不影响布局 */
 :deep(.n-menu .n-menu-divider) {
   margin-top: 8px !important;
   margin-bottom: 8px !important;
   margin-left: 12px !important;
   margin-right: 12px !important;
-  background-color: #29292c !important;
+  background-color: var(--app-divider-color) !important;
   height: 1px !important;
   min-height: 1px !important;
   max-height: 1px !important;

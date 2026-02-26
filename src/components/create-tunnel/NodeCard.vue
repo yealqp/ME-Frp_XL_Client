@@ -167,22 +167,22 @@ function handleClick() {
 
 .node-card--selectable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  background-color: rgba(24, 160, 251, 0.05);
-  border-color: rgba(24, 160, 251, 0.3);
+  box-shadow: var(--app-box-shadow-1);
+  background-color: var(--app-card-color);
+  border-color: var(--app-primary-color);
 }
 
 .node-card--vip.node-card--selectable:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(242, 201, 76, 0.25);
-  background-color: rgba(242, 201, 76, 0.12);
+  box-shadow: var(--app-box-shadow-2);
+  background-color: var(--app-card-color);
   border-color: #f2c94c;
 }
 
 .node-card--selected {
-  background-color: rgba(24, 160, 251, 0.1);
-  border-color: #18a0fb;
-  box-shadow: 0 0 0 2px rgba(24, 160, 251, 0.2);
+  background-color: var(--app-card-color);
+  border-color: var(--app-primary-color);
+  box-shadow: 0 0 0 2px var(--app-primary-color-hover);
 }
 
 .node-card--disabled {
@@ -204,7 +204,7 @@ function handleClick() {
 .node-name {
   font-weight: 600;
   font-size: 14px;
-  color: #d5d3d2;
+  color: var(--app-text-color-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -218,7 +218,7 @@ function handleClick() {
 
 .node-description {
   margin: 0;
-  color: #666;
+  color: var(--app-text-color-3);
   font-size: 12px;
   line-height: 1.4;
   display: -webkit-box;
@@ -258,7 +258,7 @@ function handleClick() {
 
 .load-text {
   font-size: 11px;
-  color: #666;
+  color: var(--app-text-color-3);
   font-weight: 500;
 }
 

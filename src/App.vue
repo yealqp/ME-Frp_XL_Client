@@ -3,10 +3,23 @@ import { onMounted, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { darkTheme, NDialogProvider, NSpin, createDiscreteApi, type LoadingBarProviderInst } from "naive-ui";
+import { 
+  darkTheme, 
+  NDialogProvider, 
+  NSpin, 
+  NConfigProvider,
+  NLoadingBarProvider,
+  NMessageProvider,
+  NNotificationProvider,
+  NLayout,
+  NLayoutContent,
+  createDiscreteApi, 
+  type LoadingBarProviderInst 
+} from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
 import { useCreateTunnelStore } from "./stores/createTunnel";
+import { useThemeStore } from "./stores/theme";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
 import Login from "./components/Login.vue";
@@ -18,6 +31,7 @@ const route = useRoute();
 // Initialize stores
 const authStore = useAuthStore();
 const createTunnelStore = useCreateTunnelStore();
+const themeStore = useThemeStore();
 
 // Loading bar ref
 const loadingBar = ref<LoadingBarProviderInst | null>(null);
@@ -26,30 +40,12 @@ const loadingBar = ref<LoadingBarProviderInst | null>(null);
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
 const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 
-// 自定义主题配置
-const customTheme = {
-  ...darkTheme,
-  common: {
-    ...darkTheme.common,
-    bodyColor: "#101014",
-    cardColor: "#18181c",
-    modalColor: "#18181c",
-    popoverColor: "#18181c",
-    tableHeaderColor: "#18181c",
-    inputColor: "#303033",
-    inputColorDisabled: "#303033",
-    primaryColor: "#349ff4",
-    primaryColorHover: "#4da8f5",
-    primaryColorPressed: "#2891f3",
-    borderColor: "#29292c",
-    dividerColor: "#29292c",
-  },
-};
-
 // 消息和对话框 - 使用 createDiscreteApi
+// Note: Discrete API uses darkTheme for now since it's created at setup time
+// The main app uses themeStore.naiveTheme which is reactive
 const { message } = createDiscreteApi(["message"], {
   configProviderProps: {
-    theme: customTheme,
+    theme: darkTheme,
   },
   messageProviderProps: {
     containerStyle: {
@@ -324,6 +320,9 @@ onMounted(async () => {
 /_/  /_/_____/  /_/   /_/  / .___/   /_/|_/_____/   \\____/_/_/\\___/_/ /_/\\__/  
                           /_/                                                  `);
 
+  // Initialize theme system BEFORE first render
+  await themeStore.initTheme();
+
   // Set loading bar instance immediately - this must happen before any navigation
   // Use nextTick to ensure the ref is available
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -363,7 +362,7 @@ onMounted(async () => {
 
 <template>
   <div class="app-container">
-    <n-config-provider :theme="customTheme">
+    <n-config-provider :theme="themeStore.naiveTheme">
       <n-loading-bar-provider ref="loadingBar">
         <n-message-provider :container-style="{ zIndex: 100000 }">
           <n-dialog-provider>
@@ -456,12 +455,12 @@ body {
 }
 
 .content-layout {
-  background-color: #101014;
+  background-color: var(--app-bg-color);
 }
 
 .content-body {
   padding: 30px;
-  background-color: #101014;
+  background-color: var(--app-bg-color);
   min-height: 100%;
   overflow-y: auto;
 }
@@ -530,7 +529,7 @@ body {
 /* 自定义滚动条样式 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #3e3e42 #18181c;
+  scrollbar-color: rgba(128, 128, 128, 0.5) var(--app-card-color);
 }
 
 *::-webkit-scrollbar {
@@ -539,40 +538,40 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: #18181c;
+  background: var(--app-card-color);
   border-radius: 0;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: #3e3e42;
+  background: rgba(128, 128, 128, 0.5);
   border-radius: 0;
   border: none;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: #4e4e52;
+  background: rgba(128, 128, 128, 0.7);
 }
 
 *::-webkit-scrollbar-thumb:active {
-  background: #5e5e62;
+  background: rgba(128, 128, 128, 0.9);
 }
 
 *::-webkit-scrollbar-corner {
-  background: #18181c;
+  background: var(--app-card-color);
 }
 
 /* Naive UI 组件滚动条样式 */
 .n-scrollbar-rail {
-  background: #18181c !important;
+  background: var(--app-card-color) !important;
 }
 
 .n-scrollbar-rail__scrollbar {
-  background: #3e3e42 !important;
+  background: rgba(128, 128, 128, 0.5) !important;
   border-radius: 0 !important;
 }
 
 .n-scrollbar-rail__scrollbar:hover {
-  background: #4e4e52 !important;
+  background: rgba(128, 128, 128, 0.7) !important;
 }
 
 .n-modal-body-wrapper::-webkit-scrollbar,
@@ -589,7 +588,7 @@ body {
 .n-data-table-base-table-body::-webkit-scrollbar-track,
 .n-select-menu::-webkit-scrollbar-track,
 .n-dropdown-menu::-webkit-scrollbar-track {
-  background: #18181c;
+  background: var(--app-card-color);
   border-radius: 0;
 }
 
@@ -598,7 +597,7 @@ body {
 .n-data-table-base-table-body::-webkit-scrollbar-thumb,
 .n-select-menu::-webkit-scrollbar-thumb,
 .n-dropdown-menu::-webkit-scrollbar-thumb {
-  background: #3e3e42;
+  background: rgba(128, 128, 128, 0.5);
   border-radius: 0;
 }
 
@@ -607,7 +606,7 @@ body {
 .n-data-table-base-table-body::-webkit-scrollbar-thumb:hover,
 .n-select-menu::-webkit-scrollbar-thumb:hover,
 .n-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: #4e4e52;
+  background: rgba(128, 128, 128, 0.7);
 }
 
 /* 路由过渡动画 */

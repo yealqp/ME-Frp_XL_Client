@@ -280,21 +280,22 @@ const getUserGroupType = (
 
 /* 1. 顶部：个人身份长卡片 */
 .profile-header {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--app-card-color);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--app-border-color);
   transition: all 0.3s ease;
 }
 
 .profile-header:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--app-card-color);
+  border-color: var(--app-primary-color);
   transform: translateY(-2px);
+  box-shadow: var(--app-box-shadow-1);
 }
 
 .profile-main {
@@ -344,7 +345,8 @@ const getUserGroupType = (
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .profile-meta {
@@ -369,8 +371,8 @@ const getUserGroupType = (
 }
 
 .spec-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -380,9 +382,10 @@ const getUserGroupType = (
 }
 
 .spec-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--app-card-color);
+  border-color: var(--app-primary-color);
   transform: translateY(-2px);
+  box-shadow: var(--app-box-shadow-1);
 }
 
 .spec-icon {
@@ -392,7 +395,8 @@ const getUserGroupType = (
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .spec-content {

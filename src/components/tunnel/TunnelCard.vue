@@ -564,9 +564,10 @@ onUnmounted(() => {
   min-width: 160px;
   max-height: 400px;
   overflow-y: auto;
-  background-color: rgb(72, 72, 78);
+  background-color: var(--app-card-color);
   border-radius: 3px;
-  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--app-box-shadow-2);
+  border: 1px solid var(--app-border-color);
   padding: 4px 0;
   z-index: 9999;
 }
@@ -585,17 +586,18 @@ onUnmounted(() => {
   padding: 8px 12px;
   cursor: pointer;
   transition: background-color 0.2s;
-  color: rgba(255, 255, 255, 0.82);
+  color: var(--app-text-color);
   font-size: 14px;
 }
 
 .dropdown-item:hover {
-  background-color: rgba(255, 255, 255, 0.09);
+  background-color: var(--app-card-color);
+  filter: brightness(1.1);
 }
 
 .dropdown-divider {
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.09);
+  background-color: var(--app-divider-color);
   margin: 4px 0;
 }
 

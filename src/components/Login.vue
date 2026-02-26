@@ -509,7 +509,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #101014;
+  background: var(--app-bg-color);
   padding: 20px;
 }
 
@@ -518,7 +518,9 @@ onUnmounted(() => {
   max-width: 400px;
   padding: 40px;
   animation: slideUp 0.6s ease-out;
-  position: relative; /* 添加相对定位以支持绝对定位的子元素 */
+  position: relative;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 @keyframes slideUp {
@@ -535,26 +537,34 @@ onUnmounted(() => {
 
 .login-title {
   text-align: center;
-  color: #349ff4;
+  color: var(--app-primary-color);
   margin-bottom: 30px;
   font-size: 24px;
   font-weight: 600;
 }
 
 .login-btn {
-  background-color: #101014 !important;
-  color: #349ff4 !important;
-  border: none !important;
+  margin-top: 8px;
 }
 
-.login-btn:hover {
-  background-color: #1a1a1e !important;
-  color: #4da8f5 !important;
+/* 使用 :deep() 确保样式优先级 */
+/* 登录按钮使用反向的颜色：浅色模式用浅蓝，深色模式用深蓝 */
+:deep(.login-btn.n-button--primary-type) {
+  background-color: var(--login-btn-bg, #349ff4) !important;
+  border-color: var(--login-btn-bg, #349ff4) !important;
+  color: #ffffff !important;
 }
 
-.login-btn:focus {
-  background-color: #101014 !important;
-  color: #349ff4 !important;
+:deep(.login-btn.n-button--primary-type:hover:not(.n-button--disabled)) {
+  background-color: var(--login-btn-bg-hover, #4da8f5) !important;
+  border-color: var(--login-btn-bg-hover, #4da8f5) !important;
+  color: #ffffff !important;
+}
+
+:deep(.login-btn.n-button--primary-type:active:not(.n-button--disabled)) {
+  background-color: var(--login-btn-bg-pressed, #2891f3) !important;
+  border-color: var(--login-btn-bg-pressed, #2891f3) !important;
+  color: #ffffff !important;
 }
 
 .vaptcha-section {
@@ -569,14 +579,14 @@ onUnmounted(() => {
 }
 
 .mode-switch-btn {
-  color: #349ff4 !important;
+  color: var(--app-primary-color) !important;
   font-size: 12px;
   padding: 4px 8px;
   transition: all 0.3s ease;
 }
 
-.mode-switch-btn:hover {
-  color: #4da8f5 !important;
+:deep(.mode-switch-btn:hover) {
+  color: var(--app-primary-color-hover) !important;
   background-color: rgba(52, 159, 244, 0.1) !important;
 }
 

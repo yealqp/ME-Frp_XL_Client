@@ -150,7 +150,7 @@ const getNodeAddress = (proxyId: number): string => {
 
 .link-value {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  color: #4da8f5;
+  color: var(--app-primary-color);
   font-weight: 500;
   word-break: break-all;
 }

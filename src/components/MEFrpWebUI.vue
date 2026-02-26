@@ -870,7 +870,7 @@ const stopStatusCheck = () => {
 }
 
 .tunnel-card {
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .tunnel-header {

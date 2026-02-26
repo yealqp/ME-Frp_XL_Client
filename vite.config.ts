@@ -2,11 +2,10 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig({
   plugins: [vue()],
 
   // Path resolution
@@ -39,15 +38,70 @@ export default defineConfig(async () => ({
   },
   // Handle font assets properly
   assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.eot', '**/*.ttf', '**/*.otf'],
+  // 优化依赖预构建
+  optimizeDeps: {
+    include: ['@cap.js/widget'],
+  },
   build: {
+    // 启用代码分割
     rollupOptions: {
       output: {
+        // 手动分割代码块
+        manualChunks(id) {
+          // 将 Vue 相关库分离
+          if (id.includes('node_modules/vue/') || id.includes('node_modules/vue-router/') || id.includes('node_modules/pinia/')) {
+            return 'vue-vendor';
+          }
+          
+          // 将 Naive UI 按功能模块细分
+          if (id.includes('node_modules/naive-ui/')) {
+            // 基础组件（按钮、卡片、输入框等）
+            if (id.includes('/button/') || id.includes('/card/') || id.includes('/input/') || 
+                id.includes('/space/') || id.includes('/form/')) {
+              return 'naive-ui-basic';
+            }
+            // 反馈组件（消息、通知、对话框等）
+            if (id.includes('/message/') || id.includes('/notification/') || 
+                id.includes('/dialog/') || id.includes('/modal/') || 
+                id.includes('/alert/') || id.includes('/result/')) {
+              return 'naive-ui-feedback';
+            }
+            // 数据展示组件（表格、骨架屏、空状态等）
+            if (id.includes('/table/') || id.includes('/skeleton/') || 
+                id.includes('/empty/') || id.includes('/spin/')) {
+              return 'naive-ui-data';
+            }
+            // 其他 Naive UI 组件
+            return 'naive-ui-other';
+          }
+          
+          // 将 ECharts 分离到单独的块
+          if (id.includes('node_modules/echarts/')) {
+            return 'echarts';
+          }
+          // 将 Tauri API 分离
+          if (id.includes('node_modules/@tauri-apps/')) {
+            return 'tauri';
+          }
+          // 将图标库分离
+          if (id.includes('node_modules/lucide-vue-next/')) {
+            return 'icons';
+          }
+          // 将 markdown-it 分离
+          if (id.includes('node_modules/markdown-it/')) {
+            return 'markdown';
+          }
+        },
+        // 资源文件命名
         assetFileNames: (assetInfo) => {
           if (assetInfo.name && /\.(woff|woff2|eot|ttf|otf)$/.test(assetInfo.name)) {
             return 'webfonts/[name][extname]';
           }
           return 'assets/[name]-[hash][extname]';
         },
+        // 代码块命名
+        chunkFileNames: 'js/[name]-[hash].js',
+        entryFileNames: 'js/[name]-[hash].js',
       },
       external: [],
     },
@@ -55,10 +109,13 @@ export default defineConfig(async () => ({
     commonjsOptions: {
       include: [/node_modules/],
     },
-    // 优化依赖预构建
-    optimizeDeps: {
-      include: ['@cap.js/widget'],
-      force: false,
-    },
+    // 启用压缩（rolldown 自带压缩）
+    minify: true,
+    // 设置代码块大小警告限制
+    chunkSizeWarningLimit: 600,
+    // 启用 CSS 代码分割
+    cssCodeSplit: true,
+    // 设置目标环境以优化输出
+    target: 'esnext',
   },
-}));
+});

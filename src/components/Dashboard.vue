@@ -507,56 +507,25 @@ onMounted(async () => {
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
-/* 使用伪元素创建渐变边框 */
-.system-status-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 1px;
-  border-radius: 0;
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
+/* 状态特定的边框颜色 */
 .system-status-card.status-normal {
-  background: linear-gradient(to right, #1e2a1e, #151515);
-}
-
-.system-status-card.status-normal::before {
-  background: linear-gradient(to right, #2d5a2d, #1a3a1a);
+  border-color: rgba(76, 175, 80, 0.3);
 }
 
 .system-status-card.status-degraded {
-  background: linear-gradient(to right, #2a2618, #151515);
-}
-
-.system-status-card.status-degraded::before {
-  background: linear-gradient(to right, #5a4d1a, #3a3010);
+  border-color: rgba(212, 160, 23, 0.3);
 }
 
 .system-status-card.status-offline {
-  background: linear-gradient(to right, #2a1818, #151515);
-}
-
-.system-status-card.status-offline::before {
-  background: linear-gradient(to right, #5a2020, #3a1010);
+  border-color: rgba(255, 68, 68, 0.3);
 }
 
 .system-status-card.status-unknown {
-  background: linear-gradient(to right, #1a1a1a, #151515);
-}
-
-.system-status-card.status-unknown::before {
-  background: linear-gradient(to right, #333, #1a1a1a);
+  border-color: var(--app-border-color);
 }
 
 .status-content {
@@ -589,7 +558,7 @@ onMounted(async () => {
 }
 
 .status-unknown .status-dot {
-  background-color: #666;
+  background-color: var(--app-text-color-3);
 }
 
 /* 中间文字内容 */
@@ -619,7 +588,7 @@ onMounted(async () => {
 }
 
 .status-unknown .status-title {
-  color: #666;
+  color: var(--app-text-color-3);
 }
 
 .status-description {
@@ -640,7 +609,7 @@ onMounted(async () => {
 }
 
 .status-unknown .status-description {
-  color: #999;
+  color: var(--app-text-color-3);
 }
 
 /* 右侧勾选图标 */
@@ -675,8 +644,8 @@ onMounted(async () => {
 
 .status-unknown .status-check-icon {
   background-color: transparent;
-  border-color: #666;
-  color: #666;
+  border-color: var(--app-text-color-3);
+  color: var(--app-text-color-3);
 }
 
 /* 欢迎信息样式 */
@@ -688,7 +657,7 @@ onMounted(async () => {
 .welcome-text {
   font-size: 28px;
   font-weight: 600;
-  color: #4b4949;
+  color: var(--app-text-color-2);
   margin: 0;
   text-align: left;
 }
@@ -731,12 +700,12 @@ onMounted(async () => {
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: #18181c;
+  background: var(--app-card-color);
   border-radius: 8px;
 }
 
 .user-info-value {
-  color: #ffffff;
+  color: var(--app-text-color);
   font-weight: 600;
   font-size: 14px;
   margin-top: 4px;
@@ -789,7 +758,7 @@ onMounted(async () => {
 }
 
 .announcement-date {
-  color: #999;
+  color: var(--app-text-color-3);
   font-size: 12px;
   white-space: nowrap;
 }

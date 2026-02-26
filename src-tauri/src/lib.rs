@@ -797,6 +797,16 @@ async fn open_webview_window(
     .build()
     .map_err(|e| format!("创建窗口失败: {}", e))?;
 
+    // 添加窗口关闭事件监听器，确保资源正确清理
+    let window_id_clone = window_id.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Destroyed = event {
+            // 窗口被销毁时的清理逻辑
+            // 这里可以添加额外的清理代码
+            println!("WebView 窗口 {} 已销毁", window_id_clone);
+        }
+    });
+
     // 窗口创建后再显示
     window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
     window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;
@@ -811,14 +821,21 @@ async fn close_webview_window(
     window_id: String,
 ) -> Result<(), String> {
     if let Some(window) = app_handle.get_webview_window(&window_id) {
-        // 先隐藏窗口，然后关闭，避免 UI 线程阻塞
+        // 先隐藏窗口，避免用户看到关闭过程
         let _ = window.hide();
         
-        // 使用 tokio 延迟关闭，给 Windows 时间清理资源
+        // 使用更长的延迟，给 Windows 足够的时间清理资源
+        // 这可以避免 "Failed to unregister class" 错误
         let window_clone = window.clone();
         tokio::spawn(async move {
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            let _ = window_clone.close();
+            // 延迟 300ms，确保 UI 线程和 WebView2 有足够时间处理
+            // 这个延迟对用户体验影响很小，因为窗口已经隐藏
+            tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+            
+            // 尝试关闭窗口，忽略错误（窗口可能已经被用户关闭）
+            if let Err(e) = window_clone.close() {
+                eprintln!("关闭窗口时出错（可忽略）: {}", e);
+            }
         });
     }
     Ok(())

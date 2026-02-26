@@ -3,7 +3,11 @@
     <div class="about-content">
       <n-card :bordered="true" class="app-info">
         <template #header>
-          <img src="../assets/icon.png" alt="logo" class="logo" />
+          <img 
+            src="../assets/icon.png" 
+            alt="logo" 
+            class="logo"
+          />
         </template>
         <div class="app-logo">ME-Frp XL Client</div>
         <p class="description"></p>
@@ -359,6 +363,7 @@ import {
 } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
 
+
 interface UpdateCheckResult {
   has_update: boolean;
   latest_version: string;
@@ -601,8 +606,8 @@ const submitFeedback = async () => {
 
 /* 一言卡片样式 */
 .hitokoto-card {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .hitokoto-card :deep(.n-card__content) {
@@ -625,13 +630,13 @@ const submitFeedback = async () => {
 .quote-icon {
   flex-shrink: 0;
   margin-top: 4px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--app-text-color-3);
 }
 
 .hitokoto-sentence {
   font-size: 16px;
   line-height: 1.8;
-  color: #ffffff;
+  color: var(--app-text-color);
   font-weight: 500;
   letter-spacing: 0.5px;
 }
@@ -644,45 +649,49 @@ const submitFeedback = async () => {
 
 .hitokoto-from {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--app-text-color-2);
   font-style: italic;
 }
 
 .hitokoto-author {
   margin-left: 4px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--app-text-color-1);
 }
 
 .hitokoto-actions {
   display: flex;
   justify-content: center;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid var(--app-divider-color);
 }
 
 .hitokoto-actions .n-button {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--app-text-color-2);
   transition: all 0.3s ease;
 }
 
 .hitokoto-actions .n-button:hover {
-  color: #ffffff;
+  color: var(--app-primary-color);
   transform: scale(1.05);
 }
 
 .hitokoto-actions .n-button :deep(.n-button__icon) {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--app-text-color-2);
+}
+
+.hitokoto-actions .n-button:hover :deep(.n-button__icon) {
+  color: var(--app-primary-color);
 }
 
 .app-info {
   text-align: center;
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .tech-stack {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 /* 技术栈标签悬停效果 */
@@ -737,7 +746,7 @@ const submitFeedback = async () => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background-color: #18181c;
+  background-color: var(--app-card-color);
   border-radius: 6px;
   font-size: 14px;
 }
@@ -861,7 +870,7 @@ const submitFeedback = async () => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .section-header :deep(svg) {
@@ -883,8 +892,8 @@ const submitFeedback = async () => {
 
 /* 帮助与反馈卡片样式 */
 .feedback-card {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .feedback-content {
@@ -901,7 +910,7 @@ const submitFeedback = async () => {
   gap: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--app-text-color);
   margin-bottom: 8px;
 }
 
@@ -911,7 +920,7 @@ const submitFeedback = async () => {
 }
 
 .section-description {
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   font-size: 14px;
   line-height: 1.6;
   margin: 0 0 12px 0;
@@ -951,7 +960,7 @@ const submitFeedback = async () => {
 }
 
 .card-description {
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   font-size: 14px;
   line-height: 1.6;
   margin: 0 0 16px 0;
@@ -972,7 +981,7 @@ const submitFeedback = async () => {
   display: flex;
   justify-content: center;
   padding: 20px;
-  background: #18181c;
+  background: var(--app-card-color);
   border-radius: 8px;
 }
 
@@ -987,7 +996,7 @@ const submitFeedback = async () => {
 .update-info-title {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffffd1;
+  color: var(--app-text-color-1);
   margin-bottom: 12px;
 }
 
@@ -995,7 +1004,7 @@ const submitFeedback = async () => {
   padding: 12px 0;
   line-height: 1.8;
   font-size: 14px;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -1010,12 +1019,12 @@ const submitFeedback = async () => {
   margin: 16px 0 10px 0;
   font-weight: 600;
   line-height: 1.4;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .update-content-markdown :deep(h1) {
   font-size: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--app-divider-color);
   padding-bottom: 8px;
 }
 
@@ -1035,7 +1044,7 @@ const submitFeedback = async () => {
 /* h2下的分割线 */
 .update-content-markdown :deep(.h2-divider) {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--app-divider-color);
   margin: 0 0 12px 0;
 }
 
@@ -1043,7 +1052,7 @@ const submitFeedback = async () => {
 .update-content-markdown :deep(p) {
   margin: 10px 0;
   line-height: 1.8;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 
 /* 列表样式 */
@@ -1057,7 +1066,7 @@ const submitFeedback = async () => {
   margin: 0;
   line-height: 1.8;
   padding-left: 8px;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 
 .update-content-markdown :deep(ul li) {
@@ -1092,23 +1101,23 @@ const submitFeedback = async () => {
 
 /* 行内代码样式 */
 .update-content-markdown :deep(code.inline-code) {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--app-card-color);
   color: #ff6b6b;
   padding: 2px 6px;
   border-radius: 3px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--app-border-color);
 }
 
 /* 代码块样式 */
 .update-content-markdown :deep(pre) {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--app-card-color);
   padding: 12px;
   border-radius: 4px;
   overflow-x: auto;
   margin: 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--app-border-color);
 }
 
 .update-content-markdown :deep(pre code) {
@@ -1118,7 +1127,7 @@ const submitFeedback = async () => {
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 
 /* 引用块样式 */
@@ -1165,7 +1174,7 @@ const submitFeedback = async () => {
 /* 强调文本 */
 .update-content-markdown :deep(strong) {
   font-weight: 600;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .update-content-markdown :deep(em) {
@@ -1180,7 +1189,7 @@ const submitFeedback = async () => {
 /* 水平分割线 */
 .update-content-markdown :deep(hr) {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--app-divider-color);
   margin: 16px 0;
 }
 
@@ -1192,10 +1201,10 @@ const submitFeedback = async () => {
 
 .update-list li {
   padding: 8px 0;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   font-size: 14px;
   line-height: 1.6;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--app-divider-color);
 }
 
 .update-list li:last-child {
@@ -1217,7 +1226,7 @@ const submitFeedback = async () => {
   padding: 12px 0;
   line-height: 1.8;
   font-size: 14px;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -1232,12 +1241,12 @@ const submitFeedback = async () => {
   margin: 16px 0 10px 0;
   font-weight: 600;
   line-height: 1.4;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .changelog-content-markdown :deep(h1) {
   font-size: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--app-divider-color);
   padding-bottom: 8px;
 }
 
@@ -1256,14 +1265,14 @@ const submitFeedback = async () => {
 
 .changelog-content-markdown :deep(.h2-divider) {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--app-divider-color);
   margin: 0 0 12px 0;
 }
 
 .changelog-content-markdown :deep(p) {
   margin: 10px 0;
   line-height: 1.8;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 
 .changelog-content-markdown :deep(ul),
@@ -1276,7 +1285,7 @@ const submitFeedback = async () => {
   margin: 0;
   line-height: 1.8;
   padding-left: 8px;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 
 .changelog-content-markdown :deep(ul li) {
@@ -1310,22 +1319,22 @@ const submitFeedback = async () => {
 }
 
 .changelog-content-markdown :deep(code.inline-code) {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--app-card-color);
   color: #ff6b6b;
   padding: 2px 6px;
   border-radius: 3px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--app-border-color);
 }
 
 .changelog-content-markdown :deep(pre) {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--app-card-color);
   padding: 12px;
   border-radius: 4px;
   overflow-x: auto;
   margin: 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--app-border-color);
 }
 
 .changelog-content-markdown :deep(pre code) {
@@ -1335,7 +1344,7 @@ const submitFeedback = async () => {
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
   line-height: 1.6;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 
 .changelog-content-markdown :deep(blockquote.custom-blockquote) {
@@ -1379,7 +1388,7 @@ const submitFeedback = async () => {
 
 .changelog-content-markdown :deep(strong) {
   font-weight: 600;
-  color: #ffffff;
+  color: var(--app-text-color);
 }
 
 .changelog-content-markdown :deep(em) {
@@ -1392,13 +1401,13 @@ const submitFeedback = async () => {
 
 .changelog-content-markdown :deep(hr) {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--app-divider-color);
   margin: 16px 0;
 }
 
 .no-changelog {
   text-align: center;
   padding: 40px 20px;
-  color: #a0a0a0;
+  color: var(--app-text-color-2);
 }
 </style>

@@ -232,7 +232,7 @@
     >
       <n-space vertical :size="16">
         <div>
-          <p style="margin-bottom: 8px; color: #ffffffd1; font-size: 14px">
+          <p style="margin-bottom: 8px; font-size: 14px">
             CDK兑换码
           </p>
           <n-input
@@ -277,13 +277,32 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
-import * as echarts from "echarts";
-import type { ECharts } from "echarts";
+// 按需导入 ECharts 核心和需要的组件
+import * as echarts from "echarts/core";
+import { LineChart } from "echarts/charts";
+import {
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import type { ECharts } from "echarts/core";
 import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
 import { TrendingUp, Gift, Ticket, History, Power } from "lucide-vue-next";
+
+// 注册 ECharts 组件
+echarts.use([
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  CanvasRenderer,
+]);
 
 const router = useRouter();
 const message = useMessage();
@@ -663,6 +682,11 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
     return;
   }
 
+  // 获取 CSS 变量值的辅助函数
+  const getCSSVar = (varName: string): string => {
+    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  };
+
   // 将字节转换为 KB
   const trafficInKB = data.trafficIn.map((v) => Number((v / 1024).toFixed(2)));
   const trafficOutKB = data.trafficOut.map((v) =>
@@ -717,7 +741,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
     legend: {
       data: ["下载流量", "上传流量", "总流量"],
       textStyle: {
-        color: "#ffffffd1",
+        color: getCSSVar('--app-text-color') || '#ffffffd1',
       },
       top: 10,
     },
@@ -734,11 +758,11 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: "#3e3e42",
+          color: getCSSVar('--app-border-color') || '#3e3e42',
         },
       },
       axisLabel: {
-        color: "#a0a0a0",
+        color: getCSSVar('--app-text-color-3') || '#a0a0a0',
         formatter: (value: string) => {
           // 格式化日期，只显示月-日
           const date = new Date(value);
@@ -749,7 +773,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
         show: true,
         type: "line",
         lineStyle: {
-          color: "#349ff4",
+          color: getCSSVar('--app-primary-color') || '#349ff4',
           width: 2,
           type: "solid",
         },
@@ -763,19 +787,19 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
       type: "value",
       name: `流量 (${unit})`,
       nameTextStyle: {
-        color: "#a0a0a0",
+        color: getCSSVar('--app-text-color-3') || '#a0a0a0',
       },
       axisLine: {
         lineStyle: {
-          color: "#3e3e42",
+          color: getCSSVar('--app-border-color') || '#3e3e42',
         },
       },
       axisLabel: {
-        color: "#a0a0a0",
+        color: getCSSVar('--app-text-color-3') || '#a0a0a0',
       },
       splitLine: {
         lineStyle: {
-          color: "#2a2a2e",
+          color: getCSSVar('--app-divider-color') || '#2a2a2e',
         },
       },
     },
@@ -786,7 +810,7 @@ const updateChart = (data: TrafficStatsResponse["data"]) => {
         smooth: true,
         data: trafficData.trafficIn,
         itemStyle: {
-          color: "#349ff4",
+          color: getCSSVar('--app-primary-color') || '#349ff4',
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -1099,8 +1123,8 @@ onBeforeUnmount(() => {
 }
 /* 流量统计卡片样式 */
 .traffic-stats-card {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   position: relative;
   z-index: 1;
 }
@@ -1143,13 +1167,14 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(24, 24, 28, 0.8);
+  background: var(--app-card-color);
+  opacity: 0.9;
   z-index: 10;
   pointer-events: none; /* 加载层不阻止鼠标事件 */
 }
 
 .chart-loading p {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 14px;
   margin: 0;
 }
@@ -1161,9 +1186,9 @@ onBeforeUnmount(() => {
   z-index: 9999;
   min-width: 140px;
   max-width: 200px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
-  background: #18181c !important;
-  border-color: #29292c !important;
+  box-shadow: var(--app-box-shadow-2) !important;
+  background: var(--app-card-color) !important;
+  border-color: var(--app-border-color) !important;
 }
 
 .custom-tooltip :deep(.n-card__content) {
@@ -1173,10 +1198,10 @@ onBeforeUnmount(() => {
 .tooltip-date {
   font-size: 15px;
   font-weight: 600;
-  color: #ffffff !important;
+  color: var(--app-text-color-1) !important;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #29292c;
+  border-bottom: 1px solid var(--app-divider-color);
 }
 
 .tooltip-content {
@@ -1193,7 +1218,7 @@ onBeforeUnmount(() => {
 }
 
 .tooltip-label {
-  color: #ffffff !important;
+  color: var(--app-text-color) !important;
 }
 
 /* 签到按钮区域样式 */
@@ -1211,8 +1236,8 @@ onBeforeUnmount(() => {
 
 /* CDK相关样式 */
 .cdk-section {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .section-header {
@@ -1221,11 +1246,11 @@ onBeforeUnmount(() => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--app-text-color-1);
 }
 
 .section-header :deep(svg) {
-  color: #349ff4;
+  color: var(--app-primary-color);
 }
 
 .cdk-redeem-item {
@@ -1239,13 +1264,13 @@ onBeforeUnmount(() => {
   margin: 0 0 4px 0;
   font-size: 14px;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--app-text-color-1);
 }
 
 .cdk-info p {
   margin: 0;
   font-size: 12px;
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   line-height: 1.4;
 }
 
@@ -1256,7 +1281,7 @@ onBeforeUnmount(() => {
 
 .loading-text,
 .empty-text {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 14px;
   padding: 20px;
   text-align: center;
@@ -1273,15 +1298,16 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #1a1a1e;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 6px;
   transition: all 0.2s ease;
 }
 
 .cdk-history-card:hover {
-  background: #1e1e22;
-  border-color: #3a3a3e;
+  background: var(--app-card-color);
+  border-color: var(--app-primary-color);
+  filter: brightness(1.05);
 }
 
 .cdk-card-left {
@@ -1321,13 +1347,13 @@ onBeforeUnmount(() => {
 }
 
 .cdk-card-value {
-  color: #ffffff;
+  color: var(--app-text-color-1);
   font-size: 14px;
   font-weight: 500;
 }
 
 .cdk-card-time {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 12px;
 }
 
@@ -1337,13 +1363,13 @@ onBeforeUnmount(() => {
 }
 
 .cdk-card-code {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 12px;
   font-family: "Courier New", monospace;
   padding: 4px 8px;
-  background: #0f0f12;
+  background: var(--app-card-color);
   border-radius: 4px;
-  border: 1px solid #29292c;
+  border: 1px solid var(--app-border-color);
 }
 
 .cdk-history-footer {
@@ -1352,11 +1378,11 @@ onBeforeUnmount(() => {
   align-items: center;
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid #29292c;
+  border-top: 1px solid var(--app-divider-color);
 }
 
 .pagination-info {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 13px;
 }
 

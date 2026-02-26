@@ -13,6 +13,34 @@
   font-size: 14px;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  
+  /* Markdown 颜色变量 - 亮色模式默认值 */
+  --md-primary-color: #2080f0;
+  --md-primary-hover: #4098fc;
+  --md-code-bg: rgba(0, 0, 0, 0.05);
+  --md-code-text: #d63384;
+  --md-code-border: rgba(0, 0, 0, 0.1);
+  --md-blockquote-border: #2080f0;
+  --md-blockquote-bg: rgba(32, 128, 240, 0.08);
+  --md-marker-color: #2080f0;
+  --md-table-header-bg: rgba(32, 128, 240, 0.08);
+  --md-table-hover-bg: rgba(0, 0, 0, 0.02);
+  --md-divider-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 暗色模式下的 Markdown 颜色 */
+body[style*="--app-bg-color: #101014"] .markdown-content {
+  --md-primary-color: #4da8f5;
+  --md-primary-hover: #6bb8f7;
+  --md-code-bg: rgba(255, 255, 255, 0.08);
+  --md-code-text: #ff6b6b;
+  --md-code-border: rgba(255, 255, 255, 0.1);
+  --md-blockquote-border: #4da8f5;
+  --md-blockquote-bg: rgba(52, 159, 244, 0.1);
+  --md-marker-color: #4da8f5;
+  --md-table-header-bg: rgba(52, 159, 244, 0.1);
+  --md-table-hover-bg: rgba(255, 255, 255, 0.05);
+  --md-divider-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Markdown 标题样式 */
@@ -25,17 +53,20 @@
   margin: 16px 0 10px 0;
   font-weight: 600;
   line-height: 1.4;
+  color: var(--app-text-color);
 }
 
 .markdown-content h1 {
   font-size: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid var(--md-primary-color);
   padding-bottom: 8px;
 }
 
 .markdown-content h2 {
   font-size: 18px;
   margin-bottom: 4px;
+  border-bottom: 1px solid var(--md-primary-color);
+  padding-bottom: 6px;
 }
 
 .markdown-content h3 {
@@ -46,17 +77,16 @@
   font-size: 15px;
 }
 
-/* h2下的分割线 */
+/* h2下的分割线 - 已移除，使用 h2 自带的蓝色下划线 */
 .markdown-content .h2-divider {
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin: 0 0 12px 0;
+  display: none;
 }
 
 /* 段落样式 */
 .markdown-content p {
   margin: 10px 0;
   line-height: 1.8;
+  color: var(--app-text-color-2);
 }
 
 /* 列表样式 */
@@ -70,6 +100,7 @@
   margin: 0;
   line-height: 1.8;
   padding-left: 8px;
+  color: var(--app-text-color-2);
 }
 
 .markdown-content ul li {
@@ -78,6 +109,7 @@
 
 .markdown-content ul li::marker {
   font-size: 0.8em;
+  color: var(--md-marker-color);
 }
 
 .markdown-content ol li {
@@ -86,6 +118,7 @@
 
 .markdown-content ol li::marker {
   font-weight: 600;
+  color: var(--md-marker-color);
 }
 
 .markdown-content ul ul,
@@ -102,23 +135,23 @@
 
 /* 行内代码样式 */
 .markdown-content code.inline-code {
-  background: rgba(0, 0, 0, 0.3);
-  color: #ff6b6b;
+  background: var(--md-code-bg);
+  color: var(--md-code-text);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--md-code-border);
 }
 
 /* 代码块样式 */
 .markdown-content pre {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--md-code-bg);
   padding: 12px;
   border-radius: 4px;
   overflow-x: auto;
   margin: 12px 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--md-code-border);
 }
 
 .markdown-content pre code {
@@ -128,24 +161,26 @@
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
   line-height: 1.6;
+  color: var(--app-text-color-2);
 }
 
 /* 引用块样式 */
 .markdown-content blockquote.custom-blockquote {
-  border-left: 4px solid #4da8f5;
+  border-left: 4px solid var(--md-blockquote-border);
   margin: 12px 0;
   padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--md-blockquote-bg);
   border-radius: 0 4px 4px 0;
 }
 
 .markdown-content blockquote.custom-blockquote p {
   margin: 4px 0;
+  color: var(--app-text-color-2);
 }
 
-/* 链接样式 - 全局统一为 #4da8f5 */
+/* 链接样式 */
 .markdown-content a {
-  color: #4da8f5;
+  color: var(--md-primary-color);
   text-decoration: none;
   transition: color 0.2s;
   font-weight: 500;
@@ -159,12 +194,12 @@
   bottom: 0;
   width: 0;
   height: 1px;
-  background-color: #6bb8f7;
+  background-color: var(--md-primary-hover);
   transition: width 0.3s ease;
 }
 
 .markdown-content a:hover {
-  color: #6bb8f7;
+  color: var(--md-primary-hover);
 }
 
 .markdown-content a:hover::after {
@@ -174,6 +209,7 @@
 /* 强调文本 */
 .markdown-content strong {
   font-weight: 600;
+  color: var(--app-text-color);
 }
 
 .markdown-content em {
@@ -183,12 +219,13 @@
 /* 删除线 */
 .markdown-content del {
   text-decoration: line-through;
+  opacity: 0.7;
 }
 
 /* 水平分割线 */
 .markdown-content hr {
   border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--md-divider-color);
   margin: 16px 0;
 }
 
@@ -197,22 +234,23 @@
   width: 100%;
   border-collapse: collapse;
   margin: 12px 0;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--md-code-border);
 }
 
 .markdown-content table th,
 .markdown-content table td {
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--md-code-border);
   text-align: left;
+  color: var(--app-text-color-2);
 }
 
 .markdown-content table th {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--md-table-header-bg);
   font-weight: 600;
+  color: var(--app-text-color);
 }
 
 .markdown-content table tr:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--md-table-hover-bg);
 }
