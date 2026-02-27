@@ -409,10 +409,14 @@ onMounted(() => {
 }
 
 .filter-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 0px;
 }
 
 .table-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 0px;
 }
 

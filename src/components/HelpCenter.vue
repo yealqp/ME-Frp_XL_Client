@@ -223,6 +223,12 @@ const openPolicy = async (tab: string) => {
   width: 100%;
 }
 
+/* 帮助中心卡片样式 */
+.help-grid :deep(.n-card) {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
+}
+
 .tags {
   display: flex;
   gap: 8px;

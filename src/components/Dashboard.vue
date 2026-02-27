@@ -724,6 +724,8 @@ onMounted(async () => {
 
 /* 系统公告卡片样式 */
 .announcement-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   margin-bottom: 16px;
   transition: all 0.3s ease;
 }

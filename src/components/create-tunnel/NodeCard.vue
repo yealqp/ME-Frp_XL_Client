@@ -155,6 +155,8 @@ function handleClick() {
 
 <style scoped>
 .node-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   transition: all 0.3s ease;
   border-radius: 0px;
   width: 100%;

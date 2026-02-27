@@ -859,8 +859,8 @@ const submitFeedback = async () => {
 
 /* 检查更新卡片样式 */
 .update-card {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .section-header {
@@ -941,8 +941,8 @@ const submitFeedback = async () => {
 
 /* 仙林云计算卡片样式 */
 .sponsor-card {
-  background: #18181c;
-  border: 1px solid #29292c;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
 }
 
 .sponsor-card .card-description {

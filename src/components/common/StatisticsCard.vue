@@ -127,6 +127,8 @@ onMounted(() => {
 
 <style scoped>
 .statistics-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   width: 100%;
 }
 

@@ -1239,6 +1239,12 @@ onBeforeUnmount(() => {
   border: 1px solid var(--app-border-color);
 }
 
+/* 账户与安全卡片样式 */
+.security-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
+}
+
 .section-header {
   display: flex;
   align-items: center;

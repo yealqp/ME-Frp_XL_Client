@@ -884,21 +884,25 @@ onMounted(async () => {
 
 .tunnel-item.tunnel-disabled {
   opacity: 0.6;
-  background: #161619;
+  background: var(--app-card-color);
+  filter: brightness(0.95);
 }
 
 .tunnel-item.tunnel-disabled:hover {
-  background: #191919;
+  background: var(--app-card-color);
+  filter: brightness(0.9);
 }
 
 .tunnel-item.tunnel-deleted {
-  background: #2a1a1a;
-  border: 1px solid #5c2626;
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   opacity: 0.9;
+  filter: brightness(0.85) saturate(1.2);
 }
 
 .tunnel-item.tunnel-deleted:hover {
-  background: #2d1d1d;
+  background: var(--app-card-color);
+  filter: brightness(0.8) saturate(1.2);
 }
 
 .deleted-tunnel-content {

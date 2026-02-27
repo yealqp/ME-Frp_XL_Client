@@ -457,6 +457,8 @@ defineExpose({
 }
 
 .node-info-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 0px;
   margin-bottom: 20px;
 }
@@ -531,6 +533,8 @@ defineExpose({
 }
 
 .config-form-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 0px;
 }
 

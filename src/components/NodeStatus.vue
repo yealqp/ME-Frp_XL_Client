@@ -231,6 +231,12 @@ onMounted(() => {
   overflow-y: auto;
 }
 
+/* 节点监控卡片样式 */
+.node-status-container :deep(.n-card) {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
+}
+
 .header-bar {
   display: flex;
   justify-content: space-between;
@@ -241,6 +247,6 @@ onMounted(() => {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: #fff;
+  color: var(--app-text-color);
 }
 </style>

@@ -88,6 +88,8 @@ const emit = defineEmits<NodeFilterBarEmits>();
 
 <style scoped>
 .filter-card {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   margin-bottom: 20px;
   border-radius: 0px;
 }

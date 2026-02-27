@@ -443,6 +443,8 @@ onUnmounted(() => {
 <style scoped>
 /* 确保下拉框不被裁剪 */
 .tunnel-card {
+  background: var(--app-bg-color);
+  border: 1px solid var(--app-border-color);
   overflow: visible !important;
   position: relative;
   z-index: 1;
@@ -462,6 +464,8 @@ onUnmounted(() => {
 }
 
 .tunnel-card :deep(.n-card__action) {
+  background: var(--app-card-color);
+  border-top: 1px solid var(--app-divider-color);
   overflow: visible !important;
   position: relative;
   z-index: 1;

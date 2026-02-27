@@ -799,6 +799,8 @@ const stopStatusCheck = () => {
 .webui-section,
 .webui-embed-section,
 .webui-logs-section {
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 0px;
 }
 
