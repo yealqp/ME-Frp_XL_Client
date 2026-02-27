@@ -1114,8 +1114,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .user-center {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 20px;

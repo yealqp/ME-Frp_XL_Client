@@ -484,7 +484,7 @@ defineExpose({
 .node-name {
   font-weight: 600;
   font-size: 14px;
-  color: #d5d3d2;
+  color: var(--app-text-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -535,7 +535,7 @@ defineExpose({
 }
 
 .tunnel-form {
-  max-width: 600px;
+  width: 100%;
 }
 
 @media (max-width: 768px) {

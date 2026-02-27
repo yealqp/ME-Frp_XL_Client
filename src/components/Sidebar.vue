@@ -256,17 +256,16 @@ onMounted(async () => {
   flex-direction: column;
   height: 100vh;
   border-right: 1px solid var(--app-border-color) !important;
-  transition: none;
 }
 
-/* 侧边栏宽度变化 - 移除过渡动画，让滑块调整时立即响应 */
+/* 侧边栏宽度变化 - 保留收起展开动画 */
 :deep(.n-layout-sider) {
-  transition: none !important;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   will-change: width;
 }
 
 :deep(.n-layout-sider__border) {
-  transition: none !important;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 :deep(.n-layout-sider-scroll-container) {
@@ -282,7 +281,6 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   min-height: 68px;
-  transition: none;
   overflow: hidden;
   cursor: pointer;
 }
@@ -308,7 +306,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 10px;
-  transition: none;
   white-space: nowrap;
   justify-content: center;
   width: 100%;
@@ -333,7 +330,6 @@ onMounted(async () => {
   height: 28px;
   object-fit: contain;
   flex-shrink: 0;
-  transition: none;
 }
 
 /* 收缩状态下 logo 保持居中 */
@@ -347,7 +343,6 @@ onMounted(async () => {
   background-color: var(--app-card-color);
   overflow-y: auto;
   overflow-x: hidden;
-  transition: none;
 }
 
 .sidebar-footer {
@@ -356,7 +351,6 @@ onMounted(async () => {
   border-top: 1px solid var(--app-border-color);
   background-color: var(--app-card-color);
   flex-shrink: 0;
-  transition: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;

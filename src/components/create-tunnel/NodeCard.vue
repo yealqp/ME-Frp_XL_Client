@@ -157,7 +157,7 @@ function handleClick() {
 .node-card {
   transition: all 0.3s ease;
   border-radius: 0px;
-  max-width: 365px;
+  width: 100%;
   position: relative;
 }
 

@@ -1,7 +1,7 @@
 <template>
   <n-card
     :bordered="true"
-    class="tunnel-card"
+    :class="['tunnel-card', { 'menu-open': showMoreMenu || isMenuClosing }]"
     hoverable
   >
     <!-- 卡片头部 -->
@@ -94,16 +94,6 @@
             </template>
             复制地址
           </n-button>
-          <n-button
-            type="default"
-            size="small"
-            @click="emit('view-details', tunnel.proxyId)"
-          >
-            <template #icon>
-              <Info :size="14" />
-            </template>
-            详情
-          </n-button>
           <div class="more-dropdown-wrapper">
             <n-button
               type="default"
@@ -137,7 +127,7 @@
           </div>
         </div>
 
-        <!-- 启动后：第一行4个按钮，第二行更多按钮独占 -->
+        <!-- 启动后：第一行3个按钮，第二行更多按钮独占 -->
         <template v-else>
           <div class="tunnel-actions-row">
             <n-button
@@ -170,16 +160,6 @@
                 <Copy :size="14" />
               </template>
               复制地址
-            </n-button>
-            <n-button
-              type="default"
-              size="small"
-              @click="emit('view-details', tunnel.proxyId)"
-            >
-              <template #icon>
-                <Info :size="14" />
-              </template>
-              详情
             </n-button>
           </div>
 
@@ -305,10 +285,16 @@ const emit = defineEmits<Emits>();
 // 更多菜单状态
 const showMoreMenu = ref(false);
 const menuPosition = ref<'top' | 'bottom'>('bottom');
+const isMenuClosing = ref(false); // 菜单正在关闭的状态
 
 // 计算更多菜单选项
 const moreOptions = computed<MoreMenuOption[]>(() => {
   const options: MoreMenuOption[] = [
+    {
+      label: "详情",
+      key: "view-details",
+      icon: () => h(NIcon, null, { default: () => h(Info, { size: 16 }) }),
+    },
     {
       label: "编辑",
       key: "edit",
@@ -379,8 +365,18 @@ function toggleMoreMenu(event: MouseEvent) {
   event.stopPropagation();
   
   if (showMoreMenu.value) {
+    // 关闭菜单
     showMoreMenu.value = false;
+    isMenuClosing.value = true;
+    
+    // 延迟恢复 z-index，等待动画完成
+    setTimeout(() => {
+      isMenuClosing.value = false;
+    }, 200); // 与动画时长一致
   } else {
+    // 打开菜单
+    isMenuClosing.value = false;
+    
     // 计算菜单应该显示在上方还是下方
     const button = event.currentTarget as HTMLElement;
     const rect = button.getBoundingClientRect();
@@ -403,14 +399,33 @@ function toggleMoreMenu(event: MouseEvent) {
 // 处理更多菜单选项点击
 function handleMoreOptionClick(action: string) {
   showMoreMenu.value = false;
-  emit('more-action', action, props.tunnel.proxyId);
+  isMenuClosing.value = true;
+  
+  // 延迟恢复 z-index
+  setTimeout(() => {
+    isMenuClosing.value = false;
+  }, 200);
+  
+  // 特殊处理详情按钮
+  if (action === 'view-details') {
+    emit('view-details', props.tunnel.proxyId);
+  } else {
+    emit('more-action', action, props.tunnel.proxyId);
+  }
 }
 
 // 点击外部关闭菜单
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as HTMLElement;
   if (!target.closest('.more-dropdown-wrapper')) {
-    showMoreMenu.value = false;
+    if (showMoreMenu.value) {
+      showMoreMenu.value = false;
+      isMenuClosing.value = true;
+      
+      setTimeout(() => {
+        isMenuClosing.value = false;
+      }, 200);
+    }
   }
 }
 
@@ -430,6 +445,16 @@ onUnmounted(() => {
 .tunnel-card {
   overflow: visible !important;
   position: relative;
+  z-index: 1;
+}
+
+/* 当下拉菜单打开时，提升卡片层级 */
+.tunnel-card.menu-open {
+  z-index: 100 !important;
+}
+
+.tunnel-card :deep(.n-card) {
+  overflow: visible !important;
 }
 
 .tunnel-card :deep(.n-card__content) {
@@ -472,23 +497,24 @@ onUnmounted(() => {
 .tunnel-info {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .info-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .info-label {
-  font-size: 13px;
-  min-width: 80px;
+  font-size: 12px;
+  min-width: 70px;
+  color: var(--n-text-color-depth-3);
 }
 
 .info-value {
-  font-size: 13px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -569,7 +595,8 @@ onUnmounted(() => {
   box-shadow: var(--app-box-shadow-2);
   border: 1px solid var(--app-border-color);
   padding: 4px 0;
-  z-index: 9999;
+  z-index: 10000;
+  pointer-events: auto;
 }
 
 .more-dropdown-menu.menu-bottom {

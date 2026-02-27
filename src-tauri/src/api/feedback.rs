@@ -41,7 +41,7 @@ pub async fn send_feedback(
     // 构建反馈消息
     let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let feedback_message = format!(
-        "【XL客户端用户反馈】\n时间：{}\nME-Frp ID：{}\n内容：{}",
+        "【XL Client用户反馈】\n时间：{}\nME-Frp ID：{}\n内容：{}",
         timestamp, user_id, content
     );
 

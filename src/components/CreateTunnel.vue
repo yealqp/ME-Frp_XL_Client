@@ -452,7 +452,7 @@ onMounted(async () => {
   margin: 0 0 20px 0;
   font-size: 24px;
   font-weight: 600;
-  color: #fff;
+  color: var(--app-text-color-2);
 }
 
 .next-button-container {

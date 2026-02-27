@@ -774,8 +774,7 @@ onMounted(async () => {
 <style scoped>
 .settings {
   padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .settings-content {

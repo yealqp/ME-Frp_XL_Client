@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { ref, h, onMounted, reactive } from "vue";
-import { useMessage, NTag } from "naive-ui";
+import { useMessage, NTag, NDataTable } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { DataTableColumns } from "naive-ui";
 import { RefreshCw, Filter, RotateCcw } from "lucide-vue-next";

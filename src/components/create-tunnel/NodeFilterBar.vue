@@ -102,7 +102,6 @@ const emit = defineEmits<NodeFilterBarEmits>();
 .search-input {
   min-width: 200px;
   flex: 1;
-  max-width: 300px;
 }
 
 .checkbox-group {

@@ -58,8 +58,7 @@ onMounted(() => {
 
 .privacy-policy {
   padding: 0;
-  max-width: 1000px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .privacy-card {
