@@ -14,7 +14,7 @@
           <div class="setting-item">
             <div class="setting-info">
               <h4>开机自启动</h4>
-              <p>开启后，系统启动时会自动运行ME-Frp XL客户端</p>
+              <p>开启后，系统启动时会自动运行ME-Frp XL Client</p>
             </div>
             <n-switch
               v-model:value="settings.autoStart"
