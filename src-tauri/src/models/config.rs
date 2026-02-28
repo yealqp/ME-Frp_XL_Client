@@ -61,8 +61,6 @@ pub struct UnifiedConfig {
     // 主题设置
     #[serde(rename = "themeMode", skip_serializing_if = "Option::is_none")]
     pub theme_mode: Option<String>,
-    #[serde(rename = "enableThemeTransitions", skip_serializing_if = "Option::is_none")]
-    pub enable_theme_transitions: Option<bool>,
 }
 
 impl Default for UnifiedConfig {
@@ -96,7 +94,6 @@ impl Default for UnifiedConfig {
 
             // 主题设置默认值
             theme_mode: None,
-            enable_theme_transitions: None,
         }
     }
 }

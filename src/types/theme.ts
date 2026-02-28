@@ -73,7 +73,7 @@ export interface ThemeConfig {
  */
 export interface ThemePreference {
   mode: ThemeMode;
-  enableTransitions: boolean;
+  enableTransitions: boolean; // 保留用于向后兼容，但始终为 true
 }
 
 /**

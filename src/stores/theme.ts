@@ -106,13 +106,6 @@ export const useThemeStore = defineStore('theme', () => {
    */
   const systemTheme = ref<Theme | null>(null);
   
-  /**
-   * 是否启用主题切换动画
-   * 
-   * Requirements: 7.1, 7.2, 7.3, 7.4
-   */
-  const enableTransitions = ref<boolean>(true);
-  
   // ==================== System Theme Listener ====================
   
   /**
@@ -181,17 +174,12 @@ export const useThemeStore = defineStore('theme', () => {
   /**
    * 应用主题到 UI
    * 
-   * 更新 CSS Variables 和过渡动画类
+   * 更新 CSS Variables，动画永久启用
    * 
    * Requirements: 2.3, 7.1, 7.2, 7.3, 7.4
    */
   function applyTheme(): void {
     applyCSSVariables(activeTheme.value);
-    if (enableTransitions.value) {
-      applyTransitionClass(true);
-    } else {
-      applyTransitionClass(false);
-    }
     
     // 设置窗口标题栏主题（所有模式都需要设置）
     setWindowTheme(activeTheme.value);
@@ -207,7 +195,7 @@ export const useThemeStore = defineStore('theme', () => {
   async function savePreference(): Promise<void> {
     const preference: ThemePreference = {
       mode: mode.value,
-      enableTransitions: enableTransitions.value,
+      enableTransitions: true, // 永久启用动画
     };
     
     // 保存到 LocalStorage
@@ -228,7 +216,6 @@ export const useThemeStore = defineStore('theme', () => {
       const updatedConfig: UnifiedConfig = {
         ...config,
         themeMode: mode.value,
-        enableThemeTransitions: enableTransitions.value,
       };
       await invoke('save_unified_config', { config: updatedConfig });
     } catch (error) {
@@ -257,7 +244,7 @@ export const useThemeStore = defineStore('theme', () => {
       if (preference) {
         // 如果存在主题偏好，使用保存的设置
         mode.value = preference.mode;
-        enableTransitions.value = preference.enableTransitions;
+        // enableTransitions 已删除，永久启用动画
       } else {
         // 2. 如果没有偏好，使用暗色模式作为默认主题
         mode.value = 'dark';
@@ -469,19 +456,15 @@ export const useThemeStore = defineStore('theme', () => {
   /**
    * 设置是否启用过渡动画
    * 
-   * @param enable - 是否启用过渡动画
+   * @deprecated 动画已永久启用，此方法保留仅用于兼容性
+   * 
+   * @param enable - 是否启用过渡动画（已忽略）
    * 
    * Requirements: 7.1, 7.2, 7.3, 7.4
    */
   async function setEnableTransitions(enable: boolean): Promise<void> {
-    try {
-      enableTransitions.value = enable;
-      applyTransitionClass(enable);
-      await savePreference();
-    } catch (error) {
-      console.error('设置过渡动画失败:', error);
-      throw error;
-    }
+    console.warn('setEnableTransitions 已废弃：动画已永久启用');
+    // 不执行任何操作，动画永久启用
   }
   
   // ==================== Watchers ====================
@@ -509,7 +492,6 @@ export const useThemeStore = defineStore('theme', () => {
     mode,
     activeTheme,
     systemTheme,
-    enableTransitions,
     
     // Getters
     currentTheme,

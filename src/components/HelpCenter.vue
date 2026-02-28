@@ -14,17 +14,19 @@
         </p>
         <template #footer>
           <div class="card-actions">
-            <n-button-group>
-              <n-button type="primary" @click="joinQQGroup1">
+            <n-button-group style="width: 100%">
+              <n-button type="primary" @click="joinQQGroup1" style="flex: 1">
                 加入一群
               </n-button>
-              <n-button @click="copyQQGroup1"> 复制群号 </n-button>
-            </n-button-group>
-            <n-button-group>
-              <n-button type="primary" @click="joinQQGroup2">
+              <n-button @click="copyQQGroup1" style="flex: 1">
+                复制群号
+              </n-button>
+              <n-button type="primary" @click="joinQQGroup2" style="flex: 1">
                 加入二群
               </n-button>
-              <n-button @click="copyQQGroup2"> 复制群号 </n-button>
+              <n-button @click="copyQQGroup2" style="flex: 1">
+                复制群号
+              </n-button>
             </n-button-group>
           </div>
         </template>
@@ -43,7 +45,9 @@
         </p>
         <template #footer>
           <div class="card-actions">
-            <n-button type="primary" @click="sendEmail">发送邮件</n-button>
+            <n-button type="primary" @click="sendEmail" style="width: 100%"
+              >发送邮件</n-button
+            >
           </div>
         </template>
       </n-card>
@@ -59,7 +63,27 @@
         <p class="card-description">加入用户交流群获取帮助</p>
         <template #footer>
           <div class="card-actions">
-            <n-button type="primary" @click="joinFeishu">加入飞书群</n-button>
+            <n-button type="primary" @click="joinFeishu" style="width: 100%"
+              >加入飞书群</n-button
+            >
+          </div>
+        </template>
+      </n-card>
+
+      <!-- 企业微信群 -->
+      <n-card title="企业微信群" hoverable>
+        <template #header-extra>
+          <div class="tags">
+            <n-tag type="error" size="small">不推荐</n-tag>
+            <n-tag type="info" size="small">快速响应</n-tag>
+          </div>
+        </template>
+        <p class="card-description">由于腾讯钱没圈够，我们用不了了</p>
+        <template #footer>
+          <div class="card-actions">
+            <n-button type="primary" disabled style="flex: 1">
+              一年要吃我们三百块，跟狼一样
+            </n-button>
           </div>
         </template>
       </n-card>
@@ -77,7 +101,9 @@
         </p>
         <template #footer>
           <div class="card-actions">
-            <n-button type="primary" @click="openDocs">查看文档</n-button>
+            <n-button type="primary" @click="openDocs" style="width: 100%"
+              >查看文档</n-button
+            >
           </div>
         </template>
       </n-card>
@@ -94,15 +120,26 @@
         </p>
         <template #footer>
           <div class="card-actions">
-            <n-button type="success" @click="openPolicy('content')"
-              >内容策略</n-button
-            >
-            <n-button type="success" @click="openPolicy('terms')"
-              >服务条款</n-button
-            >
-            <n-button type="success" @click="openPolicy('privacy')"
-              >隐私政策</n-button
-            >
+            <n-button-group style="width: 100%">
+              <n-button
+                type="success"
+                @click="openPolicy('content')"
+                style="flex: 1"
+                >内容策略</n-button
+              >
+              <n-button
+                type="success"
+                @click="openPolicy('terms')"
+                style="flex: 1"
+                >服务条款</n-button
+              >
+              <n-button
+                type="success"
+                @click="openPolicy('privacy')"
+                style="flex: 1"
+                >隐私政策</n-button
+              >
+            </n-button-group>
           </div>
         </template>
       </n-card>
@@ -111,7 +148,7 @@
 </template>
 
 <script setup lang="ts">
-import { useMessage, NCard, NButton, NTag } from "naive-ui";
+import { useMessage, NCard, NButton, NTag, NButtonGroup } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 const message = useMessage();
@@ -246,6 +283,7 @@ const openPolicy = async (tab: string) => {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -256,10 +294,6 @@ const openPolicy = async (tab: string) => {
 
   .help-center {
     padding: 16px;
-  }
-
-  .card-actions {
-    flex-direction: column;
   }
 }
 </style>
