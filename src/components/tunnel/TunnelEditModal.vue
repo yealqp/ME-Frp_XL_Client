@@ -61,8 +61,13 @@
         >
           <n-input
             v-model:value="editForm.domain"
-            placeholder="例如: example.com 或 subdomain.example.com"
+            placeholder="例如: example.com 或多个域名用逗号分隔: www.example.com,hyw.com,why.com"
           />
+          <template #feedback>
+            <n-text depth="3" style="font-size: 12px;">
+              支持多个域名，用逗号分隔
+            </n-text>
+          </template>
         </n-form-item>
 
         <n-form-item
@@ -216,7 +221,8 @@ import {
   NRadio,
   NSelect,
   NCheckbox,
-  NDivider
+  NDivider,
+  NText
 } from 'naive-ui'
 
 // Props 接口
@@ -292,6 +298,43 @@ interface EditFormData {
 const props = defineProps<TunnelEditModalProps>()
 const emit = defineEmits<TunnelEditModalEmits>()
 
+// 格式化域名显示（将 JSON 字符串数组转换为逗号分隔的字符串）
+function parseDomainForEdit(domain: string): string {
+  if (!domain) return '';
+  
+  try {
+    // 尝试解析 JSON 字符串数组
+    const domains = JSON.parse(domain);
+    if (Array.isArray(domains)) {
+      // 将数组转换为逗号分隔的字符串
+      return domains.join(', ');
+    }
+    // 如果不是数组，直接返回原值
+    return domain;
+  } catch {
+    // 解析失败，直接返回原值
+    return domain;
+  }
+}
+
+// 格式化域名保存（将逗号分隔的字符串转换为 JSON 字符串数组）
+function formatDomainForSave(domain: string): string {
+  if (!domain) return '';
+  
+  // 如果已经是 JSON 格式，直接返回
+  if (domain.trim().startsWith('[')) {
+    return domain;
+  }
+  
+  // 将逗号分隔的域名转换为 JSON 字符串数组
+  const domains = domain
+    .split(',')
+    .map(d => d.trim())
+    .filter(d => d.length > 0);
+  
+  return JSON.stringify(domains);
+}
+
 // 内部表单状态
 const editForm = ref<EditFormData>({
   proxyName: '',
@@ -341,7 +384,16 @@ const handleGetFreePort = () => {
 // 处理保存
 const handleSave = () => {
   if (!props.tunnel) return
-  emit('save', props.tunnel.proxyId, editForm.value)
+  
+  // 创建保存数据的副本
+  const saveData = { ...editForm.value }
+  
+  // 如果是 HTTP/HTTPS 隧道，需要将域名转换为 JSON 字符串数组格式
+  if ((saveData.proxyType === 'http' || saveData.proxyType === 'https') && saveData.domain) {
+    saveData.domain = formatDomainForSave(saveData.domain)
+  }
+  
+  emit('save', props.tunnel.proxyId, saveData)
 }
 
 // 处理取消
@@ -371,7 +423,7 @@ watch(
         localIp: newTunnel.localIp,
         localPort: newTunnel.localPort,
         remotePort: newTunnel.remotePort,
-        domain: newTunnel.domain,
+        domain: parseDomainForEdit(newTunnel.domain),
         sourceProtocol: sourceProtocol,
         securityMode: securityMode,
         accessKey: newTunnel.accessKey || '',

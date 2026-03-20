@@ -229,6 +229,15 @@ body[style*="--app-bg-color: #101014"] .markdown-content {
   margin: 16px 0;
 }
 
+/* 图片样式 */
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0;
+  border-radius: 4px;
+}
+
 /* 表格样式 */
 .markdown-content table {
   width: 100%;

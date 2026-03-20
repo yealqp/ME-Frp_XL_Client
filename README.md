@@ -9,6 +9,7 @@
 - ⚡ **高性能**: 使用 Tauri 2 框架，体积小、启动快
 - 🔧 **易于维护**: 代码优化后减少 30-40% 代码行数，消除 80% 重复代码
 - 🛠️ **开发友好**: 完整的 TypeScript 类型定义，单元测试和属性测试覆盖
+- 📦 **批量操作**: 支持批量强制下线和批量删除隧道，提高管理效率
 
 ## 技术栈
 
@@ -142,6 +143,8 @@ await execute();
 详细文档请参考：
 - [迁移指南](./docs/MIGRATION_GUIDE.md)
 - [组件文档](./docs/COMPONENTS.md)
+- [批量操作功能](./docs/batch-operations.md)
+- [批量操作使用指南](./docs/batch-operations-usage.md)
 
 ### 测试
 

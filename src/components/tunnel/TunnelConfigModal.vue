@@ -11,10 +11,11 @@
         <span class="config-title">隧道 ID: {{ tunnelId }}</span>
         <n-space>
           <template v-if="!isEditing">
+            <n-tag :bordered="false" type="success">推荐使用TOML格式</n-tag>
             <n-button
               type="primary"
               size="small"
-              @click="$emit('start-edit')"
+              @click="$emit(                                               'start-edit')"` 
               :disabled="!configContents[activeType]"
             >
               <template #icon>

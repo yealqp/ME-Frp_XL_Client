@@ -338,6 +338,17 @@ async function createTunnel() {
       httpPlugin = "https2https";
     }
     
+    // 处理域名：对于 HTTP/HTTPS 隧道，需要转换为 JSON 字符串数组格式
+    let domainValue = "";
+    if ((tunnelForm.value.type === 'http' || tunnelForm.value.type === 'https') && tunnelForm.value.customDomain) {
+      // 将逗号分隔的域名转换为 JSON 字符串数组
+      const domains = tunnelForm.value.customDomain
+        .split(',')
+        .map(d => d.trim())
+        .filter(d => d.length > 0);
+      domainValue = JSON.stringify(domains);
+    }
+    
     // 构建请求数据
     const requestData = {
       nodeId: selectedNode.value?.nodeId,
@@ -346,7 +357,7 @@ async function createTunnel() {
       localIp: tunnelForm.value.localIp,
       localPort: tunnelForm.value.localPort,
       remotePort: tunnelForm.value.remotePort || 0,
-      domain: tunnelForm.value.customDomain || "",
+      domain: domainValue,
       locations: "",
       accessKey: tunnelForm.value.securityMode === 'accessKey' ? tunnelForm.value.accessKey : "",
       hostHeaderRewrite: "",

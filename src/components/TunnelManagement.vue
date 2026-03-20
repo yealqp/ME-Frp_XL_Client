@@ -2,13 +2,75 @@
   <div class="tunnel-management">
     <div class="page-header">
       <h2 class="page-title">隧道管理</h2>
-      <n-button type="primary" @click="refreshTunnels" :loading="loading">
-        <template #icon>
-          <RefreshCw :size="16" />
-        </template>
-        刷新
-      </n-button>
+      <div class="header-actions">
+        <!-- 批量操作模式切换 -->
+        <n-button
+          v-if="!batchMode"
+          @click="enterBatchMode"
+        >
+          <template #icon>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </template>
+          批量操作
+        </n-button>
+        
+        <!-- 批量操作按钮组 -->
+        <BatchOperationBar
+          :batch-mode="batchMode"
+          :selected-count="selectedTunnels.size"
+          @batch-start="batchStartTunnels"
+          @batch-stop="batchStopTunnels"
+          @batch-enable="batchEnableTunnels"
+          @batch-disable="batchDisableTunnels"
+          @batch-kick="batchKickTunnels"
+          @batch-delete="batchDeleteTunnels"
+          @cancel="exitBatchMode"
+        />
+        
+        <!-- 视图切换 -->
+        <n-button-group v-if="!batchMode">
+          <n-button
+            :type="viewMode === 'grid' ? 'primary' : 'default'"
+            @click="viewMode = 'grid'"
+          >
+            <template #icon>
+              <LayoutGrid :size="16" />
+            </template>
+            卡片
+          </n-button>
+          <n-button
+            :type="viewMode === 'table' ? 'primary' : 'default'"
+            @click="viewMode = 'table'"
+          >
+            <template #icon>
+              <List :size="16" />
+            </template>
+            表格
+          </n-button>
+        </n-button-group>
+        
+        <n-button v-if="!batchMode" type="primary" @click="refreshTunnels" :loading="loading">
+          <template #icon>
+            <RefreshCw :size="16" />
+          </template>
+          刷新
+        </n-button>
+      </div>
     </div>
+    
+    <!-- 批量操作提示 -->
+    <BatchOperationAlert
+      :show="batchMode"
+      :selected-count="selectedTunnels.size"
+      @close="exitBatchMode"
+      @clear-selection="clearSelection"
+      @select-all="selectAll"
+    />
 
     <!-- 错误状态 -->
     <div v-if="error" class="error-container">
@@ -29,7 +91,8 @@
 
     <!-- 加载状态 -->
     <div v-else-if="loading" class="tunnels-container">
-      <div class="tunnels-grid">
+      <!-- 卡片视图骨架屏 -->
+      <div v-if="viewMode === 'grid'" class="tunnels-grid">
         <n-card
           v-for="i in 6"
           :key="i"
@@ -57,20 +120,34 @@
           </template>
         </n-card>
       </div>
+
+      <!-- 表格视图骨架屏 -->
+      <div v-else class="table-skeleton">
+        <n-data-table
+          :columns="skeletonTableColumns"
+          :data="skeletonTableData"
+          :bordered="false"
+          :pagination="false"
+          :row-key="(row: any) => row.id"
+          class="tunnels-table skeleton-table"
+        />
+      </div>
     </div>
 
-    <!-- 隧道卡片网格 -->
-    <div v-else-if="tunnels.length > 0" class="tunnels-container">
-      <div class="tunnels-grid">
-        <TunnelCard
-          v-for="tunnel in tunnels"
-          :key="tunnel.proxyId"
-          :tunnel="tunnel"
+    <!-- 隧道视图 -->
+    <Transition name="view-fade" mode="out-in" v-if="!loading && tunnels.length > 0">
+      <!-- 卡片网格视图 -->
+      <div v-if="viewMode === 'grid'" key="grid" class="tunnels-container">
+        <TunnelGridView
+          :tunnels="tunnels"
+          :batch-mode="batchMode"
+          :selected-tunnels="selectedTunnels"
           :node-name-map="nodeNameMap"
           :node-hostname-map="nodeHostnameMap"
-          :is-running="runningTunnels.has(tunnel.proxyId)"
-          :is-loading="actionLoading[tunnel.proxyId] || false"
-          :using-config-file="usingConfigFile.includes(tunnel.proxyId)"
+          :running-tunnels="runningTunnels"
+          :action-loading="actionLoading"
+          :using-config-file="usingConfigFile"
+          @toggle-selection="toggleTunnelSelection"
           @start="startTunnel"
           @stop="stopTunnel"
           @view-logs="viewLogs"
@@ -79,10 +156,25 @@
           @more-action="handleMoreAction"
         />
       </div>
-    </div>
+
+      <!-- 表格视图 -->
+      <div v-else key="table" class="tunnels-container">
+        <n-data-table
+          :columns="tableColumns"
+          :data="tunnels"
+          :bordered="false"
+          :single-line="false"
+          :pagination="false"
+          :row-key="(row: Tunnel) => row.proxyId"
+          :row-class-name="getRowClassName"
+          :row-props="getRowProps"
+          class="tunnels-table"
+        />
+      </div>
+    </Transition>
 
     <!-- 空状态 -->
-    <div v-else class="empty-state">
+    <div v-else-if="!loading && tunnels.length === 0" class="empty-state">
       <n-empty description="暂无隧道数据">
         <template #icon>
           <Inbox :size="48" />
@@ -141,8 +233,8 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted, onUnmounted, watch, nextTick } from "vue";
-import { useMessage, useDialog, NIcon, NDescriptions, NDescriptionsItem } from "naive-ui";
+import { h, ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
+import { useMessage, useDialog, NIcon, NDescriptions, NDescriptionsItem, NTag, NButton, NSpace, NDropdown, NDataTable, NSkeleton, NAlert, NPopconfirm } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import {
   RefreshCw,
@@ -155,6 +247,14 @@ import {
   PauseCircle,
   LogOut,
   Trash2,
+  LayoutGrid,
+  List,
+  Play,
+  Square,
+  FileText,
+  Copy,
+  MoreVertical,
+  Info,
 } from "lucide-vue-next";
 
 // Import child components
@@ -163,6 +263,10 @@ import TunnelEditModal from "./tunnel/TunnelEditModal.vue";
 import TunnelLogsModal from "./tunnel/TunnelLogsModal.vue";
 import TunnelDetailsModal from "./tunnel/TunnelDetailsModal.vue";
 import TunnelConfigModal from "./tunnel/TunnelConfigModal.vue";
+import TunnelMoreMenu from "./tunnel/TunnelMoreMenu.vue";
+import BatchOperationBar from "./tunnel/BatchOperationBar.vue";
+import BatchOperationAlert from "./tunnel/BatchOperationAlert.vue";
+import TunnelGridView from "./tunnel/TunnelGridView.vue";
 
 interface Tunnel {
   proxyId: number;
@@ -213,6 +317,330 @@ const emit = defineEmits<Emits>();
 const message = useMessage();
 const dialog = useDialog();
 
+// 视图模式（从 localStorage 读取，默认为 grid）
+const viewMode = ref<'grid' | 'table'>(
+  (localStorage.getItem('tunnel-view-mode') as 'grid' | 'table') || 'grid'
+);
+
+// 监听视图模式变化，保存到 localStorage
+watch(viewMode, (newMode) => {
+  localStorage.setItem('tunnel-view-mode', newMode);
+});
+
+// 批量操作模式
+const batchMode = ref(false);
+const selectedTunnels = ref<Set<number>>(new Set());
+
+// 进入批量操作模式
+function enterBatchMode() {
+  batchMode.value = true;
+  selectedTunnels.value.clear();
+}
+
+// 退出批量操作模式
+function exitBatchMode() {
+  batchMode.value = false;
+  selectedTunnels.value.clear();
+}
+
+// 切换隧道选择状态
+function toggleTunnelSelection(tunnelId: number) {
+  if (!batchMode.value) return;
+  
+  if (selectedTunnels.value.has(tunnelId)) {
+    selectedTunnels.value.delete(tunnelId);
+  } else {
+    selectedTunnels.value.add(tunnelId);
+  }
+  // 触发响应式更新
+  selectedTunnels.value = new Set(selectedTunnels.value);
+}
+
+// 全选
+function selectAll() {
+  const allIds = tunnels.value.map(t => t.proxyId);
+  selectedTunnels.value = new Set(allIds);
+}
+
+// 清除选择
+function clearSelection() {
+  selectedTunnels.value.clear();
+}
+
+// 批量启动
+async function batchStartTunnels() {
+  if (selectedTunnels.value.size === 0) {
+    message.warning('请先选择要启动的隧道');
+    return;
+  }
+
+  const selectedIds = Array.from(selectedTunnels.value);
+  let successCount = 0;
+  let failCount = 0;
+
+  message.loading(`正在启动 ${selectedIds.length} 个隧道...`, { duration: 0 });
+
+  for (const tunnelId of selectedIds) {
+    try {
+      const responseText = await invoke("api_start_tunnel", { proxyId: tunnelId });
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        successCount++;
+        // 更新对应隧道的在线状态
+        const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
+        if (tunnel) {
+          tunnel.isOnline = true;
+        }
+      } else {
+        failCount++;
+        console.error(`启动隧道 ${tunnelId} 失败:`, result.message);
+      }
+    } catch (err) {
+      failCount++;
+      console.error(`启动隧道 ${tunnelId} 失败:`, err);
+    }
+  }
+
+  message.destroyAll();
+
+  if (failCount === 0) {
+    message.success(`成功启动 ${successCount} 个隧道`);
+  } else {
+    message.warning(`成功启动 ${successCount} 个隧道，失败 ${failCount} 个`);
+  }
+
+  await loadRunningTunnels();
+  exitBatchMode();
+}
+
+// 批量停止
+async function batchStopTunnels() {
+  if (selectedTunnels.value.size === 0) {
+    message.warning('请先选择要停止的隧道');
+    return;
+  }
+
+  const selectedIds = Array.from(selectedTunnels.value);
+  let successCount = 0;
+  let failCount = 0;
+
+  message.loading(`正在停止 ${selectedIds.length} 个隧道...`, { duration: 0 });
+
+  for (const tunnelId of selectedIds) {
+    try {
+      const responseText = await invoke("api_stop_tunnel", { proxyId: tunnelId });
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        successCount++;
+        // 更新对应隧道的在线状态
+        const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
+        if (tunnel) {
+          tunnel.isOnline = false;
+        }
+      } else {
+        failCount++;
+        console.error(`停止隧道 ${tunnelId} 失败:`, result.message);
+      }
+    } catch (err) {
+      failCount++;
+      console.error(`停止隧道 ${tunnelId} 失败:`, err);
+    }
+  }
+
+  message.destroyAll();
+
+  if (failCount === 0) {
+    message.success(`成功停止 ${successCount} 个隧道`);
+  } else {
+    message.warning(`成功停止 ${successCount} 个隧道，失败 ${failCount} 个`);
+  }
+
+  await loadRunningTunnels();
+  exitBatchMode();
+}
+
+// 批量启用
+async function batchEnableTunnels() {
+  if (selectedTunnels.value.size === 0) {
+    message.warning('请先选择要启用的隧道');
+    return;
+  }
+
+  const selectedIds = Array.from(selectedTunnels.value);
+  let successCount = 0;
+  let failCount = 0;
+
+  message.loading(`正在启用 ${selectedIds.length} 个隧道...`, { duration: 0 });
+
+  for (const tunnelId of selectedIds) {
+    try {
+      const responseText = await invoke("api_toggle_tunnel", {
+        proxyId: tunnelId,
+        isDisabled: false,
+      });
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(`启用隧道 ${tunnelId} 失败:`, result.message);
+      }
+    } catch (err) {
+      failCount++;
+      console.error(`启用隧道 ${tunnelId} 失败:`, err);
+    }
+  }
+
+  message.destroyAll();
+
+  if (failCount === 0) {
+    message.success(`成功启用 ${successCount} 个隧道`);
+  } else {
+    message.warning(`成功启用 ${successCount} 个隧道，失败 ${failCount} 个`);
+  }
+
+  await loadTunnels();
+  exitBatchMode();
+}
+
+// 批量禁用
+async function batchDisableTunnels() {
+  if (selectedTunnels.value.size === 0) {
+    message.warning('请先选择要禁用的隧道');
+    return;
+  }
+
+  const selectedIds = Array.from(selectedTunnels.value);
+  let successCount = 0;
+  let failCount = 0;
+
+  message.loading(`正在禁用 ${selectedIds.length} 个隧道...`, { duration: 0 });
+
+  for (const tunnelId of selectedIds) {
+    try {
+      const responseText = await invoke("api_toggle_tunnel", {
+        proxyId: tunnelId,
+        isDisabled: true,
+      });
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(`禁用隧道 ${tunnelId} 失败:`, result.message);
+      }
+    } catch (err) {
+      failCount++;
+      console.error(`禁用隧道 ${tunnelId} 失败:`, err);
+    }
+  }
+
+  message.destroyAll();
+
+  if (failCount === 0) {
+    message.success(`成功禁用 ${successCount} 个隧道`);
+  } else {
+    message.warning(`成功禁用 ${successCount} 个隧道，失败 ${failCount} 个`);
+  }
+
+  await loadTunnels();
+  exitBatchMode();
+}
+
+// 批量强制下线
+async function batchKickTunnels() {
+  if (selectedTunnels.value.size === 0) {
+    message.warning('请先选择要下线的隧道');
+    return;
+  }
+
+  const selectedIds = Array.from(selectedTunnels.value);
+  let successCount = 0;
+  let failCount = 0;
+
+  message.loading(`正在下线 ${selectedIds.length} 个隧道...`, { duration: 0 });
+
+  for (const tunnelId of selectedIds) {
+    try {
+      const responseText = await invoke("api_kick_tunnel", { proxyId: tunnelId });
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        successCount++;
+        // 强制下线后自动启用隧道
+        try {
+          await toggleTunnel(tunnelId, true);
+        } catch (err) {
+          console.error(`自动启用隧道 ${tunnelId} 失败:`, err);
+        }
+      } else {
+        failCount++;
+        console.error(`下线隧道 ${tunnelId} 失败:`, result.message);
+      }
+    } catch (err) {
+      failCount++;
+      console.error(`下线隧道 ${tunnelId} 失败:`, err);
+    }
+  }
+
+  message.destroyAll();
+
+  if (failCount === 0) {
+    message.success(`成功下线 ${successCount} 个隧道`);
+  } else {
+    message.warning(`成功下线 ${successCount} 个隧道，失败 ${failCount} 个`);
+  }
+
+  await loadRunningTunnels();
+  exitBatchMode();
+}
+
+// 批量删除
+async function batchDeleteTunnels() {
+  if (selectedTunnels.value.size === 0) {
+    message.warning('请先选择要删除的隧道');
+    return;
+  }
+
+  const selectedIds = Array.from(selectedTunnels.value);
+  let successCount = 0;
+  let failCount = 0;
+
+  message.loading(`正在删除 ${selectedIds.length} 个隧道...`, { duration: 0 });
+
+  for (const tunnelId of selectedIds) {
+    try {
+      const responseText = await invoke("api_delete_tunnel", { proxyId: tunnelId });
+      const result = JSON.parse(responseText as string);
+
+      if (result.code === 200) {
+        successCount++;
+      } else {
+        failCount++;
+        console.error(`删除隧道 ${tunnelId} 失败:`, result.message);
+      }
+    } catch (err) {
+      failCount++;
+      console.error(`删除隧道 ${tunnelId} 失败:`, err);
+    }
+  }
+
+  message.destroyAll();
+
+  if (failCount === 0) {
+    message.success(`成功删除 ${successCount} 个隧道`);
+  } else {
+    message.warning(`成功删除 ${successCount} 个隧道，失败 ${failCount} 个`);
+  }
+
+  await loadTunnels();
+  exitBatchMode();
+}
+
 // 响应式数据
 const tunnels = ref<Tunnel[]>([]);
 const loading = ref(false);
@@ -220,6 +648,189 @@ const error = ref("");
 const actionLoading = ref<Record<number, boolean>>({});
 const nodeNameMap = ref<Record<number, string>>({});
 const nodeHostnameMap = ref<Record<number, string>>({});
+
+// 解析域名数组
+function parseDomainArray(domain: string): string[] {
+  if (!domain) return [];
+  try {
+    const domains = JSON.parse(domain);
+    if (Array.isArray(domains)) return domains;
+    return [domain];
+  } catch {
+    return [domain];
+  }
+}
+
+// 表格骨架屏列定义（与实际表格列宽完全一致）
+const skeletonTableColumns = [
+  { title: 'ID', key: 'id', width: 80 },
+  { title: '隧道名称', key: 'name', width: 150 },
+  { title: '状态', key: 'status', width: 120 },
+  { title: '协议', key: 'protocol', width: 80 },
+  { title: '节点', key: 'node', width: 150 },
+  { title: '本地地址', key: 'local', width: 150 },
+  { title: '远程端口/域名', key: 'remote', width: 200 },
+  { title: '操作', key: 'actions', width: 280, fixed: 'right' as const },
+];
+
+// 表格骨架屏数据
+const skeletonTableData = computed(() => 
+  Array.from({ length: 8 }, (_, i) => ({
+    id: h(NSkeleton, { text: true, width: '50px', height: '22px' }),
+    name: h(NSkeleton, { text: true, width: '110px', height: '14px' }),
+    status: h(NSpace, { size: 4 }, () => [
+      h(NSkeleton, { text: true, width: '45px', height: '22px' }),
+      h(NSkeleton, { text: true, width: '45px', height: '22px' }),
+    ]),
+    protocol: h(NSkeleton, { text: true, width: '50px', height: '22px' }),
+    node: h(NSkeleton, { text: true, width: '130px', height: '14px' }),
+    local: h(NSkeleton, { text: true, width: '120px', height: '14px' }),
+    remote: h(NSkeleton, { text: true, width: '100px', height: '14px' }),
+    actions: h(NSpace, { size: 4 }, () => [
+      h(NSkeleton, { text: true, width: '60px', height: '28px' }),
+      h(NSkeleton, { text: true, width: '60px', height: '28px' }),
+      h(NSkeleton, { text: true, width: '40px', height: '28px' }),
+    ]),
+  }))
+);
+
+// 表格行类名
+function getRowClassName(row: Tunnel) {
+  if (!batchMode.value) return '';
+  return selectedTunnels.value.has(row.proxyId) ? 'selected-row' : '';
+}
+
+// 表格行属性
+function getRowProps(row: Tunnel) {
+  if (!batchMode.value) return {};
+  return {
+    style: 'cursor: pointer;',
+    onClick: () => toggleTunnelSelection(row.proxyId)
+  };
+}
+
+// 表格列定义
+const tableColumns = computed(() => [
+  {
+    title: 'ID',
+    key: 'proxyId',
+    width: 80,
+    render: (row: Tunnel) => h(NTag, { type: 'info', bordered: false, size: 'small' }, { default: () => `#${row.proxyId}` })
+  },
+  {
+    title: '隧道名称',
+    key: 'proxyName',
+    width: 150,
+    ellipsis: { tooltip: true }
+  },
+  {
+    title: '状态',
+    key: 'status',
+    width: 120,
+    render: (row: Tunnel) => h(NSpace, { size: 4 }, () => [
+      row.isDisabled ? h(NTag, { type: 'warning', bordered: false, size: 'small' }, { default: () => '已禁用' }) : null,
+      h(NTag, { 
+        type: row.isOnline ? 'success' : 'default', 
+        bordered: false, 
+        size: 'small' 
+      }, { default: () => row.isOnline ? '在线' : '离线' })
+    ])
+  },
+  {
+    title: '协议',
+    key: 'proxyType',
+    width: 80,
+    render: (row: Tunnel) => h(NTag, { bordered: false, size: 'small' }, { default: () => row.proxyType.toUpperCase() })
+  },
+  {
+    title: '节点',
+    key: 'nodeId',
+    width: 150,
+    ellipsis: { tooltip: true },
+    render: (row: Tunnel) => `#${row.nodeId} - ${nodeNameMap.value[row.nodeId] || '未知节点'}`
+  },
+  {
+    title: '本地地址',
+    key: 'local',
+    width: 150,
+    render: (row: Tunnel) => `${row.localIp}:${row.localPort}`
+  },
+  {
+    title: '远程端口/域名',
+    key: 'remote',
+    width: 200,
+    render: (row: Tunnel) => {
+      if (row.proxyType === 'tcp' || row.proxyType === 'udp') {
+        return String(row.remotePort);
+      } else if (row.domain) {
+        const domains = parseDomainArray(row.domain);
+        return h(NSpace, { size: 4, vertical: true }, () => 
+          domains.map(domain => h(NTag, { type: 'info', bordered: false, size: 'small' }, { default: () => domain }))
+        );
+      }
+      return '-';
+    }
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 280,
+    fixed: 'right' as const,
+    render: (row: Tunnel) => {
+      const isRunning = runningTunnels.value.has(row.proxyId);
+      const isLoading = actionLoading.value[row.proxyId] || false;
+      
+      return h(NSpace, { size: 4 }, () => [
+        // 启动/停止按钮
+        isRunning 
+          ? h(NButton, {
+              type: 'warning',
+              size: 'small',
+              loading: isLoading,
+              onClick: () => stopTunnel(row.proxyId)
+            }, {
+              icon: () => h(NIcon, null, { default: () => h(Square, { size: 14 }) }),
+              default: () => '停止'
+            })
+          : h(NButton, {
+              type: 'primary',
+              size: 'small',
+              loading: isLoading,
+              onClick: () => startTunnel(row.proxyId)
+            }, {
+              icon: () => h(NIcon, null, { default: () => h(Play, { size: 14 }) }),
+              default: () => '启动'
+            }),
+        
+        // 日志按钮（仅运行时显示）
+        isRunning ? h(NButton, {
+          type: 'info',
+          size: 'small',
+          onClick: () => viewLogs(row.proxyId)
+        }, {
+          icon: () => h(NIcon, null, { default: () => h(FileText, { size: 14 }) }),
+          default: () => '日志'
+        }) : null,
+        
+        // 复制地址按钮
+        h(NButton, {
+          size: 'small',
+          onClick: () => copyRemoteAddress(row.proxyId)
+        }, {
+          icon: () => h(NIcon, null, { default: () => h(Copy, { size: 14 }) }),
+          default: () => '复制地址'
+        }),
+        
+        // 更多操作下拉菜单
+        h(TunnelMoreMenu, {
+          tunnel: row,
+          usingConfigFile: usingConfigFile.value.includes(row.proxyId),
+          onSelect: (action: string, tunnelId: number) => handleMoreAction(action, tunnelId)
+        })
+      ]);
+    }
+  }
+]);
 
 // 加载节点名称列表
 async function loadNodeNames() {
@@ -499,6 +1110,8 @@ function editTunnel(id: number) {
 async function updateTunnel(tunnelId: number, updateData: any) {
   try {
     actionLoading.value[tunnelId] = true;
+    
+    // 处理域名：确保域名已经是 JSON 字符串数组格式（从编辑模态框传来的已经处理过）
     const requestData = {
       proxyId: tunnelId,
       proxyName: updateData.proxyName,
@@ -796,6 +1409,14 @@ async function kickTunnel(tunnelId: number) {
     if (result.code === 200) {
       message.success("隧道已强制下线");
       await loadRunningTunnels();
+      
+      // 强制下线后自动启用隧道（因为主控会将隧道标记为禁用）
+      try {
+        await toggleTunnel(tunnelId, true);
+      } catch (err) {
+        console.error("自动启用隧道失败:", err);
+        // 不影响主流程，只记录错误
+      }
     } else {
       throw new Error(result.message || "强制下线失败");
     }
@@ -834,7 +1455,7 @@ async function toggleTunnel(tunnelId: number, enable: boolean) {
 }
 
 // 复制远程地址到剪贴板
-async function copyRemoteAddress(tunnelId: number) {
+async function copyRemoteAddress(tunnelId: number, selectedDomain?: string) {
   try {
     const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
     if (!tunnel) {
@@ -844,19 +1465,39 @@ async function copyRemoteAddress(tunnelId: number) {
 
     let remoteAddress: string;
 
+    // 解析域名（处理 JSON 字符串数组格式）
+    const parseDomain = (domain: string): string => {
+      if (!domain) return '';
+      
+      // 如果提供了选中的域名，直接使用
+      if (selectedDomain) return selectedDomain;
+      
+      try {
+        const domains = JSON.parse(domain);
+        if (Array.isArray(domains) && domains.length > 0) {
+          return domains[0]; // 返回第一个域名
+        }
+        return domain;
+      } catch {
+        return domain;
+      }
+    };
+
     // HTTP/HTTPS 隧道复制完整 URL，TCP/UDP 隧道复制节点地址:端口
     if (tunnel.proxyType === "http") {
       if (!tunnel.domain) {
         message.error("该隧道未配置域名");
         return;
       }
-      remoteAddress = `http://${tunnel.domain}`;
+      const domain = parseDomain(tunnel.domain);
+      remoteAddress = `http://${domain}`;
     } else if (tunnel.proxyType === "https") {
       if (!tunnel.domain) {
         message.error("该隧道未配置域名");
         return;
       }
-      remoteAddress = `https://${tunnel.domain}`;
+      const domain = parseDomain(tunnel.domain);
+      remoteAddress = `https://${domain}`;
     } else {
       // TCP/UDP 隧道
       const nodeAddress = getNodeAddress(tunnelId);
@@ -901,91 +1542,13 @@ function goToCreateTunnel() {
   emit("go-to-create");
 }
 
-function getMoreOptions(tunnelId: number) {
-  const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
-
-  if (!tunnel) {
-    return [
-      {
-        label: "刷新",
-        key: "refresh",
-        icon: () => h(NIcon, null, { default: () => h(RefreshCw, { size: 16 }) }),
-      },
-    ];
-  }
-
-  const isUsingConfig = usingConfigFile.value.includes(tunnelId);
-
-  const options: any[] = [
-    {
-      label: "编辑",
-      key: "edit",
-      icon: () => h(NIcon, null, { default: () => h(Edit, { size: 16 }) }),
-    },
-    {
-      type: "divider",
-      key: "d1",
-    },
-  ];
-
-  if (isUsingConfig) {
-    options.push(
-      {
-        label: "配置文件",
-        key: "view-config",
-        icon: () => h(NIcon, null, { default: () => h(FileCode, { size: 16 }) }),
-      },
-      {
-        label: "改用快速启动",
-        key: "use-quick-start",
-        icon: () => h(NIcon, null, { default: () => h(Rocket, { size: 16 }) }),
-      },
-    );
-  } else {
-    options.push({
-      label: "改用配置文件",
-      key: "use-config",
-      icon: () => h(NIcon, null, { default: () => h(FileOutput, { size: 16 }) }),
-    });
-  }
-
-  options.push(
-    {
-      type: "divider",
-      key: "d2",
-    },
-    {
-      label: tunnel.isDisabled ? "启用隧道" : "禁用隧道",
-      key: tunnel.isDisabled ? "enable" : "disable",
-      icon: () =>
-        h(NIcon, null, {
-          default: () => h(tunnel.isDisabled ? PlayCircle : PauseCircle, { size: 16 }),
-        }),
-    },
-    {
-      label: "强制下线",
-      key: "kick",
-      icon: () => h(NIcon, null, { default: () => h(LogOut, { size: 16 }) }),
-    },
-    {
-      type: "divider",
-      key: "d3",
-    },
-    {
-      label: "删除隧道",
-      key: "delete",
-      icon: () =>
-        h(NIcon, { style: { color: "#d03050" } }, { default: () => h(Trash2, { size: 16 }) }),
-    },
-  );
-
-  return options;
-}
-
 async function handleMoreAction(action: string, tunnelId: number) {
   const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
   
   switch (action) {
+    case "view-details":
+      viewTunnelDetails(tunnelId);
+      break;
     case "edit":
       editTunnel(tunnelId);
       break;
@@ -1142,6 +1705,12 @@ defineExpose({
   cancelEditConfig,
   saveEditedConfig,
   handleConfigTypeChange,
+  batchStartTunnels,
+  batchStopTunnels,
+  batchEnableTunnels,
+  batchDisableTunnels,
+  batchKickTunnels,
+  batchDeleteTunnels,
 });
 </script>
 
@@ -1157,6 +1726,12 @@ defineExpose({
   margin-bottom: 24px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .page-title {
   margin: 0;
   font-size: 24px;
@@ -1170,13 +1745,127 @@ defineExpose({
   z-index: 1;
 }
 
+/* 卡片网格布局 */
 .tunnels-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
-  position: relative;
-  overflow: visible;
+}
+
+/* 视图切换动画 */
+.view-fade-enter-active,
+.view-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.view-fade-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.view-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.tunnels-table {
+  background: var(--app-card-color);
+  border-radius: 0px;
+  border: 1px solid var(--app-border-color);
+  overflow: hidden;
+}
+
+.tunnels-table :deep(.n-data-table) {
+  background: var(--app-card-color);
+}
+
+.tunnels-table :deep(.n-data-table-th) {
+  background: var(--app-card-color);
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid var(--app-divider-color);
+}
+
+.tunnels-table :deep(.n-data-table-td) {
+  background: var(--app-bg-color);
+  border: none;
+}
+
+.tunnels-table :deep(.n-data-table-tr) {
+  border: none;
+}
+
+.tunnels-table :deep(.n-data-table-tr:hover .n-data-table-td) {
+  background: var(--app-bg-color);
+}
+
+/* 暗色模式下增加亮度 */
+html[data-theme="dark"] .tunnels-table :deep(.n-data-table-tr:hover .n-data-table-td) {
+  filter: brightness(1.15);
+}
+
+/* 浅色模式下降低亮度 */
+html[data-theme="light"] .tunnels-table :deep(.n-data-table-tr:hover .n-data-table-td) {
+  filter: brightness(0.96);
+}
+
+/* 批量模式表格行样式 */
+.tunnels-table :deep(.n-data-table-tr.selected-row .n-data-table-td) {
+  background: rgba(24, 160, 88, 0.1) !important;
+}
+
+.tunnels-table :deep(.n-data-table-tr.selected-row:hover .n-data-table-td) {
+  background: rgba(24, 160, 88, 0.15) !important;
+  filter: none;
+}
+
+.tunnels-table :deep(.n-data-table-tbody .n-data-table-tr:not(:last-child) .n-data-table-td) {
+  border-bottom: 1px solid var(--app-divider-color);
+}
+
+/* 表格骨架屏样式 */
+.table-skeleton {
+  width: 100%;
+}
+
+.skeleton-table :deep(.n-data-table-td) {
+  padding: 12px 16px;
+}
+
+.skeleton-table :deep(.n-skeleton) {
+  display: inline-block;
+}
+
+/* 表格中的下拉菜单样式 - 与卡片视图保持一致 */
+.tunnels-table :deep(.n-dropdown-menu) {
+  background-color: var(--app-card-color);
+  border-radius: 3px;
+  box-shadow: var(--app-box-shadow-2);
+  border: 1px solid var(--app-border-color);
+  padding: 2px 0;
+  min-width: 130px;
+}
+
+.tunnels-table :deep(.n-dropdown-option) {
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--app-text-color);
+}
+
+.tunnels-table :deep(.n-dropdown-option:hover) {
+  background-color: var(--app-card-color);
+  filter: brightness(1.1);
+}
+
+.tunnels-table :deep(.n-dropdown-divider) {
+  height: 1px;
+  background-color: var(--app-divider-color);
+  margin: 4px 0;
+}
+
+.tunnels-table :deep(.n-dropdown-option-body__prefix) {
+  margin-right: 8px;
 }
 
 .error-container {
@@ -1209,16 +1898,25 @@ defineExpose({
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .tunnels-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
   .page-header {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
     padding: 0 16px;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .header-actions > * {
+    width: 100%;
+  }
+  
+  .tunnels-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
@@ -1237,11 +1935,15 @@ defineExpose({
 </style>
 
 <style>
-/* 全局样式 - 确保下拉框正确显示 */
+/* 全局样式 - 确保下拉框正确显示并与卡片视图样式一致 */
 .n-dropdown-menu {
   z-index: 9999 !important;
-  box-shadow: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05) !important;
-  min-width: 160px !important;
+  background-color: var(--app-card-color) !important;
+  border-radius: 3px !important;
+  box-shadow: var(--app-box-shadow-2) !important;
+  border: 1px solid var(--app-border-color) !important;
+  padding: 2px 0 !important;
+  min-width: 130px !important;
 }
 
 .n-dropdown {
@@ -1249,6 +1951,22 @@ defineExpose({
 }
 
 .n-dropdown-option {
-  padding: 8px 12px !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+}
+
+.n-dropdown-option:not(.n-dropdown-option--disabled):hover {
+  background-color: var(--app-card-color) !important;
+  filter: brightness(1.1) !important;
+}
+
+.n-dropdown-divider {
+  height: 1px !important;
+  background-color: var(--app-divider-color) !important;
+  margin: 2px 0 !important;
+}
+
+.n-dropdown-option-body__prefix {
+  margin-right: 6px !important;
 }
 </style>

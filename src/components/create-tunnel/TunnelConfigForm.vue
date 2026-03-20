@@ -134,8 +134,13 @@
         >
           <n-input
             v-model:value="formData.customDomain"
-            placeholder="例如: example.com 或 subdomain.example.com"
+            placeholder="例如: example.com 或多个域名用逗号分隔: www.example.com,hyw.com,why.com"
           />
+          <template #feedback>
+            <n-text depth="3" style="font-size: 12px;">
+              支持多个域名，用逗号分隔
+            </n-text>
+          </template>
         </n-form-item>
 
         <!-- HTTP/HTTPS 条件字段：源协议 -->
