@@ -7,12 +7,7 @@
     style="margin-bottom: 16px"
   >
     <template #icon>
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="3" width="7" height="7"></rect>
-        <rect x="14" y="3" width="7" height="7"></rect>
-        <rect x="14" y="14" width="7" height="7"></rect>
-        <rect x="3" y="14" width="7" height="7"></rect>
-      </svg>
+      <LayoutGrid :size="18" />
     </template>
     批量操作模式：点击隧道卡片或表格行进行选择，已选择 {{ selectedCount }} 个隧道
     <template v-if="selectedCount > 0">
@@ -50,6 +45,7 @@
 </template>
 
 <script setup lang="ts">
+import { LayoutGrid } from 'lucide-vue-next'
 import { NAlert, NButton } from 'naive-ui';
 
 interface Props {

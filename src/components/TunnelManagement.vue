@@ -9,12 +9,7 @@
           @click="enterBatchMode"
         >
           <template #icon>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
+            <LayoutGrid :size="16" />
           </template>
           批量操作
         </n-button>
@@ -233,9 +228,12 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref, onMounted, onUnmounted, watch, nextTick, computed } from "vue";
+import { h, ref, onMounted, onUnmounted, watch, nextTick, computed, shallowRef } from "vue";
 import { useMessage, useDialog, NIcon, NDescriptions, NDescriptionsItem, NTag, NButton, NSpace, NDropdown, NDataTable, NSkeleton, NAlert, NPopconfirm } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
+import { executeBatchOperation } from "@/utils/batchOperationHelper";
+import { extractErrorMessage } from "@/utils/errorHandler";
+import type { Tunnel, EditFormData, ApiResponse, TunnelListData } from "@/types/tunnel";
 import {
   RefreshCw,
   Edit,
@@ -267,43 +265,6 @@ import TunnelMoreMenu from "./tunnel/TunnelMoreMenu.vue";
 import BatchOperationBar from "./tunnel/BatchOperationBar.vue";
 import BatchOperationAlert from "./tunnel/BatchOperationAlert.vue";
 import TunnelGridView from "./tunnel/TunnelGridView.vue";
-
-interface Tunnel {
-  proxyId: number;
-  username: string;
-  proxyName: string;
-  proxyType: string;
-  isBanned: boolean;
-  isDisabled: boolean;
-  localIp: string;
-  localPort: number;
-  remotePort: number;
-  nodeId: number;
-  runId: string;
-  isOnline: boolean;
-  domain: string;
-  lastStartTime: number;
-  lastCloseTime: number;
-  clientVersion: string;
-  proxyProtocolVersion: string;
-  useEncryption: boolean;
-  useCompression: boolean;
-  location: string;
-  accessKey: string;
-  hostHeaderRewrite: string;
-  headerXFromWhere: string;
-  httpUser?: string;
-  httpPassword?: string;
-  crtPath?: string;
-  keyPath?: string;
-  transportProtocol?: string;
-}
-
-interface ApiResponse {
-  code: number;
-  data: Tunnel[];
-  message: string;
-}
 
 interface Emits {
   (e: "tunnel-start", id: number): void;
@@ -369,276 +330,147 @@ function clearSelection() {
 
 // 批量启动
 async function batchStartTunnels() {
-  if (selectedTunnels.value.size === 0) {
-    message.warning('请先选择要启动的隧道');
-    return;
-  }
-
   const selectedIds = Array.from(selectedTunnels.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  message.loading(`正在启动 ${selectedIds.length} 个隧道...`, { duration: 0 });
-
-  for (const tunnelId of selectedIds) {
-    try {
+  
+  await executeBatchOperation({
+    operationName: '启动',
+    ids: selectedIds,
+    message,
+    executeSingle: async (tunnelId) => {
       const responseText = await invoke("api_start_tunnel", { proxyId: tunnelId });
       const result = JSON.parse(responseText as string);
-
-      if (result.code === 200) {
-        successCount++;
-        // 更新对应隧道的在线状态
-        const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
-        if (tunnel) {
-          tunnel.isOnline = true;
-        }
-      } else {
-        failCount++;
-        console.error(`启动隧道 ${tunnelId} 失败:`, result.message);
+      return result.code === 200;
+    },
+    onSuccess: (tunnelId) => {
+      const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
+      if (tunnel) {
+        tunnel.isOnline = true;
       }
-    } catch (err) {
-      failCount++;
-      console.error(`启动隧道 ${tunnelId} 失败:`, err);
-    }
-  }
-
-  message.destroyAll();
-
-  if (failCount === 0) {
-    message.success(`成功启动 ${successCount} 个隧道`);
-  } else {
-    message.warning(`成功启动 ${successCount} 个隧道，失败 ${failCount} 个`);
-  }
-
-  await loadRunningTunnels();
-  exitBatchMode();
+    },
+    onComplete: async () => {
+      await loadRunningTunnels();
+      exitBatchMode();
+    },
+  });
 }
 
 // 批量停止
 async function batchStopTunnels() {
-  if (selectedTunnels.value.size === 0) {
-    message.warning('请先选择要停止的隧道');
-    return;
-  }
-
   const selectedIds = Array.from(selectedTunnels.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  message.loading(`正在停止 ${selectedIds.length} 个隧道...`, { duration: 0 });
-
-  for (const tunnelId of selectedIds) {
-    try {
+  
+  await executeBatchOperation({
+    operationName: '停止',
+    ids: selectedIds,
+    message,
+    executeSingle: async (tunnelId) => {
       const responseText = await invoke("api_stop_tunnel", { proxyId: tunnelId });
       const result = JSON.parse(responseText as string);
-
-      if (result.code === 200) {
-        successCount++;
-        // 更新对应隧道的在线状态
-        const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
-        if (tunnel) {
-          tunnel.isOnline = false;
-        }
-      } else {
-        failCount++;
-        console.error(`停止隧道 ${tunnelId} 失败:`, result.message);
+      return result.code === 200;
+    },
+    onSuccess: (tunnelId) => {
+      const tunnel = tunnels.value.find((t) => t.proxyId === tunnelId);
+      if (tunnel) {
+        tunnel.isOnline = false;
       }
-    } catch (err) {
-      failCount++;
-      console.error(`停止隧道 ${tunnelId} 失败:`, err);
-    }
-  }
-
-  message.destroyAll();
-
-  if (failCount === 0) {
-    message.success(`成功停止 ${successCount} 个隧道`);
-  } else {
-    message.warning(`成功停止 ${successCount} 个隧道，失败 ${failCount} 个`);
-  }
-
-  await loadRunningTunnels();
-  exitBatchMode();
+    },
+    onComplete: async () => {
+      await loadRunningTunnels();
+      exitBatchMode();
+    },
+  });
 }
 
 // 批量启用
 async function batchEnableTunnels() {
-  if (selectedTunnels.value.size === 0) {
-    message.warning('请先选择要启用的隧道');
-    return;
-  }
-
   const selectedIds = Array.from(selectedTunnels.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  message.loading(`正在启用 ${selectedIds.length} 个隧道...`, { duration: 0 });
-
-  for (const tunnelId of selectedIds) {
-    try {
+  
+  await executeBatchOperation({
+    operationName: '启用',
+    ids: selectedIds,
+    message,
+    executeSingle: async (tunnelId) => {
       const responseText = await invoke("api_toggle_tunnel", {
         proxyId: tunnelId,
         isDisabled: false,
       });
       const result = JSON.parse(responseText as string);
-
-      if (result.code === 200) {
-        successCount++;
-      } else {
-        failCount++;
-        console.error(`启用隧道 ${tunnelId} 失败:`, result.message);
-      }
-    } catch (err) {
-      failCount++;
-      console.error(`启用隧道 ${tunnelId} 失败:`, err);
-    }
-  }
-
-  message.destroyAll();
-
-  if (failCount === 0) {
-    message.success(`成功启用 ${successCount} 个隧道`);
-  } else {
-    message.warning(`成功启用 ${successCount} 个隧道，失败 ${failCount} 个`);
-  }
-
-  await loadTunnels();
-  exitBatchMode();
+      return result.code === 200;
+    },
+    onComplete: async () => {
+      await loadTunnels();
+      exitBatchMode();
+    },
+  });
 }
 
 // 批量禁用
 async function batchDisableTunnels() {
-  if (selectedTunnels.value.size === 0) {
-    message.warning('请先选择要禁用的隧道');
-    return;
-  }
-
   const selectedIds = Array.from(selectedTunnels.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  message.loading(`正在禁用 ${selectedIds.length} 个隧道...`, { duration: 0 });
-
-  for (const tunnelId of selectedIds) {
-    try {
+  
+  await executeBatchOperation({
+    operationName: '禁用',
+    ids: selectedIds,
+    message,
+    executeSingle: async (tunnelId) => {
       const responseText = await invoke("api_toggle_tunnel", {
         proxyId: tunnelId,
         isDisabled: true,
       });
       const result = JSON.parse(responseText as string);
-
-      if (result.code === 200) {
-        successCount++;
-      } else {
-        failCount++;
-        console.error(`禁用隧道 ${tunnelId} 失败:`, result.message);
-      }
-    } catch (err) {
-      failCount++;
-      console.error(`禁用隧道 ${tunnelId} 失败:`, err);
-    }
-  }
-
-  message.destroyAll();
-
-  if (failCount === 0) {
-    message.success(`成功禁用 ${successCount} 个隧道`);
-  } else {
-    message.warning(`成功禁用 ${successCount} 个隧道，失败 ${failCount} 个`);
-  }
-
-  await loadTunnels();
-  exitBatchMode();
+      return result.code === 200;
+    },
+    onComplete: async () => {
+      await loadTunnels();
+      exitBatchMode();
+    },
+  });
 }
 
 // 批量强制下线
 async function batchKickTunnels() {
-  if (selectedTunnels.value.size === 0) {
-    message.warning('请先选择要下线的隧道');
-    return;
-  }
-
   const selectedIds = Array.from(selectedTunnels.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  message.loading(`正在下线 ${selectedIds.length} 个隧道...`, { duration: 0 });
-
-  for (const tunnelId of selectedIds) {
-    try {
+  
+  await executeBatchOperation({
+    operationName: '下线',
+    ids: selectedIds,
+    message,
+    executeSingle: async (tunnelId) => {
       const responseText = await invoke("api_kick_tunnel", { proxyId: tunnelId });
       const result = JSON.parse(responseText as string);
-
-      if (result.code === 200) {
-        successCount++;
-        // 强制下线后自动启用隧道
-        try {
-          await toggleTunnel(tunnelId, true);
-        } catch (err) {
-          console.error(`自动启用隧道 ${tunnelId} 失败:`, err);
-        }
-      } else {
-        failCount++;
-        console.error(`下线隧道 ${tunnelId} 失败:`, result.message);
+      return result.code === 200;
+    },
+    onSuccess: async (tunnelId) => {
+      try {
+        await toggleTunnel(tunnelId, true);
+      } catch (err) {
+        console.error(`自动启用隧道 ${tunnelId} 失败:`, err);
       }
-    } catch (err) {
-      failCount++;
-      console.error(`下线隧道 ${tunnelId} 失败:`, err);
-    }
-  }
-
-  message.destroyAll();
-
-  if (failCount === 0) {
-    message.success(`成功下线 ${successCount} 个隧道`);
-  } else {
-    message.warning(`成功下线 ${successCount} 个隧道，失败 ${failCount} 个`);
-  }
-
-  await loadRunningTunnels();
-  exitBatchMode();
+    },
+    onComplete: async () => {
+      await loadRunningTunnels();
+      exitBatchMode();
+    },
+  });
 }
 
 // 批量删除
 async function batchDeleteTunnels() {
-  if (selectedTunnels.value.size === 0) {
-    message.warning('请先选择要删除的隧道');
-    return;
-  }
-
   const selectedIds = Array.from(selectedTunnels.value);
-  let successCount = 0;
-  let failCount = 0;
-
-  message.loading(`正在删除 ${selectedIds.length} 个隧道...`, { duration: 0 });
-
-  for (const tunnelId of selectedIds) {
-    try {
+  
+  await executeBatchOperation({
+    operationName: '删除',
+    ids: selectedIds,
+    message,
+    executeSingle: async (tunnelId) => {
       const responseText = await invoke("api_delete_tunnel", { proxyId: tunnelId });
       const result = JSON.parse(responseText as string);
-
-      if (result.code === 200) {
-        successCount++;
-      } else {
-        failCount++;
-        console.error(`删除隧道 ${tunnelId} 失败:`, result.message);
-      }
-    } catch (err) {
-      failCount++;
-      console.error(`删除隧道 ${tunnelId} 失败:`, err);
-    }
-  }
-
-  message.destroyAll();
-
-  if (failCount === 0) {
-    message.success(`成功删除 ${successCount} 个隧道`);
-  } else {
-    message.warning(`成功删除 ${successCount} 个隧道，失败 ${failCount} 个`);
-  }
-
-  await loadTunnels();
-  exitBatchMode();
+      return result.code === 200;
+    },
+    onComplete: async () => {
+      await loadTunnels();
+      exitBatchMode();
+    },
+  });
 }
 
 // 响应式数据
@@ -856,16 +688,21 @@ async function loadNodeNames() {
 }
 
 // 加载配置文件状态
+let configFileStatusTimer: number | null = null;
+
 async function loadConfigFileStatus() {
-  try {
-    const tunnelsWithConfig = await invoke("check_tunnel_config_files");
-    console.log("加载配置文件状态:", tunnelsWithConfig);
-    // 使用数组以触发响应式更新
-    usingConfigFile.value = tunnelsWithConfig as number[];
-    console.log("更新后的usingConfigFile:", usingConfigFile.value);
-  } catch (err) {
-    console.error("加载配置文件状态失败:", err);
+  if (configFileStatusTimer) {
+    clearTimeout(configFileStatusTimer);
   }
+  
+  configFileStatusTimer = window.setTimeout(async () => {
+    try {
+      const tunnelsWithConfig = await invoke("check_tunnel_config_files");
+      usingConfigFile.value = tunnelsWithConfig as number[];
+    } catch (err) {
+      console.error("加载配置文件状态失败:", err);
+    }
+  }, 100);
 }
 
 // 加载隧道列表
@@ -902,14 +739,21 @@ async function loadTunnels() {
 }
 
 // 获取运行中的隧道
-const runningTunnels = ref(new Set());
+const runningTunnels = ref<Set<number>>(new Set());
+
+let isLoadingRunningTunnels = false;
 
 const loadRunningTunnels = async () => {
+  if (isLoadingRunningTunnels) return;
+  
   try {
+    isLoadingRunningTunnels = true;
     const running = await invoke("api_get_running_tunnels");
     runningTunnels.value = new Set(running as number[]);
   } catch (error) {
     console.error("获取运行状态失败:", error);
+  } finally {
+    isLoadingRunningTunnels = false;
   }
 };
 
@@ -1054,10 +898,13 @@ const viewTunnelDetails = async (tunnelId: number) => {
 // 获取节点地址
 const getNodeAddress = (proxyId: number): string => {
   const tunnel = tunnels.value.find((t) => t.proxyId === proxyId);
-  if (tunnel && nodeHostnameMap.value[tunnel.nodeId]) {
-    return nodeHostnameMap.value[tunnel.nodeId];
+  if (!tunnel) return "未知";
+  
+  if (!nodeHostnameMap.value || !nodeHostnameMap.value[tunnel.nodeId]) {
+    return "未知";
   }
-  return "未知";
+  
+  return nodeHostnameMap.value[tunnel.nodeId];
 };
 
 function editTunnel(id: number) {
@@ -1215,7 +1062,7 @@ const activeConfigType = ref("toml");
 const configContents = ref<Record<string, string>>({});
 const editableConfigContents = ref<Record<string, string>>({});
 const loadingConfig = ref(false);
-const usingConfigFile = ref<number[]>([]);
+const usingConfigFile = shallowRef<number[]>([]);
 const isEditingConfig = ref(false);
 
 // 获取隧道配置文件
@@ -1257,17 +1104,14 @@ async function saveConfigFile(
     });
     message.success(`配置文件已保存: ${fileName}，下次启动将使用配置文件模式`);
 
-    // 添加短暂延迟确保文件系统操作完成
     await new Promise(resolve => setTimeout(resolve, 100));
-
-    // 立即刷新配置文件状态以确保与文件系统同步
     await loadConfigFileStatus();
 
-    // 关闭模态框
     showConfigModal.value = false;
   } catch (err) {
     console.error("保存配置文件失败:", err);
     message.error(err instanceof Error ? err.message : "保存配置文件失败");
+    await loadConfigFileStatus();
   }
 }
 
@@ -1308,6 +1152,39 @@ function cancelEditConfig() {
 }
 
 // 保存编辑的配置
+function validateConfigContent(content: string, format: string): boolean {
+  if (!content || content.trim() === '') {
+    return false;
+  }
+
+  try {
+    switch (format) {
+      case 'json':
+        JSON.parse(content);
+        break;
+      case 'toml':
+        if (!content.includes('=') && !content.includes('[')) {
+          return false;
+        }
+        break;
+      case 'yml':
+      case 'yaml':
+        if (!content.includes(':') && !content.includes('-')) {
+          return false;
+        }
+        break;
+      case 'ini':
+        if (!content.includes('=') && !content.includes('[')) {
+          return false;
+        }
+        break;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function saveEditedConfig() {
   if (!currentConfigTunnelId.value) return;
 
@@ -1321,9 +1198,13 @@ async function saveEditedConfig() {
       return;
     }
 
+    if (!validateConfigContent(content, format)) {
+      message.error(`配置内容格式无效，请检查 ${format.toUpperCase()} 格式是否正确`);
+      return;
+    }
+
     await saveConfigFile(tunnelId, format, content);
 
-    // 更新原始内容
     configContents.value[format] = content;
     isEditingConfig.value = false;
 
@@ -1368,23 +1249,21 @@ async function viewConfigFile(tunnelId: number) {
 // 切换到快速启动模式
 async function switchToQuickStart(tunnelId: number) {
   try {
-    // 删除所有格式的配置文件
     const configFormats = ["toml", "json", "yml", "ini"];
     const deletePromises = configFormats.map((format) => {
       const fileName = `${tunnelId}.${format}`;
-      return invoke("delete_config_file", { fileName }).catch(() => {
-        // 忽略文件不存在的错误
-      });
+      return invoke("delete_config_file", { fileName }).catch(() => {});
     });
 
     await Promise.all(deletePromises);
 
-    // 重新加载配置文件状态以触发响应式更新
+    await new Promise(resolve => setTimeout(resolve, 100));
     await loadConfigFileStatus();
     message.success("已切换到快速启动模式");
   } catch (err) {
     console.error("切换到快速启动失败:", err);
     message.error(err instanceof Error ? err.message : "切换到快速启动失败");
+    await loadConfigFileStatus();
   }
 }
 
@@ -1604,7 +1483,6 @@ async function handleMoreAction(action: string, tunnelId: number) {
       }
       break;
     case "delete":
-      // 删除隧道确认
       if (tunnel) {
         dialog.error({
           title: "确认删除",
@@ -1620,7 +1498,7 @@ async function handleMoreAction(action: string, tunnelId: number) {
 
               if (result.code === 200) {
                 message.success("隧道删除成功");
-                // 重新加载隧道列表
+                delete actionLoading.value[tunnelId];
                 await loadTunnels();
                 emit("tunnel-delete", tunnelId);
               } else {
@@ -1657,6 +1535,7 @@ onUnmounted(() => {
     clearInterval(statusUpdateTimer);
     statusUpdateTimer = null;
   }
+  actionLoading.value = {};
 });
 
 // 暴露给模板的变量和方法

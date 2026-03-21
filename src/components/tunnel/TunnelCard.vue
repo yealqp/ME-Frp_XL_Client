@@ -180,8 +180,8 @@
 </template>
 
 <script setup lang="ts">
-import { h, ref } from "vue";
-import { NIcon, useDialog, NRadioGroup, NRadio, NSpace } from "naive-ui";
+import { h } from "vue";
+import { useDialog, NRadioGroup, NRadio, NSpace } from "naive-ui";
 import {
   Play,
   Square,
@@ -191,6 +191,7 @@ import {
 } from "lucide-vue-next";
 import TunnelMoreMenu from "./TunnelMoreMenu.vue";
 import type { Tunnel } from "@/types/tunnel";
+import { parseDomainArray } from "@/utils/domainUtils";
 
 interface Props {
   tunnel: Tunnel;
@@ -214,96 +215,61 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const dialog = useDialog();
 
-// 解析域名为数组
-function parseDomainArray(domain: string): string[] {
-  if (!domain) return [];
-  
-  try {
-    // 尝试解析 JSON 字符串数组
-    const domains = JSON.parse(domain);
-    if (Array.isArray(domains)) {
-      return domains;
-    }
-    // 如果不是数组，返回单个域名的数组
-    return [domain];
-  } catch {
-    // 解析失败，返回单个域名的数组
-    return [domain];
-  }
+function createDomainRadioGroup(domains: string[], selectedDomain: { value: string }) {
+  return h(NSpace, { vertical: true, size: 'large', style: 'width: 100%;' }, {
+    default: () => [
+      h(NRadioGroup, {
+        value: selectedDomain.value,
+        'onUpdate:value': (value: string) => {
+          selectedDomain.value = value;
+        }
+      }, {
+        default: () => h(NSpace, { vertical: true, size: 'medium' }, {
+          default: () => domains.map(domain =>
+            h(NRadio, {
+              key: domain,
+              value: domain,
+              style: 'width: 100%;'
+            }, {
+              default: () => h('span', { 
+                style: 'font-family: Consolas, Monaco, monospace; font-size: 13px;' 
+              }, domain)
+            })
+          )
+        })
+      })
+    ]
+  });
 }
 
-// 处理复制地址
+function showDomainSelectionDialog(domains: string[]) {
+  const selectedDomain = { value: domains[0] };
+  
+  dialog.info({
+    title: '选择要复制的域名',
+    content: () => createDomainRadioGroup(domains, selectedDomain),
+    positiveText: '复制',
+    negativeText: '取消',
+    onPositiveClick: () => {
+      emit('copy-address', props.tunnel.proxyId, selectedDomain.value);
+    }
+  });
+}
+
 function handleCopyAddress() {
-  // 如果是 HTTP/HTTPS 隧道且有多个域名，显示选择对话框
   if ((props.tunnel.proxyType === 'http' || props.tunnel.proxyType === 'https') && props.tunnel.domain) {
     const domains = parseDomainArray(props.tunnel.domain);
     
     if (domains.length > 1) {
-      // 多个域名，显示选择对话框
-      const selectedDomain = ref(domains[0]);
-      
-      dialog.info({
-        title: '选择要复制的域名',
-        content: () => h(NSpace, { vertical: true, size: 'large', style: 'width: 100%;' }, {
-          default: () => [
-            h(NRadioGroup, {
-              value: selectedDomain.value,
-              'onUpdate:value': (value: string) => {
-                selectedDomain.value = value;
-              }
-            }, {
-              default: () => h(NSpace, { vertical: true, size: 'medium' }, {
-                default: () => domains.map(domain =>
-                  h(NRadio, {
-                    key: domain,
-                    value: domain,
-                    style: 'width: 100%;'
-                  }, {
-                    default: () => h('span', { 
-                      style: 'font-family: Consolas, Monaco, monospace; font-size: 13px;' 
-                    }, domain)
-                  })
-                )
-              })
-            })
-          ]
-        }),
-        positiveText: '复制',
-        negativeText: '取消',
-        onPositiveClick: () => {
-          emit('copy-address', props.tunnel.proxyId, selectedDomain.value);
-        }
-      });
+      showDomainSelectionDialog(domains);
     } else {
-      // 单个域名，直接复制
       emit('copy-address', props.tunnel.proxyId);
     }
   } else {
-    // TCP/UDP 隧道，直接复制
     emit('copy-address', props.tunnel.proxyId);
   }
 }
 
-// 格式化域名显示（保留用于其他可能的用途）
-function formatDomain(domain: string): string {
-  if (!domain) return '';
-  
-  try {
-    // 尝试解析 JSON 字符串数组
-    const domains = JSON.parse(domain);
-    if (Array.isArray(domains)) {
-      // 如果是数组，用逗号分隔显示
-      return domains.join(', ');
-    }
-    // 如果不是数组，直接返回原值
-    return domain;
-  } catch {
-    // 解析失败，直接返回原值
-    return domain;
-  }
-}
-
-// 处理更多操作
 function handleMoreAction(action: string, tunnelId: number) {
   // 特殊处理详情按钮
   if (action === 'view-details') {

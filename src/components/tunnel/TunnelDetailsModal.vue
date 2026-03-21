@@ -126,8 +126,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { NModal, NDescriptions, NDescriptionsItem, NTag, NButton, NAlert, NSelect } from "naive-ui";
+import { NModal, NDescriptions, NDescriptionsItem, NTag, NButton, NAlert, NSelect, useMessage } from "naive-ui";
 import QrcodeVue from "qrcode-vue3";
+import { parseDomainArray } from "@/utils/domainUtils";
 
 // Tunnel 接口定义
 interface Tunnel {
@@ -176,45 +177,10 @@ interface Emits {
 
 const props = defineProps<Props>();
 defineEmits<Emits>();
+const message = useMessage();
 
-// 选中的域名
 const selectedDomain = ref<string>("");
 
-// 格式化域名显示（解析 JSON 字符串数组）
-function formatDomain(domain: string): string {
-  if (!domain) return '未配置域名';
-  
-  try {
-    // 尝试解析 JSON 字符串数组
-    const domains = JSON.parse(domain);
-    if (Array.isArray(domains) && domains.length > 0) {
-      // 返回第一个域名
-      return domains[0];
-    }
-    // 如果不是数组，直接返回原值
-    return domain;
-  } catch {
-    // 解析失败，直接返回原值
-    return domain;
-  }
-}
-
-// 解析域名数组
-function parseDomainArray(domain: string): string[] {
-  if (!domain) return [];
-  
-  try {
-    const domains = JSON.parse(domain);
-    if (Array.isArray(domains)) {
-      return domains;
-    }
-    return [domain];
-  } catch {
-    return [domain];
-  }
-}
-
-// 域名选项（用于下拉框）
 const domainOptions = computed(() => {
   if (!props.tunnel || !props.tunnel.domain) return [];
   
@@ -225,7 +191,6 @@ const domainOptions = computed(() => {
   }));
 });
 
-// 监听 tunnel 变化，重置选中的域名
 watch(
   () => props.tunnel,
   (newTunnel) => {
@@ -264,34 +229,36 @@ const getNodeAddress = (proxyId: number): string => {
   return "未知";
 };
 
-// 计算链接地址
 const linkAddress = computed(() => {
   if (!props.tunnel) return "";
   
   const tunnel = props.tunnel;
-  const domain = selectedDomain.value || formatDomain(tunnel.domain);
+  const domains = parseDomainArray(tunnel.domain);
+  const domain = selectedDomain.value || domains[0] || '';
   
   if (tunnel.proxyType === "tcp") {
     const nodeAddress = getNodeAddress(tunnel.proxyId);
     return `http://${nodeAddress}:${tunnel.remotePort || "未分配"}/`;
   } else if (tunnel.proxyType === "udp") {
-    // UDP 不支持生成二维码
     return "";
   } else if (tunnel.proxyType === "http") {
-    return `http://${domain}`;
+    return domain ? `http://${domain}` : "";
   } else if (tunnel.proxyType === "https") {
-    return `https://${domain}`;
+    return domain ? `https://${domain}` : "";
   } else {
     return domain;
   }
 });
 
-// 显示二维码
 const showQrCode = () => {
   if (!props.tunnel) return;
   
-  // UDP 不支持生成二维码
   if (props.tunnel.proxyType === "udp") {
+    return;
+  }
+  
+  if (!linkAddress.value || linkAddress.value === '') {
+    message.error('无法生成二维码：链接地址为空');
     return;
   }
   

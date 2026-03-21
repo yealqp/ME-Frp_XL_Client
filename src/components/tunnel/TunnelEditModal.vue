@@ -224,6 +224,7 @@ import {
   NDivider,
   NText
 } from 'naive-ui'
+import { formatDomainForDisplay, formatDomainForSave } from '@/utils/domainUtils'
 
 // Props 接口
 interface TunnelEditModalProps {
@@ -298,44 +299,6 @@ interface EditFormData {
 const props = defineProps<TunnelEditModalProps>()
 const emit = defineEmits<TunnelEditModalEmits>()
 
-// 格式化域名显示（将 JSON 字符串数组转换为逗号分隔的字符串）
-function parseDomainForEdit(domain: string): string {
-  if (!domain) return '';
-  
-  try {
-    // 尝试解析 JSON 字符串数组
-    const domains = JSON.parse(domain);
-    if (Array.isArray(domains)) {
-      // 将数组转换为逗号分隔的字符串
-      return domains.join(', ');
-    }
-    // 如果不是数组，直接返回原值
-    return domain;
-  } catch {
-    // 解析失败，直接返回原值
-    return domain;
-  }
-}
-
-// 格式化域名保存（将逗号分隔的字符串转换为 JSON 字符串数组）
-function formatDomainForSave(domain: string): string {
-  if (!domain) return '';
-  
-  // 如果已经是 JSON 格式，直接返回
-  if (domain.trim().startsWith('[')) {
-    return domain;
-  }
-  
-  // 将逗号分隔的域名转换为 JSON 字符串数组
-  const domains = domain
-    .split(',')
-    .map(d => d.trim())
-    .filter(d => d.length > 0);
-  
-  return JSON.stringify(domains);
-}
-
-// 内部表单状态
 const editForm = ref<EditFormData>({
   proxyName: '',
   localIp: '',
@@ -401,12 +364,10 @@ const handleCancel = () => {
   emit('cancel')
 }
 
-// 监听 tunnel prop 变化,初始化表单数据
 watch(
   () => props.tunnel,
   (newTunnel) => {
     if (newTunnel) {
-      // 根据 accessKey 和 httpUser 判断安全模式
       let securityMode = 'none'
       if (newTunnel.accessKey) {
         securityMode = 'accessKey'
@@ -414,27 +375,28 @@ watch(
         securityMode = 'basic'
       }
       
-      // 根据隧道类型和域名判断源协议（简化处理，默认 http）
-      const sourceProtocol = 'http'
+      let sourceProtocol = 'http'
+      if (newTunnel.proxyType === 'https') {
+        sourceProtocol = 'https'
+      }
       
-      // 初始化表单数据
       editForm.value = {
         proxyName: newTunnel.proxyName,
         localIp: newTunnel.localIp,
         localPort: newTunnel.localPort,
         remotePort: newTunnel.remotePort,
-        domain: parseDomainForEdit(newTunnel.domain),
+        domain: formatDomainForDisplay(newTunnel.domain),
         sourceProtocol: sourceProtocol,
         securityMode: securityMode,
         accessKey: newTunnel.accessKey || '',
-        httpUser: '',
-        httpPassword: '',
-        crtPath: '',
-        keyPath: '',
+        httpUser: newTunnel.httpUser || '',
+        httpPassword: newTunnel.httpPassword || '',
+        crtPath: newTunnel.crtPath || '',
+        keyPath: newTunnel.keyPath || '',
         useEncryption: newTunnel.useEncryption,
         useCompression: newTunnel.useCompression,
         proxyProtocolVersion: newTunnel.proxyProtocolVersion || '',
-        transportProtocol: 'tcp',
+        transportProtocol: newTunnel.transportProtocol || 'tcp',
         proxyType: newTunnel.proxyType,
         nodeId: newTunnel.nodeId
       }

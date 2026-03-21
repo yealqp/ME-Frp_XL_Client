@@ -36,10 +36,10 @@ import type { Tunnel } from '@/types/tunnel';
 interface Props {
   tunnels: Tunnel[];
   batchMode: boolean;
-  selectedTunnels: any;
+  selectedTunnels: Set<number>;
   nodeNameMap: Record<number, string>;
   nodeHostnameMap: Record<number, string>;
-  runningTunnels: any;
+  runningTunnels: Set<number>;
   actionLoading: Record<number, boolean>;
   usingConfigFile: number[];
 }
