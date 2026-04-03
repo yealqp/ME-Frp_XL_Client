@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
-import { invoke } from "@tauri-apps/api/core";
-import type { UnifiedConfig } from "../types/config";
 import { startLoading, finishLoading, errorLoading } from "../composables/useLoadingBar";
+import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 
 // 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
@@ -108,7 +107,7 @@ router.beforeEach(async (to, _from) => {
   // 检查是否需要登录
   if (to.meta.requiresAuth) {
     try {
-      const config = await invoke<UnifiedConfig>("load_unified_config");
+      const config = await loadUnifiedConfig();
       const isLoggedIn = config && config.userToken;
 
       if (isLoggedIn) {

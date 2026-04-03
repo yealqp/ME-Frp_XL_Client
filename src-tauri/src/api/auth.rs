@@ -56,7 +56,7 @@ pub async fn login(
 
     // 调用登录API
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/public/login")
+        .post("https://api.mefrp.com/api/public/login")
         .header("Content-Type", "application/json")
         .json(&login_request)
         .send()
@@ -79,7 +79,7 @@ pub async fn login(
 
     // 获取frp_token
     let frp_response = client
-        .get("https://api.mefrp.yealqp.cn/api/auth/user/frpToken")
+        .get("https://api.mefrp.com/api/auth/user/frpToken")
         .header("authorization", format!("Bearer {user_token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -114,7 +114,7 @@ pub async fn get_user_info(token: &str) -> Result<UserDetailInfo, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.yealqp.cn/api/auth/user/info")
+        .get("https://api.mefrp.com/api/auth/user/info")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -146,7 +146,7 @@ pub async fn user_sign(token: &str, captcha_token: String) -> Result<String, Str
     let client = create_http_client();
 
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/user/sign")
+        .post("https://api.mefrp.com/api/auth/user/sign")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&serde_json::json!({
@@ -185,7 +185,7 @@ pub async fn redeem_cdk(
     let client = create_http_client();
 
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/cdk/redeem")
+        .post("https://api.mefrp.com/api/auth/cdk/redeem")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&serde_json::json!({
@@ -220,7 +220,7 @@ pub async fn get_frp_token(token: &str) -> Result<String, String> {
 
     // 获取frp_token
     let response = client
-        .get("https://api.mefrp.yealqp.cn/api/auth/user/frpToken")
+        .get("https://api.mefrp.com/api/auth/user/frpToken")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -255,7 +255,7 @@ pub async fn get_cdk_history(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.yealqp.cn/api/auth/cdk/usage")
+        .get("https://api.mefrp.com/api/auth/cdk/usage")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -294,7 +294,7 @@ pub async fn send_email_code(email: String, captcha_token: String) -> Result<Str
     };
 
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/public/register/emailCode")
+        .post("https://api.mefrp.com/api/public/register/emailCode")
         .header("Content-Type", "application/json")
         .json(&request_data)
         .send()
@@ -342,7 +342,7 @@ pub async fn register(
     };
 
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/public/register")
+        .post("https://api.mefrp.com/api/public/register")
         .header("Content-Type", "application/json")
         .json(&request_data)
         .send()

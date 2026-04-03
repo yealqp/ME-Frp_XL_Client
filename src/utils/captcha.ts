@@ -55,7 +55,7 @@ export function createCaptcha(options: CaptchaOptions = {}): CaptchaInstance {
         
         // 创建 Cap 实例
         capInstance = new Cap({
-          apiEndpoint: `https://captcha.mefrp.yealqp.cn/${siteId}/`,
+          apiEndpoint: `https://captcha.mefrp.com/${siteId}/`,
           workerCount: workerCount,
         } as any);
 

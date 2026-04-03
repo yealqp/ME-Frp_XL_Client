@@ -114,18 +114,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
-import { createCaptcha } from "../utils/captcha";
+import type { ApiResponse } from "@/types/api";
+import { useCaptchaVerifier } from "@/composables/useCaptchaVerifier";
+import { extractErrorMessage } from "@/utils/errorHandler";
 
 const emit = defineEmits(["register-success"]);
 const message = useMessage();
 const router = useRouter();
+const { ensureCaptcha, verifyWithFeedback } = useCaptchaVerifier();
+
+interface RegisterForm {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  emailCode: string;
+}
 
 // 注册表单数据
-const registerForm = ref({
+const registerForm = ref<RegisterForm>({
   username: "",
   email: "",
   password: "",
@@ -133,11 +144,8 @@ const registerForm = ref({
   emailCode: "",
 });
 
-// 验证码实例
-let captchaInstance: ReturnType<typeof createCaptcha> | null = null;
-
 // 表单引用
-const formRef = ref<any>(null);
+const formRef = useTemplateRef<any>("formRef");
 
 // 倒计时
 const countdown = ref(0);
@@ -145,6 +153,29 @@ let countdownTimer: number | null = null;
 
 // 是否已发送验证码
 const emailSent = ref(false);
+
+function parseApiResponse<T>(response: string): ApiResponse<T> {
+  return JSON.parse(response) as ApiResponse<T>;
+}
+
+function clearCountdown() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
+
+function startCountdown() {
+  clearCountdown();
+  countdown.value = 60;
+  countdownTimer = window.setInterval(() => {
+    countdown.value--;
+
+    if (countdown.value <= 0) {
+      clearCountdown();
+    }
+  }, 1000);
+}
 
 // 表单验证规则
 const rules = {
@@ -253,72 +284,37 @@ const passwordStrength = computed(() => {
  * 发送邮箱验证码
  */
 async function sendEmailCode() {
-  if (!canSendCode.value) return;
+  if (!canSendCode.value || isSendingCode.value) return;
 
   try {
     isSendingCode.value = true;
+    const captchaToken = await verifyWithFeedback({ message });
 
-    // 显示人机验证提示
-    const verifyingMessage = message.loading("正在进行人机验证，请稍候...", {
-      duration: 0, // 不自动关闭
-    });
-
-    // 获取验证码token
-    if (!captchaInstance) {
-      captchaInstance = createCaptcha({
-        onProgress: (progress) => {
-          console.log(`验证进度: ${progress}%`);
-          // 可以在这里更新进度提示
-          if (progress === 100) {
-            verifyingMessage.destroy();
-            message.loading("验证成功，正在发送验证码...", { duration: 0 });
-          }
-        },
-        onError: (error) => {
-          console.error("验证错误:", error);
-          verifyingMessage.destroy();
-        },
-      });
-    }
-
-    const captchaToken = await captchaInstance.verify();
-    console.log("验证码token:", captchaToken);
-
-    // 关闭验证提示，显示发送中提示
-    verifyingMessage.destroy();
-    const sendingMessage = message.loading("正在发送验证码...", { duration: 0 });
+    message.loading("正在发送验证码...", { duration: 0 });
 
     // 调用后端API发送验证码
     const response = await invoke<string>("api_send_email_code", {
       email: registerForm.value.email,
-      captchaToken: captchaToken,
+      captchaToken,
     });
 
-    // 关闭发送中提示
-    sendingMessage.destroy();
-
-    const result = JSON.parse(response);
+    const result = parseApiResponse<null>(response);
     if (result.code === 200) {
+      message.destroyAll();
       message.success("验证码已发送至您的邮箱，请注意查收");
-      
+
       // 标记已发送验证码
       emailSent.value = true;
-      
+
       // 开始倒计时
-      countdown.value = 60;
-      countdownTimer = window.setInterval(() => {
-        countdown.value--;
-        if (countdown.value <= 0 && countdownTimer) {
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-        }
-      }, 1000);
+      startCountdown();
     } else {
       throw new Error(result.message || "发送验证码失败");
     }
   } catch (error) {
+    message.destroyAll();
     console.error("发送验证码失败:", error);
-    message.error(`发送验证码失败: ${error}`);
+    message.error(extractErrorMessage(error, "发送验证码失败"));
   } finally {
     isSendingCode.value = false;
   }
@@ -328,7 +324,7 @@ async function sendEmailCode() {
  * 处理注册
  */
 async function handleRegister() {
-  if (!canRegister.value) return;
+  if (!canRegister.value || isRegistering.value) return;
 
   // 验证表单
   try {
@@ -340,6 +336,8 @@ async function handleRegister() {
   isRegistering.value = true;
 
   try {
+    message.loading("正在注册中，请稍候...", { duration: 0 });
+
     // 调用后端API注册
     const response = await invoke<string>("api_register", {
       username: registerForm.value.username,
@@ -348,11 +346,12 @@ async function handleRegister() {
       emailCode: registerForm.value.emailCode,
     });
 
-    const result = JSON.parse(response);
+    const result = parseApiResponse<null>(response);
     if (result.code === 200) {
+      message.destroyAll();
       message.success(result.message || "注册成功！请登录");
       emit("register-success");
-      
+
       // 延迟跳转到登录页
       setTimeout(() => {
         router.push("/login");
@@ -361,8 +360,9 @@ async function handleRegister() {
       throw new Error(result.message || "注册失败");
     }
   } catch (error) {
+    message.destroyAll();
     console.error("注册失败:", error);
-    message.error(`注册失败: ${error}`);
+    message.error(extractErrorMessage(error, "注册失败，请稍后重试"));
   } finally {
     isRegistering.value = false;
   }
@@ -377,26 +377,12 @@ function goToLogin() {
 
 // 组件挂载时初始化验证码
 onMounted(() => {
-  captchaInstance = createCaptcha({
-    onProgress: (progress) => {
-      console.log(`验证进度: ${progress}%`);
-    },
-    onError: (error) => {
-      console.error("验证错误:", error);
-    },
-  });
+  ensureCaptcha();
 });
 
 // 组件卸载时清理
 onUnmounted(() => {
-  if (countdownTimer) {
-    clearInterval(countdownTimer);
-    countdownTimer = null;
-  }
-  if (captchaInstance) {
-    captchaInstance.destroy();
-    captchaInstance = null;
-  }
+  clearCountdown();
 });
 </script>
 

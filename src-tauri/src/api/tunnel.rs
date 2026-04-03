@@ -20,7 +20,7 @@ use crate::models::tunnel::{
 pub async fn create_tunnel(token: &str, request: &CreateTunnelRequest) -> Result<String, String> {
     let client = create_http_client();
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/proxy/create")
+        .post("https://api.mefrp.com/api/auth/proxy/create")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(request)
@@ -51,7 +51,7 @@ pub async fn create_tunnel(token: &str, request: &CreateTunnelRequest) -> Result
 pub async fn get_tunnel_list(token: &str) -> Result<String, String> {
     let client = create_http_client();
     let response = client
-        .get("https://api.mefrp.yealqp.cn/api/auth/proxy/list")
+        .get("https://api.mefrp.com/api/auth/proxy/list")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -82,7 +82,7 @@ pub async fn get_tunnel_list(token: &str) -> Result<String, String> {
 pub async fn update_tunnel(token: &str, request: &UpdateTunnelRequest) -> Result<String, String> {
     let client = create_http_client();
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/proxy/update")
+        .post("https://api.mefrp.com/api/auth/proxy/update")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(request)
@@ -116,7 +116,7 @@ pub async fn delete_tunnel(token: &str, proxy_id: i32) -> Result<String, String>
 
     let client = create_http_client();
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/proxy/delete")
+        .post("https://api.mefrp.com/api/auth/proxy/delete")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&delete_request)
@@ -150,7 +150,7 @@ pub async fn kick_tunnel(token: &str, proxy_id: i32) -> Result<String, String> {
 
     let client = create_http_client();
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/proxy/kick")
+        .post("https://api.mefrp.com/api/auth/proxy/kick")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&kick_request)
@@ -181,7 +181,7 @@ pub async fn kick_tunnel(token: &str, proxy_id: i32) -> Result<String, String> {
 pub async fn kick_all_proxies(token: &str) -> Result<String, String> {
     let client = create_http_client();
     let response = client
-        .get("https://api.mefrp.yealqp.cn/api/auth/user/kickAllProxies")
+        .get("https://api.mefrp.com/api/auth/user/kickAllProxies")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -225,7 +225,7 @@ pub async fn toggle_tunnel(
 
     let client = create_http_client();
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/proxy/toggle")
+        .post("https://api.mefrp.com/api/auth/proxy/toggle")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&toggle_request)
@@ -264,7 +264,7 @@ pub async fn get_tunnel_config(
 
     let client = create_http_client();
     let response = client
-        .post("https://api.mefrp.yealqp.cn/api/auth/proxy/config")
+        .post("https://api.mefrp.com/api/auth/proxy/config")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&request_data)

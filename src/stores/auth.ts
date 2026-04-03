@@ -7,8 +7,8 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { invoke } from '@tauri-apps/api/core';
 import type { UnifiedConfig } from '@/types/config';
+import { loadUnifiedConfig, saveUnifiedConfig } from '@/utils/unifiedConfig';
 
 export const useAuthStore = defineStore('auth', () => {
   // ============================================================================
@@ -49,7 +49,7 @@ export const useAuthStore = defineStore('auth', () => {
     isCheckingAuth.value = true;
 
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config');
+      const config = await loadUnifiedConfig();
       
       if (config?.userToken) {
         isLoggedIn.value = true;
@@ -148,7 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     // Clear login information from UnifiedConfig
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config');
+      const config = await loadUnifiedConfig();
       const clearedConfig: UnifiedConfig = {
         ...config,
         userToken: '',
@@ -156,7 +156,7 @@ export const useAuthStore = defineStore('auth', () => {
         username: '',
         group: '',
       };
-      await invoke('save_unified_config', { config: clearedConfig });
+      await saveUnifiedConfig(clearedConfig);
     } catch (error) {
       console.error('清除登录信息失败:', error);
       throw error;

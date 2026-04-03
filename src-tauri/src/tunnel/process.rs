@@ -81,7 +81,7 @@ pub async fn start_tunnel(
             .arg("-p")
             .arg(proxy_id.to_string())
             .arg("--api-root-url")
-            .arg("https://api.mefrp.yealqp.cn");
+            .arg("https://api.mefrp.com");
     }
 
     command.stdout(Stdio::piped()).stderr(Stdio::piped());

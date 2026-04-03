@@ -119,36 +119,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, ref, useTemplateRef } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
-import { createCaptcha } from "../utils/captcha";
 import type { UnifiedConfig } from "../types/config";
+import { useCaptchaVerifier } from "@/composables/useCaptchaVerifier";
+import { extractErrorMessage } from "@/utils/errorHandler";
+import { mergeUnifiedConfig } from "@/utils/unifiedConfig";
 
 const emit = defineEmits(["login-success"]);
 const message = useMessage();
 const router = useRouter();
 const authStore = useAuthStore();
+const { ensureCaptcha, verifyWithFeedback } = useCaptchaVerifier();
+
+interface LoginForm {
+  username: string;
+  password: string;
+  captchaToken: string;
+  userToken: string;
+}
+
+interface TokenLoginUserInfo {
+  username?: string;
+  group?: string;
+}
+
+function createEmptyLoginForm(): LoginForm {
+  return {
+    username: "",
+    password: "",
+    captchaToken: "",
+    userToken: "",
+  };
+}
 
 // 登录表单数据
-const loginForm = ref({
-  username: "",
-  password: "",
-  captchaToken: "",
-  userToken: "", // 新增：用于存储用户输入的token
-});
+const loginForm = ref<LoginForm>(createEmptyLoginForm());
 
 // Token登录模式状态
 const isTokenMode = ref(false);
 
-// 验证码实例
-let captchaInstance: ReturnType<typeof createCaptcha> | null = null;
-
 // 表单引用
-const formRef = ref<any>(null);
+const formRef = useTemplateRef<any>("formRef");
 
 // 表单验证规则
 const rules = computed(() => {
@@ -182,30 +198,77 @@ const rules = computed(() => {
 // 登录状态
 const isLogging = ref(false);
 
+function resetLoginForm() {
+  loginForm.value = createEmptyLoginForm();
+}
+
+function finishLogin(config: UnifiedConfig) {
+  authStore.login({
+    userToken: config.userToken,
+    username: config.username,
+    group: config.group,
+    frpToken: config.frpToken,
+  });
+  emit("login-success");
+}
+
+async function openExternalPage(url: string, fallbackUrl = url) {
+  try {
+    await openUrl(url);
+  } catch (error) {
+    console.error("打开链接失败:", error);
+    message.error(`无法打开链接，请手动访问 ${fallbackUrl}`);
+  }
+}
+
+function getTokenLoginErrorMessage(error: unknown): string {
+  const errorMessage = extractErrorMessage(error, "Token登录失败");
+
+  if (errorMessage.includes("未找到有效的token")) {
+    return "Token验证失败，请检查Token是否正确或已过期";
+  }
+
+  if (errorMessage.includes("配置保存失败")) {
+    return "配置保存失败，请检查应用权限或重试";
+  }
+
+  if (errorMessage.includes("未找到配置文件")) {
+    return "配置文件加载失败，请重启应用后重试";
+  }
+
+  return errorMessage;
+}
+
+async function buildTokenLoginConfig(userToken: string): Promise<UnifiedConfig> {
+  const normalizedToken = userToken.trim();
+
+  if (!normalizedToken) {
+    throw new Error("请输入有效的Token");
+  }
+
+  await mergeUnifiedConfig({ userToken: normalizedToken });
+
+  const userInfo = await invoke<TokenLoginUserInfo>("api_get_user_info");
+  const frpToken = await invoke<string>("api_get_frp_token");
+
+  return mergeUnifiedConfig({
+    userToken: normalizedToken,
+    username: userInfo.username || "",
+    group: userInfo.group || "",
+    frpToken,
+  });
+}
+
 /**
  * 切换登录模式（普通登录 <-> Token登录）
  */
 function toggleLoginMode() {
   isTokenMode.value = !isTokenMode.value;
-
-  // 清空表单数据
-  loginForm.value = {
-    username: "",
-    password: "",
-    captchaToken: "",
-    userToken: "",
-  };
+  resetLoginForm();
 
   // 如果切换到普通登录模式，初始化验证码实例
-  if (!isTokenMode.value && !captchaInstance) {
-    captchaInstance = createCaptcha({
-      onProgress: (progress) => {
-        console.log(`验证进度: ${progress}%`);
-      },
-      onError: (error) => {
-        console.error("验证错误:", error);
-      },
-    });
+  if (!isTokenMode.value) {
+    ensureCaptcha();
   }
 
   console.log("切换登录模式:", isTokenMode.value ? "Token模式" : "普通模式");
@@ -223,25 +286,14 @@ function goToRegister() {
  * 使用Tauri的opener插件在默认浏览器中打开链接
  */
 async function openTokenPage() {
-  try {
-    await openUrl("https://www.mefrp.com/dashboard/profile");
-  } catch (error) {
-    console.error("打开链接失败:", error);
-    message.error(
-      "无法打开链接，请手动访问 https://www.mefrp.com/dashboard/profile",
-    );
-  }
+  await openExternalPage("https://www.mefrp.com/dashboard/profile");
 }
 
 async function openWebWievPage() {
-  try {
-    await openUrl("https://alist.yealqp.cn/mefrp-desktop/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF");
-  } catch (error) {
-    console.error("打开链接失败:", error);
-    message.error(
-      "无法打开链接，请手动访问 https://alist.yealqp.cn/mefrp-desktop/ME-Frp XL客户端",
-    );
-  }
+  await openExternalPage(
+    "https://alist.yealqp.cn/mefrp-desktop/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF",
+    "https://alist.yealqp.cn/mefrp-desktop/ME-Frp XL客户端",
+  );
 }
 
 /**
@@ -249,149 +301,28 @@ async function openWebWievPage() {
  * 直接将输入的token存储为usertoken，然后调用用户信息API验证token有效性
  */
 async function handleTokenLogin() {
-  try {
-    console.log(
-      "开始Token登录，Token长度:",
-      loginForm.value.userToken?.length || 0,
-    );
+  const config = await buildTokenLoginConfig(loginForm.value.userToken);
 
-    // 验证Token输入
-    if (!loginForm.value.userToken || loginForm.value.userToken.trim() === "") {
-      throw new Error("请输入有效的Token");
-    }
+  message.destroyAll();
+  message.success("Token登录成功");
+  finishLogin(config);
+}
 
-    console.log("步骤1: 加载当前配置...");
-    // 首先加载当前配置
-    const currentConfig = (await invoke(
-      "load_unified_config",
-    )) as UnifiedConfig;
-    console.log("当前配置加载成功:", {
-      hasUserToken: !!currentConfig.userToken,
-      userTokenLength: currentConfig.userToken?.length || 0,
-    });
+async function handleAccountLogin() {
+  const captchaToken = await verifyWithFeedback({ message });
 
-    console.log("步骤2: 准备更新配置...");
-    // 更新配置中的token - 注意字段名要与后端UnifiedConfig结构体匹配
-    const updatedConfig: UnifiedConfig = {
-      ...currentConfig,
-      userToken: loginForm.value.userToken.trim(), // 使用userToken而不是user_token
-    };
+  loginForm.value.captchaToken = captchaToken;
+  message.loading("正在登录中，请稍候...", { duration: 0 });
 
-    console.log("更新后的配置对象:", {
-      hasUserToken: !!updatedConfig.userToken,
-      userTokenLength: updatedConfig.userToken?.length || 0,
-      configKeys: Object.keys(updatedConfig),
-    });
+  const config = await invoke<UnifiedConfig>("api_login", {
+    username: loginForm.value.username,
+    password: loginForm.value.password,
+    captchaToken,
+  });
 
-    console.log("步骤3: 保存配置到文件...");
-    // 保存更新后的配置
-    const saveResult = await invoke("save_unified_config", {
-      config: updatedConfig,
-    });
-    console.log("配置保存结果:", saveResult);
-
-    console.log("步骤4: 验证配置是否保存成功...");
-    // 添加短暂延迟确保文件写入完成
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // 重新加载配置验证是否保存成功
-    const verifyConfig = (await invoke("load_unified_config")) as UnifiedConfig;
-    console.log("验证配置加载结果:", {
-      hasUserToken: !!verifyConfig.userToken,
-      userTokenLength: verifyConfig.userToken?.length || 0,
-      userTokenValue: verifyConfig.userToken?.substring(0, 10) + "...",
-      expectedToken: loginForm.value.userToken.trim().substring(0, 10) + "...",
-      configKeys: Object.keys(verifyConfig),
-    });
-
-    if (
-      !verifyConfig.userToken ||
-      verifyConfig.userToken !== loginForm.value.userToken.trim()
-    ) {
-      throw new Error("配置保存失败，Token未正确写入配置文件");
-    }
-    console.log("配置验证成功，Token已正确保存");
-
-    console.log("步骤5: 调用用户信息API验证Token...");
-    // 现在调用用户信息API进行验证（不需要传递参数，它会从配置中读取token）
-    const userInfo = (await invoke("api_get_user_info")) as any;
-
-    console.log("Token验证成功，获取到用户信息:", userInfo);
-
-    console.log("步骤6: 获取 frpToken...");
-    // 获取 frpToken
-    const frpToken = (await invoke("api_get_frp_token")) as string;
-    console.log("frpToken 获取成功，长度:", frpToken?.length || 0);
-
-    console.log("步骤7: 重新加载配置以获取最新的 frpToken...");
-    // 重新加载配置以获取最新的 frpToken（api_get_frp_token 已经自动保存了）
-    const latestConfig = (await invoke("load_unified_config")) as UnifiedConfig;
-    console.log(
-      "最新配置加载成功，frpToken 长度:",
-      latestConfig.frpToken?.length || 0,
-    );
-
-    console.log("步骤8: 使用用户信息更新配置文件...");
-    // 使用获取到的用户信息更新配置，保留已保存的 frpToken
-    const completeConfig: UnifiedConfig = {
-      ...latestConfig, // 使用最新配置，包含已保存的 frpToken
-      username: userInfo.username || "",
-      group: userInfo.group || "",
-    };
-
-    console.log("准备保存完整配置:", {
-      username: completeConfig.username,
-      group: completeConfig.group,
-      hasUserToken: !!completeConfig.userToken,
-      hasFrpToken: !!completeConfig.frpToken,
-      frpTokenLength: completeConfig.frpToken?.length || 0,
-    });
-
-    // 保存完整的配置信息
-    await invoke("save_unified_config", { config: completeConfig });
-    console.log("完整配置保存成功，包含 frpToken");
-
-    message.success("Token登录成功");
-
-    // Call auth store login action with user info
-    authStore.login({
-      userToken: completeConfig.userToken,
-      username: completeConfig.username,
-      group: completeConfig.group,
-      frpToken: completeConfig.frpToken,
-    });
-
-    // 立即触发登录成功事件
-    console.log("触发login-success事件");
-    emit("login-success");
-  } catch (error) {
-    console.error("Token登录失败，详细错误:", error);
-
-    // 详细的错误处理
-    let errorMessage = "Token登录失败";
-
-    if (typeof error === "string") {
-      errorMessage = error;
-    } else if (error && typeof error === "object") {
-      if ("message" in error) {
-        errorMessage = (error as any).message;
-      } else if ("toString" in error) {
-        errorMessage = error.toString();
-      }
-    }
-
-    // 根据错误类型给出更具体的提示
-    if (errorMessage.includes("未找到有效的token")) {
-      errorMessage = "Token验证失败，请检查Token是否正确或已过期";
-    } else if (errorMessage.includes("配置保存失败")) {
-      errorMessage = "配置保存失败，请检查应用权限或重试";
-    } else if (errorMessage.includes("未找到配置文件")) {
-      errorMessage = "配置文件加载失败，请重启应用后重试";
-    }
-
-    console.error("最终错误信息:", errorMessage);
-    message.error(errorMessage);
-  }
+  message.destroyAll();
+  message.success("登录成功");
+  finishLogin(config);
 }
 
 // 处理登录
@@ -410,82 +341,17 @@ async function handleLogin() {
 
   try {
     if (isTokenMode.value) {
-      // Token登录模式
-      message.loading("正在登录中，请稍候...");
+      message.loading("正在登录中，请稍候...", { duration: 0 });
       await handleTokenLogin();
     } else {
-      // 普通登录模式 - 先进行人机验证
-      message.loading("正在进行人机验证...", { duration: 0 });
-      
-      // 确保验证码实例已创建
-      if (!captchaInstance) {
-        captchaInstance = createCaptcha({
-          onProgress: (progress) => {
-            console.log(`验证进度: ${progress}%`);
-          },
-          onError: (error) => {
-            console.error("验证错误:", error);
-          },
-        });
-      }
-
-      // 触发隐式验证
-      let captchaToken: string;
-      try {
-        captchaToken = await captchaInstance.verify();
-        console.log("获取到的 captchaToken:", captchaToken, "类型:", typeof captchaToken);
-        
-        // 确保 token 是字符串
-        if (typeof captchaToken !== 'string') {
-          throw new Error(`验证 token 类型错误: ${typeof captchaToken}`);
-        }
-      } catch (captchaError) {
-        message.destroyAll();
-        console.error("人机验证失败:", captchaError);
-        message.error("人机验证失败，请重试");
-        isLogging.value = false;
-        return;
-      }
-      
-      loginForm.value.captchaToken = captchaToken;
-      
-      message.destroyAll();
-      message.loading("正在登录中，请稍候...");
-      
-      console.log("开始登录:", loginForm.value.username, "captchaToken:", loginForm.value.captchaToken);
-
-      // 调用后端登录API命令
-      const config = await invoke<UnifiedConfig>("api_login", {
-        username: loginForm.value.username,
-        password: loginForm.value.password,
-        captchaToken: loginForm.value.captchaToken,
-      });
-
-      console.log("登录成功，配置已保存:", config);
-      message.success("登录成功");
-
-      // Call auth store login action with user info
-      authStore.login({
-        userToken: config.userToken,
-        username: config.username,
-        group: config.group,
-        frpToken: config.frpToken,
-      });
-
-      // 立即触发登录成功事件
-      console.log("触发login-success事件");
-      emit("login-success");
+      await handleAccountLogin();
     }
   } catch (error) {
-    message.destroyAll(); // 清除所有加载消息
+    message.destroyAll();
     console.error("登录失败:", error);
-    // 显示完整的错误信息
-    const errorMessage =
-      error && typeof error === "string"
-        ? error
-        : error && typeof error === "object" && "message" in error
-          ? (error as any).message
-          : "登录失败，请检查用户名和密码";
+    const errorMessage = isTokenMode.value
+      ? getTokenLoginErrorMessage(error)
+      : extractErrorMessage(error, "登录失败，请检查用户名和密码");
     message.error(errorMessage);
   } finally {
     isLogging.value = false;
@@ -494,28 +360,9 @@ async function handleLogin() {
 
 onMounted(async () => {
   console.log("登录组件已加载，准备登录");
-  
-  // 预初始化验证码实例
-  if (!isTokenMode.value) {
-    captchaInstance = createCaptcha({
-      onProgress: (progress) => {
-        console.log(`验证进度: ${progress}%`);
-      },
-      onError: (error) => {
-        console.error("验证错误:", error);
-      },
-    });
-  }
-});
 
-onUnmounted(() => {
-  // 组件卸载时的清理工作
-  console.log("登录组件卸载");
-  
-  // 销毁验证码实例
-  if (captchaInstance) {
-    captchaInstance.destroy();
-    captchaInstance = null;
+  if (!isTokenMode.value) {
+    ensureCaptcha();
   }
 });
 </script>
