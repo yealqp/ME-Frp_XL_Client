@@ -7,9 +7,9 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { invoke } from '@tauri-apps/api/core';
-import type { UnifiedConfig, AppSettings } from '@/types/config';
+import type { AppSettings } from '@/types/config';
 import { showAdGlobal } from '@/utils/eventBus';
+import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
 export const useSettingsStore = defineStore('settings', () => {
   // ============================================================================
@@ -63,7 +63,7 @@ export const useSettingsStore = defineStore('settings', () => {
     error.value = '';
 
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config');
+      const config = await loadUnifiedConfig();
       
       // Load settings with defaults
       settings.value = {
@@ -98,12 +98,7 @@ export const useSettingsStore = defineStore('settings', () => {
     error.value = '';
 
     try {
-      // Load current config to preserve other fields
-      const config = await invoke<UnifiedConfig>('load_unified_config');
-      
-      // Merge settings into config
-      const updatedConfig: UnifiedConfig = {
-        ...config,
+      await mergeUnifiedConfig({
         autoStart: settings.value.autoStart,
         alwaysOnTop: settings.value.alwaysOnTop,
         autoUpdate: settings.value.autoUpdate,
@@ -112,9 +107,7 @@ export const useSettingsStore = defineStore('settings', () => {
         minimizeToTray: settings.value.minimizeToTray,
         showAd: settings.value.showAd,
         hideWebuiEntry: settings.value.hideWebuiEntry,
-      };
-
-      await invoke('save_unified_config', { config: updatedConfig });
+      });
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err);
       console.error('保存设置失败:', err);

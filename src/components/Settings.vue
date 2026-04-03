@@ -345,6 +345,8 @@ import {
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import type { UnifiedConfig, AppSettings } from "../types/config";
+import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
+import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
 import { useSettingsStore } from "../stores/settings";
 import { useUIStore } from "../stores/ui";
 import { useThemeStore } from "../stores/theme";
@@ -565,8 +567,7 @@ const handleSidebarCollapsibleChange = async (value: boolean) => {
 // 保存设置
 const saveSettings = async () => {
   try {
-    // 首先加载当前的统一配置
-    const currentConfig = await invoke<UnifiedConfig>("load_unified_config");
+    const currentConfig = await loadUnifiedConfig();
 
     // 更新设置部分（不包含 theme，theme 由前端管理）
     const updatedConfig: UnifiedConfig = {
@@ -581,7 +582,7 @@ const saveSettings = async () => {
       hideWebuiEntry: settings.value.hideWebuiEntry,
     };
 
-    await invoke("save_unified_config", { config: updatedConfig });
+    await saveUnifiedConfig(updatedConfig);
 
     // theme 保存到 localStorage
     localStorage.setItem("mefrp_theme", settings.value.theme);
@@ -593,7 +594,7 @@ const saveSettings = async () => {
 // 加载设置
 const loadSettings = async () => {
   try {
-    const unifiedConfig = await invoke<UnifiedConfig>("load_unified_config");
+    const unifiedConfig = await loadUnifiedConfig();
     if (unifiedConfig) {
       settings.value = {
         autoStart: unifiedConfig.autoStart || false,
@@ -647,12 +648,10 @@ const loadSettings = async () => {
 const loadTunnels = async () => {
   tunnelLoading.value = true;
   try {
-    const responseText = await invoke("api_get_tunnel_list");
-    const result = JSON.parse(responseText as string);
+    const result = await invokeTauriResponse<{ proxies?: Tunnel[] } | Tunnel[]>("api_get_tunnel_list");
 
     if (result.code === 200) {
-      // 新版 API 返回格式: {code, data: {nodes, proxies}, message}
-      const tunnelData = result.data.proxies || result.data || [];
+      const tunnelData = extractProxyList(result.data);
       tunnels.value = tunnelData;
 
       // 清理无效的自启动隧道ID

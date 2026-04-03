@@ -9,12 +9,11 @@
 
 import { ref, computed, watch } from 'vue';
 import { defineStore } from 'pinia';
-import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import type { ThemeMode, Theme, ThemePreference } from '@/types/theme';
-import type { UnifiedConfig } from '@/types/config';
 import { useSystemTheme } from '@/composables/useSystemTheme';
 import { applyCSSVariables, getNaiveTheme, applyTransitionClass } from '@/utils/themeApplier';
+import { mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
 /**
  * LocalStorage 键名
@@ -212,12 +211,9 @@ export const useThemeStore = defineStore('theme', () => {
    */
   async function syncToUnifiedConfig(): Promise<void> {
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config');
-      const updatedConfig: UnifiedConfig = {
-        ...config,
+      await mergeUnifiedConfig({
         themeMode: mode.value,
-      };
-      await invoke('save_unified_config', { config: updatedConfig });
+      });
     } catch (error) {
       console.error('同步主题到 UnifiedConfig 失败:', error);
       // 静默失败，LocalStorage 已保存主题偏好

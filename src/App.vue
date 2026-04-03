@@ -22,7 +22,12 @@ import { useCreateTunnelStore } from "./stores/createTunnel";
 import { useThemeStore } from "./stores/theme";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
-import type { UnifiedConfig } from "./types/config";
+import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
+import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
+
+interface TunnelSummary {
+  proxyId: number;
+}
 
 const router = useRouter();
 const route = useRoute();
@@ -162,7 +167,7 @@ const handleLogout = async (): Promise<void> => {
 const autoStartTunnels = async () => {
   try {
     // 从统一配置读取自动启动隧道列表
-    const unifiedConfig = await invoke<UnifiedConfig>("load_unified_config");
+    const unifiedConfig = await loadUnifiedConfig();
 
     if (
       !unifiedConfig ||
@@ -174,18 +179,14 @@ const autoStartTunnels = async () => {
     }
 
     // 先获取服务器上的隧道列表，验证配置中的隧道是否仍然存在
-    let validTunnelIds: number[] = [];
+      let validTunnelIds: number[] = [];
 
-    try {
-      const responseText = await invoke("api_get_tunnel_list");
-      const result = JSON.parse(responseText as string);
+      try {
+      const result = await invokeTauriResponse<{ proxies?: TunnelSummary[] } | TunnelSummary[]>("api_get_tunnel_list");
 
       if (result.code === 200) {
-        // 新版 API 返回格式: {code, data: {nodes, proxies}, message}
-        const tunnelData = result.data.proxies || result.data || [];
-        const serverTunnelIds = tunnelData.map(
-          (tunnel: any) => tunnel.proxyId,
-        );
+        const tunnelData = extractProxyList(result.data);
+        const serverTunnelIds = tunnelData.map((tunnel) => tunnel.proxyId);
         const originalCount = unifiedConfig.autoStartTunnels.length;
 
         // 过滤出仍然存在于服务器上的隧道
@@ -206,7 +207,7 @@ const autoStartTunnels = async () => {
             ...unifiedConfig,
             autoStartTunnels: validTunnelIds,
           };
-          await invoke("save_unified_config", { config: updatedConfig });
+          await saveUnifiedConfig(updatedConfig);
         }
       } else {
         console.error("获取隧道列表失败，跳过自启动验证:", result.message);
@@ -243,10 +244,9 @@ const autoStartTunnels = async () => {
           );
 
           // 调用API启动隧道
-          const responseText = await invoke("api_start_tunnel", {
+          const result = await invokeTauriResponse<null>("api_start_tunnel", {
             proxyId: tunnelId,
           });
-          const result = JSON.parse(responseText as string);
 
           if (result.code === 200) {
             console.log(`隧道 ${tunnelId} 启动成功`);
@@ -277,7 +277,7 @@ const autoStartTunnels = async () => {
 const autoCheckForUpdates = async () => {
   try {
     // 从统一配置读取自动更新设置
-    const unifiedConfig = await invoke<UnifiedConfig>("load_unified_config");
+    const unifiedConfig = await loadUnifiedConfig();
 
     // 如果未开启自动更新，则跳过
     if (!unifiedConfig || unifiedConfig.autoUpdate === false) {

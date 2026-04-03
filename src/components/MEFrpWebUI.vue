@@ -304,6 +304,9 @@ import {
 } from "lucide-vue-next";
 import { useWebuiStore } from "../stores/webui";
 import { invoke } from "@tauri-apps/api/core";
+import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
+import { loadUnifiedConfig } from "@/utils/unifiedConfig";
+import { extractErrorMessage } from "@/utils/errorHandler";
 
 const message = useMessage();
 const webuiStore = useWebuiStore();
@@ -336,6 +339,45 @@ const logsError = ref("");
 const autoRefreshLogs = ref(true); // 默认开启自动刷新
 const logsTextRef = ref<HTMLElement | null>(null);
 let logsRefreshInterval: number | null = null;
+
+interface TunnelListPayload {
+  proxies?: Tunnel[];
+}
+
+async function getRequiredConfigToken(
+  key: "userToken" | "frpToken",
+  errorMessage: string,
+): Promise<string> {
+  const config = await loadUnifiedConfig();
+  const token = config[key] || "";
+
+  if (!token) {
+    throw new Error(errorMessage);
+  }
+
+  return token;
+}
+
+async function runTunnelAction(
+  command: "webui_start_tunnel" | "webui_stop_tunnel",
+  proxyId: number,
+  successMessage: string,
+): Promise<void> {
+  const frpToken = await getRequiredConfigToken("frpToken", "未找到 FRP Token，请先登录");
+
+  const result = await invokeTauriResponse<null>(command, {
+    session: sessionCookie.value,
+    proxyId,
+    frpToken,
+  });
+
+  if (result.code !== 200) {
+    throw new Error(result.message || successMessage.replace("成功", "失败"));
+  }
+
+  message.success(successMessage);
+  await fetchTunnels();
+}
 
 // 包装 store 方法以显示消息
 const handleStart = async () => {
@@ -391,28 +433,21 @@ const fetchTunnels = async () => {
   tunnelsError.value = "";
 
   try {
-    // 从配置中获取 userToken
-    const config = await invoke<any>("load_unified_config");
-    const userToken = config.userToken || "";
+    const userToken = await getRequiredConfigToken("userToken", "未找到用户 Token，请先登录");
 
-    if (!userToken) {
-      throw new Error("未找到用户 Token，请先登录");
-    }
-
-    const responseText = await invoke<string>("webui_get_tunnels", {
+    const result = await invokeTauriResponse<TunnelListPayload | Tunnel[]>("webui_get_tunnels", {
       session: sessionCookie.value,
-      userToken: userToken,
+      userToken,
     });
 
-    const result = JSON.parse(responseText);
     if (result.code === 200) {
-      tunnels.value = result.data.proxies || [];
+      tunnels.value = extractProxyList(result.data);
     } else {
       throw new Error(result.message || "获取隧道列表失败");
     }
   } catch (error) {
     console.error("获取隧道列表失败:", error);
-    tunnelsError.value = error instanceof Error ? error.message : "获取隧道列表失败";
+    tunnelsError.value = extractErrorMessage(error, "获取隧道列表失败");
     // 如果是认证失败，尝试重新登录
     if (tunnelsError.value.includes("401") || tunnelsError.value.includes("认证")) {
       sessionCookie.value = "";
@@ -437,31 +472,10 @@ const startTunnel = async (proxyId: number) => {
 
   tunnelActionLoading.value[proxyId] = true;
   try {
-    // 从配置中获取 frpToken
-    const config = await invoke<any>("load_unified_config");
-    const frpToken = config.frpToken || "";
-
-    if (!frpToken) {
-      throw new Error("未找到 FRP Token，请先登录");
-    }
-
-    const responseText = await invoke<string>("webui_start_tunnel", {
-      session: sessionCookie.value,
-      proxyId: proxyId,
-      frpToken: frpToken,
-    });
-
-    const result = JSON.parse(responseText);
-    if (result.code === 200) {
-      message.success("隧道启动成功");
-      // 刷新隧道列表
-      await fetchTunnels();
-    } else {
-      throw new Error(result.message || "启动隧道失败");
-    }
+    await runTunnelAction("webui_start_tunnel", proxyId, "隧道启动成功");
   } catch (error) {
     console.error("启动隧道失败:", error);
-    message.error(error instanceof Error ? error.message : "启动隧道失败");
+    message.error(extractErrorMessage(error, "启动隧道失败"));
   } finally {
     tunnelActionLoading.value[proxyId] = false;
   }
@@ -476,31 +490,10 @@ const stopTunnel = async (proxyId: number) => {
 
   tunnelActionLoading.value[proxyId] = true;
   try {
-    // 从配置中获取 frpToken
-    const config = await invoke<any>("load_unified_config");
-    const frpToken = config.frpToken || "";
-
-    if (!frpToken) {
-      throw new Error("未找到 FRP Token，请先登录");
-    }
-
-    const responseText = await invoke<string>("webui_stop_tunnel", {
-      session: sessionCookie.value,
-      proxyId: proxyId,
-      frpToken: frpToken,
-    });
-
-    const result = JSON.parse(responseText);
-    if (result.code === 200) {
-      message.success("隧道停止成功");
-      // 刷新隧道列表
-      await fetchTunnels();
-    } else {
-      throw new Error(result.message || "停止隧道失败");
-    }
+    await runTunnelAction("webui_stop_tunnel", proxyId, "隧道停止成功");
   } catch (error) {
     console.error("停止隧道失败:", error);
-    message.error(error instanceof Error ? error.message : "停止隧道失败");
+    message.error(extractErrorMessage(error, "停止隧道失败"));
   } finally {
     tunnelActionLoading.value[proxyId] = false;
   }

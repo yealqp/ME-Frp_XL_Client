@@ -10,8 +10,8 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 import { showAdGlobal } from '@/utils/eventBus';
-import type { UnifiedConfig } from '@/types/config';
 import type { NotificationReactive } from 'naive-ui';
+import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
 export const useUIStore = defineStore('ui', () => {
   // State
@@ -64,7 +64,7 @@ export const useUIStore = defineStore('ui', () => {
    */
   async function loadSidebarSettings() {
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config');
+      const config = await loadUnifiedConfig();
       
       if (config.sidebarWidth !== undefined) {
         const width = config.sidebarWidth;
@@ -90,16 +90,11 @@ export const useUIStore = defineStore('ui', () => {
    */
   async function saveSidebarSettings() {
     try {
-      const config = await invoke<UnifiedConfig>('load_unified_config');
-      
-      const updatedConfig: UnifiedConfig = {
-        ...config,
+      await mergeUnifiedConfig({
         sidebarWidth: sidebarWidth.value,
         sidebarCollapsible: sidebarCollapsible.value,
         sidebarCollapsed: sidebarCollapsed.value,
-      };
-      
-      await invoke('save_unified_config', { config: updatedConfig });
+      });
     } catch (error) {
       console.error('保存侧边栏设置失败:', error);
       throw error;

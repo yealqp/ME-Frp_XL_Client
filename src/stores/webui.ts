@@ -1,11 +1,25 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { extractErrorMessage } from '@/utils/errorHandler';
+import { invokeTauriResponse } from '@/utils/tauriResponse';
+import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
+
+interface WebuiSettings {
+  addr: string;
+  port: number;
+  pass: string;
+}
+
+interface ActionResult {
+  success: boolean;
+  message: string;
+}
 
 export const useWebuiStore = defineStore('webui', () => {
 
   // 状态
-  const settings = ref({
+  const settings = ref<WebuiSettings>({
     addr: 'localhost',
     port: 1201,
     pass: 'admin',
@@ -24,7 +38,7 @@ export const useWebuiStore = defineStore('webui', () => {
   // 加载 WebUI 设置
   const loadSettings = async () => {
     try {
-      const config = await invoke<any>('load_unified_config');
+      const config = await loadUnifiedConfig();
 
       if (config.webuiAddr) settings.value.addr = config.webuiAddr;
       if (config.webuiPort) settings.value.port = config.webuiPort;
@@ -35,19 +49,40 @@ export const useWebuiStore = defineStore('webui', () => {
   };
 
   // 保存 WebUI 设置
-  const saveSettings = async () => {
+  const saveSettings = async (): Promise<ActionResult> => {
     try {
-      const config = await invoke<any>('load_unified_config');
-
-      config.webuiAddr = settings.value.addr;
-      config.webuiPort = settings.value.port;
-      config.webuiPass = settings.value.pass;
-
-      await invoke('save_unified_config', { config });
+      await mergeUnifiedConfig({
+        webuiAddr: settings.value.addr,
+        webuiPort: settings.value.port,
+        webuiPass: settings.value.pass,
+      });
       return { success: true, message: 'WebUI 设置已保存' };
     } catch (error) {
       console.error('保存 WebUI 设置失败:', error);
-      return { success: false, message: '保存 WebUI 设置失败' };
+      return { success: false, message: extractErrorMessage(error, '保存 WebUI 设置失败') };
+    }
+  };
+
+  const runWebuiCommand = async (
+    command: 'start_webui' | 'stop_webui',
+    successMessage: string,
+    failureMessage: string,
+    params?: Record<string, unknown>,
+  ): Promise<ActionResult> => {
+    try {
+      const response = await invokeTauriResponse<null>(command, params);
+      if (response.code !== 200) {
+        throw new Error(response.message || failureMessage);
+      }
+
+      await checkStatus();
+      return { success: true, message: successMessage };
+    } catch (error) {
+      console.error(`${failureMessage}:`, error);
+      return {
+        success: false,
+        message: extractErrorMessage(error, failureMessage),
+      };
     }
   };
 
@@ -78,22 +113,11 @@ export const useWebuiStore = defineStore('webui', () => {
   const start = async () => {
     isStarting.value = true;
     try {
-      const responseText = await invoke<string>('start_webui', {
+      return await runWebuiCommand('start_webui', 'WebUI 启动成功', '启动 WebUI 失败', {
         addr: settings.value.addr,
         port: settings.value.port,
         pass: settings.value.pass,
       });
-
-      const response = JSON.parse(responseText);
-      if (response.code === 200) {
-        await checkStatus();
-        return { success: true, message: 'WebUI 启动成功' };
-      } else {
-        throw new Error(response.message || '启动 WebUI 失败');
-      }
-    } catch (error) {
-      console.error('启动 WebUI 失败:', error);
-      return { success: false, message: `启动 WebUI 失败: ${error}` };
     } finally {
       isStarting.value = false;
     }
@@ -103,18 +127,7 @@ export const useWebuiStore = defineStore('webui', () => {
   const stop = async () => {
     isStopping.value = true;
     try {
-      const responseText = await invoke<string>('stop_webui');
-      const response = JSON.parse(responseText);
-
-      if (response.code === 200) {
-        await checkStatus();
-        return { success: true, message: 'WebUI 已停止' };
-      } else {
-        throw new Error(response.message || '停止 WebUI 失败');
-      }
-    } catch (error) {
-      console.error('停止 WebUI 失败:', error);
-      return { success: false, message: `停止 WebUI 失败: ${error}` };
+      return await runWebuiCommand('stop_webui', 'WebUI 已停止', '停止 WebUI 失败');
     } finally {
       isStopping.value = false;
     }
