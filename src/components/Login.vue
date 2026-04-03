@@ -50,7 +50,17 @@
 
           <!-- Token登录模式 -->
           <template v-else>
-            <!-- Token说明提示 -->
+            <n-form-item path="userToken">
+              <n-input
+                v-model:value="loginForm.userToken"
+                placeholder="请输入您的Token"
+                size="large"
+                :disabled="isLogging"
+                type="textarea"
+                :autosize="{ minRows: 3, maxRows: 5 }"
+              />
+            </n-form-item>
+               <!-- Token说明提示 -->
             <n-alert type="info" :show-icon="false">
              
                 Token即为用户令牌/访问秘钥，请在
@@ -65,17 +75,6 @@
                 </n-button>
                 最底部复制您的token
             </n-alert>
-
-            <n-form-item path="userToken">
-              <n-input
-                v-model:value="loginForm.userToken"
-                placeholder="请输入您的Token"
-                size="large"
-                :disabled="isLogging"
-                type="textarea"
-                :autosize="{ minRows: 3, maxRows: 5 }"
-              />
-            </n-form-item>
           </template>
 
           <n-button
@@ -99,11 +98,20 @@
         <div class="mode-switch-container">
           <n-button
             text
-            size="small"
+            type="primary"
             @click="toggleLoginMode"
             class="mode-switch-btn"
           >
             {{ isTokenMode ? "账号登录" : "Token登录" }}
+          </n-button>
+          <span class="separator">|</span>
+          <n-button
+            text
+            type="primary"
+            @click="goToRegister"
+            class="mode-switch-btn"
+          >
+            注册账号
           </n-button>
         </div>
     </n-card>
@@ -114,6 +122,7 @@
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
+import { useRouter } from "vue-router";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
 import { createCaptcha } from "../utils/captcha";
@@ -121,6 +130,7 @@ import type { UnifiedConfig } from "../types/config";
 
 const emit = defineEmits(["login-success"]);
 const message = useMessage();
+const router = useRouter();
 const authStore = useAuthStore();
 
 // 登录表单数据
@@ -199,6 +209,13 @@ function toggleLoginMode() {
   }
 
   console.log("切换登录模式:", isTokenMode.value ? "Token模式" : "普通模式");
+}
+
+/**
+ * 跳转到注册页面
+ */
+function goToRegister() {
+  router.push("/register");
 }
 
 /**
@@ -573,28 +590,36 @@ onUnmounted(() => {
 
 /* 模式切换按钮容器 */
 .mode-switch-container {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--app-border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.separator {
+  margin: 0 8px;
+  color: var(--app-text-color-3);
 }
 
 .mode-switch-btn {
-  color: var(--app-primary-color) !important;
-  font-size: 12px;
-  padding: 4px 8px;
-  transition: all 0.3s ease;
+  font-size: 13px;
 }
 
-:deep(.mode-switch-btn:hover) {
-  color: var(--app-primary-color-hover) !important;
-  background-color: rgba(52, 159, 244, 0.1) !important;
+:deep(.mode-switch-btn.n-button) {
+  padding: 4px 8px;
+}
+
+:deep(.mode-switch-btn.n-button .n-button__content) {
+  font-size: 13px;
 }
 
 @media (max-width: 480px) {
   .login-card {
     padding: 30px 20px;
     margin: 10px;
-    position: relative; /* 确保移动端也有相对定位 */
   }
 
   .login-title {
@@ -602,17 +627,13 @@ onUnmounted(() => {
     margin-bottom: 20px;
   }
 
-  .vaptcha-hint-btn {
-    font-size: 11px;
-  }
-
   .mode-switch-container {
-    bottom: 15px;
-    right: 15px;
+    margin-top: 16px;
+    padding-top: 16px;
   }
 
   .mode-switch-btn {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 </style>

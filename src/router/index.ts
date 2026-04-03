@@ -12,6 +12,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: "/register",
+    name: "Register",
+    component: () => import("../components/Register.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
     path: "/dashboard",
     name: "Dashboard",
     component: () => import("../components/Dashboard.vue"),
@@ -94,8 +100,8 @@ router.beforeEach(async (to, _from) => {
     return "/dashboard";
   }
 
-  // 登录页面直接放行
-  if (to.path === "/login") {
+  // 登录和注册页面直接放行
+  if (to.path === "/login" || to.path === "/register") {
     return true;
   }
 

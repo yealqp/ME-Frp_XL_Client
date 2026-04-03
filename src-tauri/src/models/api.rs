@@ -7,6 +7,7 @@
 //! - FrpTokenData: FRP Token数据
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// 通用API响应结构体
 ///
@@ -46,6 +47,18 @@ pub struct VersionCheckResult {
     pub has_update: bool,
     /// 更新信息列表
     pub update_info: Vec<String>,
+    /// 更新日志 (版本号 -> 更新内容列表)
+    #[serde(default)]
+    pub changelog: HashMap<String, Vec<String>>,
+}
+
+/// 更新日志响应结构体
+///
+/// 用于解析 tpca.json 的响应格式
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ChangelogResponse {
+    /// 更新日志数据
+    pub data: HashMap<String, Vec<String>>,
 }
 
 /// FRP Token数据结构体

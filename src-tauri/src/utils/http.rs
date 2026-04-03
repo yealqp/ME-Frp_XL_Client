@@ -11,10 +11,15 @@ pub const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 ///
 /// 返回配置了统一 User-Agent 的 reqwest 客户端实例
 /// User-Agent 格式: MeFrp-XL/{version}
+/// 
+/// 自动启用 gzip 和 brotli 解压缩
 pub fn create_http_client() -> reqwest::Client {
     let user_agent = format!("MeFrp-XL/{CURRENT_VERSION}");
     reqwest::Client::builder()
         .user_agent(user_agent)
+        .gzip(true)
+        .brotli(true)
+        .deflate(true)
         .build()
         .expect("Failed to create HTTP client")
 }

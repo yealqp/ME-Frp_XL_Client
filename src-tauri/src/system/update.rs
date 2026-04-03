@@ -8,8 +8,9 @@
 //! - 下载并安装更新
 //! - 版本号比较
 
-use crate::models::api::{RemoteVersion, VersionCheckResult};
+use crate::models::api::{ChangelogResponse, RemoteVersion, VersionCheckResult};
 use crate::utils::{create_http_client, CURRENT_VERSION};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -23,31 +24,87 @@ pub fn get_app_version() -> String {
     CURRENT_VERSION.to_string()
 }
 
+/// 获取版本信息和更新日志
+///
+/// 从远程服务器获取版本信息和完整的更新日志。
+///
+/// # 返回
+/// - `Ok((RemoteVersion, HashMap<String, Vec<String>>))`: 版本信息和完整更新日志
+/// - `Err(String)`: 获取失败的错误信息
+async fn fetch_version_and_changelog() -> Result<(RemoteVersion, HashMap<String, Vec<String>>), String> {
+    let client = create_http_client();
+
+    // 并行请求版本信息和更新日志
+    let version_future = client.get("https://check.yealqp.cn/xl.json").send();
+    let changelog_future = client.get("https://check.yealqp.cn/tpca.json").send();
+
+    let (version_response, changelog_response) = tokio::try_join!(
+        async { version_future.await.map_err(|e| format!("请求版本信息失败: {e}")) },
+        async { changelog_future.await.map_err(|e| format!("请求更新日志失败: {e}")) }
+    )?;
+
+    if !version_response.status().is_success() {
+        return Err(format!("获取版本信息失败，状态码: {:?}", version_response.status()));
+    }
+
+    let remote_version: RemoteVersion = version_response
+        .json()
+        .await
+        .map_err(|e| format!("解析版本信息失败: {e}"))?;
+
+    // 解析完整的更新日志
+    let full_changelog = if changelog_response.status().is_success() {
+        changelog_response
+            .json::<ChangelogResponse>()
+            .await
+            .map(|r| r.data)
+            .unwrap_or_default()
+    } else {
+        HashMap::new()
+    };
+
+    Ok((remote_version, full_changelog))
+}
+
 /// 检查版本更新
 ///
 /// 从远程服务器获取最新版本信息，并与当前版本比较。
+/// 只返回差异版本的更新日志。
 ///
 /// # 返回
 /// - `Ok(VersionCheckResult)`: 版本检查结果，包含当前版本、最新版本、是否有更新等信息
 /// - `Err(String)`: 检查失败的错误信息
 pub async fn check_for_updates() -> Result<VersionCheckResult, String> {
-    let client = create_http_client();
+    let (remote_version, full_changelog) = fetch_version_and_changelog().await?;
 
-    // 请求远程版本信息
-    let response = client
-        .get("https://check.yealqp.cn/xl.json")
-        .send()
-        .await
-        .map_err(|e| format!("请求版本信息失败: {e}"))?;
+    let current_version = CURRENT_VERSION.to_string();
+    let latest_version = remote_version.version;
+    let update_info = remote_version.updateinfo;
 
-    if !response.status().is_success() {
-        return Err(format!("获取版本信息失败，状态码: {:?}", response.status()));
-    }
+    // 比较版本号
+    let has_update = compare_versions(&current_version, &latest_version);
 
-    let remote_version: RemoteVersion = response
-        .json()
-        .await
-        .map_err(|e| format!("解析版本信息失败: {e}"))?;
+    // 筛选出差异版本的更新日志（只包含当前版本之后的版本）
+    let changelog = filter_changelog_by_version(&full_changelog, &current_version, &latest_version);
+
+    Ok(VersionCheckResult {
+        current_version,
+        latest_version,
+        has_update,
+        update_info,
+        changelog,
+    })
+}
+
+/// 获取完整的更新历史
+///
+/// 从远程服务器获取所有版本的更新日志。
+///
+/// # 返回
+/// - `Ok(VersionCheckResult)`: 包含完整更新历史的版本检查结果
+/// - `Err(String)`: 获取失败的错误信息
+pub async fn get_update_history() -> Result<VersionCheckResult, String> {
+    let (remote_version, full_changelog) = fetch_version_and_changelog().await?;
 
     let current_version = CURRENT_VERSION.to_string();
     let latest_version = remote_version.version;
@@ -61,7 +118,38 @@ pub async fn check_for_updates() -> Result<VersionCheckResult, String> {
         latest_version,
         has_update,
         update_info,
+        changelog: full_changelog, // 返回完整的更新日志
     })
+}
+
+/// 筛选更新日志，只返回当前版本之后的版本日志
+///
+/// # 参数
+/// - `full_changelog`: 完整的更新日志
+/// - `current_version`: 当前版本号
+/// - `latest_version`: 最新版本号
+///
+/// # 返回
+/// 筛选后的更新日志，只包含当前版本之后的版本
+fn filter_changelog_by_version(
+    full_changelog: &HashMap<String, Vec<String>>,
+    current_version: &str,
+    latest_version: &str,
+) -> HashMap<String, Vec<String>> {
+    let mut filtered = HashMap::new();
+
+    for (version, changes) in full_changelog {
+        // 如果版本号大于当前版本且小于等于最新版本，则包含该版本的更新日志
+        if compare_versions(current_version, version) && !compare_versions(latest_version, version) {
+            filtered.insert(version.clone(), changes.clone());
+        }
+        // 如果版本号等于最新版本，也包含
+        if version == latest_version {
+            filtered.insert(version.clone(), changes.clone());
+        }
+    }
+
+    filtered
 }
 
 /// 下载并安装更新

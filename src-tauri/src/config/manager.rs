@@ -3,7 +3,7 @@
 //! 本模块负责配置文件的读取、保存、迁移和清除功能。
 //! 支持新的统一配置格式（config.yaml），并提供从旧格式（config.json, settings.json）迁移的功能。
 
-use crate::models::config::{AppSettings, Config, UnifiedConfig};
+use crate::models::config::UnifiedConfig;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -72,42 +72,64 @@ pub async fn load_unified_config() -> Result<UnifiedConfig, String> {
 /// 6. 删除旧配置文件
 pub async fn migrate_old_configs() -> Result<UnifiedConfig, String> {
     let mut unified_config = UnifiedConfig::default();
+    let config_dir = get_config_dir()?;
 
     // 尝试加载旧的 config.json
-    if let Ok(Some(old_config)) = read_config().await {
-        // 迁移登录相关信息
-        unified_config.user_token = old_config.user_token;
-        unified_config.frp_token = old_config.frp_token;
-        unified_config.username = old_config.username;
-
-        // 提取 user_info.group 到顶层 group 字段（需求 3.4, 3.6, 11.5）
-        if let Some(group) = old_config.user_info.group {
-            unified_config.group = group;
+    let old_config_path = config_dir.join("config.json");
+    if old_config_path.exists() {
+        // 简单读取 JSON 文件并提取需要的字段
+        if let Ok(content) = fs::read_to_string(&old_config_path) {
+            // 使用简单的字符串解析提取字段
+            for line in content.lines() {
+                let line = line.trim();
+                if line.starts_with("user_token:") {
+                    unified_config.user_token = line.split(':').nth(1).unwrap_or("").trim().to_string();
+                } else if line.starts_with("frp_token:") {
+                    unified_config.frp_token = line.split(':').nth(1).unwrap_or("").trim().to_string();
+                } else if line.starts_with("username:") && !line.contains("user_info:") {
+                    unified_config.username = line.split(':').nth(1).unwrap_or("").trim().to_string();
+                } else if line.starts_with("group:") {
+                    unified_config.group = line.split(':').nth(1).unwrap_or("").trim().to_string();
+                }
+            }
         }
-
-        // 忽略已删除的字段：api_status, login_time, user_info.token, user_info.username（需求 3.3, 11.6）
     }
 
     // 尝试加载旧的 settings.json
-    if let Ok(old_settings) = load_settings().await {
-        unified_config.auto_start = old_settings.auto_start;
-        unified_config.always_on_top = old_settings.always_on_top;
-        unified_config.auto_update = old_settings.auto_update;
-        unified_config.auto_start_tunnels = old_settings.auto_start_tunnels;
-        unified_config.startup_delay = old_settings.startup_delay;
-        unified_config.minimize_to_tray = old_settings.minimize_to_tray;
-
-        // 忽略已删除的字段：theme（需求 3.3, 11.6）
+    let old_settings_path = config_dir.join("settings.json");
+    if old_settings_path.exists() {
+        if let Ok(settings_content) = fs::read_to_string(&old_settings_path) {
+            // 尝试解析为 JSON
+            if let Ok(settings) = serde_json::from_str::<serde_json::Value>(&settings_content) {
+                if let Some(auto_start) = settings.get("auto_start").and_then(|v| v.as_bool()) {
+                    unified_config.auto_start = auto_start;
+                }
+                if let Some(always_on_top) = settings.get("always_on_top").and_then(|v| v.as_bool()) {
+                    unified_config.always_on_top = always_on_top;
+                }
+                if let Some(auto_update) = settings.get("auto_update").and_then(|v| v.as_bool()) {
+                    unified_config.auto_update = auto_update;
+                }
+                if let Some(auto_start_tunnels) = settings.get("auto_start_tunnels").and_then(|v| v.as_array()) {
+                    unified_config.auto_start_tunnels = auto_start_tunnels
+                        .iter()
+                        .filter_map(|v| v.as_i64().map(|n| n as i32))
+                        .collect();
+                }
+                if let Some(startup_delay) = settings.get("startup_delay").and_then(|v| v.as_u64()) {
+                    unified_config.startup_delay = startup_delay as i32;
+                }
+                if let Some(minimize_to_tray) = settings.get("minimize_to_tray").and_then(|v| v.as_bool()) {
+                    unified_config.minimize_to_tray = minimize_to_tray;
+                }
+            }
+        }
     }
 
     // 保存统一配置
     save_unified_config(&unified_config).await?;
 
     // 删除旧配置文件
-    let config_dir = get_config_dir()?;
-    let old_config_path = config_dir.join("config.json");
-    let old_settings_path = config_dir.join("settings.json");
-
     if old_config_path.exists() {
         let _ = fs::remove_file(old_config_path);
     }
@@ -143,105 +165,4 @@ pub async fn clear_config() -> Result<(), String> {
     }
 
     Ok(())
-}
-
-// ============================================================================
-// 向后兼容的函数（保留用于迁移）
-// ============================================================================
-
-/// 保存旧格式配置（向后兼容）
-///
-/// 保留此函数用于向后兼容，但建议使用 save_unified_config
-pub async fn save_config(config: &Config) -> Result<(), String> {
-    let config_dir = get_config_dir()?;
-    let config_path = config_dir.join("config.json");
-
-    // 将配置转换为YAML格式
-    let yaml_content = format!(
-        "api_status: {}\nlogin_time: {}\nuser_token: {}\nfrp_token: {}\nusername: {}\nuser_info:\n  group: {}\n  token: {}\n  username: {}",
-        config.api_status,
-        config.login_time,
-        config.user_token,
-        config.frp_token,
-        config.username,
-        config.user_info.group.as_ref().unwrap_or(&String::new()),
-        config.user_info.token.as_ref().unwrap_or(&String::new()),
-        config.user_info.username.as_ref().unwrap_or(&String::new())
-    );
-
-    fs::write(&config_path, yaml_content)
-        .map_err(|e| format!("Failed to write config file: {e}"))?;
-
-    Ok(())
-}
-
-/// 读取旧格式配置（向后兼容）
-///
-/// 保留此函数用于迁移旧配置，但建议使用 load_unified_config
-pub async fn read_config() -> Result<Option<Config>, String> {
-    let config_dir = get_config_dir()?;
-    let config_path = config_dir.join("config.json");
-
-    if !config_path.exists() {
-        return Ok(None);
-    }
-
-    let content =
-        fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config file: {e}"))?;
-
-    // 简单的YAML解析
-    let lines: Vec<&str> = content.lines().collect();
-    let mut config = Config {
-        api_status: String::new(),
-        login_time: String::new(),
-        user_token: String::new(),
-        frp_token: String::new(),
-        username: String::new(),
-        user_info: crate::models::auth::UserInfo {
-            group: None,
-            token: None,
-            username: None,
-        },
-    };
-
-    for line in lines {
-        let line = line.trim();
-        if line.starts_with("api_status:") {
-            config.api_status = line.split(':').nth(1).unwrap_or("").trim().to_string();
-        } else if line.starts_with("login_time:") {
-            config.login_time = line.split(':').nth(1).unwrap_or("").trim().to_string();
-        } else if line.starts_with("user_token:") {
-            config.user_token = line.split(':').nth(1).unwrap_or("").trim().to_string();
-        } else if line.starts_with("frp_token:") {
-            config.frp_token = line.split(':').nth(1).unwrap_or("").trim().to_string();
-        } else if line.starts_with("username:") && !line.contains("user_info:") {
-            config.username = line.split(':').nth(1).unwrap_or("").trim().to_string();
-        } else if line.starts_with("group:") {
-            config.user_info.group = Some(line.split(':').nth(1).unwrap_or("").trim().to_string());
-        } else if line.starts_with("token:") {
-            config.user_info.token = Some(line.split(':').nth(1).unwrap_or("").trim().to_string());
-        }
-    }
-
-    Ok(Some(config))
-}
-
-/// 加载应用设置（内部使用，用于迁移）
-///
-/// 此函数仅在迁移过程中使用，不应在新代码中调用
-pub(crate) async fn load_settings() -> Result<AppSettings, String> {
-    let config_dir = get_config_dir()?;
-    let settings_path = config_dir.join("settings.json");
-
-    if !settings_path.exists() {
-        return Ok(AppSettings::default());
-    }
-
-    let settings_content =
-        fs::read_to_string(&settings_path).map_err(|e| format!("读取设置文件失败: {e}"))?;
-
-    let settings: AppSettings =
-        serde_json::from_str(&settings_content).unwrap_or_else(|_| AppSettings::default());
-
-    Ok(settings)
 }

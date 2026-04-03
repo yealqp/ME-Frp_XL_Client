@@ -202,6 +202,22 @@
         </div>
         <div class="cdk-redeem-item">
           <div class="cdk-info">
+            <Shield :size="18" />
+            重置访问密钥
+            <p>
+              访问密钥用于验证您的身份，请妥善保管，一经泄露请及时重置。
+            </p>
+          </div>
+          <n-button
+            type="warning"
+            :loading="resettingToken"
+            @click="showResetTokenDialog"
+          >
+            重置访问密钥
+          </n-button>
+        </div>
+        <div class="cdk-redeem-item">
+          <div class="cdk-info">
             <Power :size="18" />
             下线所有隧道
             <p>
@@ -277,6 +293,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
+import { useAuthStore } from "../stores/auth";
 // 按需导入 ECharts 核心和需要的组件
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
@@ -292,7 +309,7 @@ import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
-import { TrendingUp, Gift, Ticket, History, Power } from "lucide-vue-next";
+import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
 
 // 注册 ECharts 组件
 echarts.use([
@@ -310,6 +327,7 @@ const dialog = useDialog();
 
 // Initialize User Store
 const userStore = useUserStore();
+const authStore = useAuthStore();
 const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
 const { formattedBandwidth, formattedTraffic, formattedRegTime } = userStore;
 
@@ -349,6 +367,9 @@ interface TrafficStatsResponse {
 
 // 下线所有隧道相关
 const kickingAllProxies = ref(false);
+
+// 重置访问密钥相关
+const resettingToken = ref(false);
 
 // CDK兑换相关
 const cdkCode = ref("");
@@ -415,6 +436,19 @@ const showKickAllProxiesDialog = () => {
   });
 };
 
+// 显示重置访问密钥对话框
+const showResetTokenDialog = () => {
+  dialog.warning({
+    title: "重置访问密钥验证",
+    content: "重置后原有密钥将失效，请及时更新配置。此外，所有隧道都将被强制下线！",
+    positiveText: "确认重置",
+    negativeText: "取消",
+    onPositiveClick: async () => {
+      await handleResetToken();
+    },
+  });
+};
+
 // 执行下线所有隧道
 const handleKickAllProxies = async () => {
   if (kickingAllProxies.value) {
@@ -439,6 +473,57 @@ const handleKickAllProxies = async () => {
     return false;
   } finally {
     kickingAllProxies.value = false;
+  }
+
+  return true;
+};
+
+// 执行重置访问密钥
+const handleResetToken = async () => {
+  if (resettingToken.value) {
+    return false;
+  }
+
+  resettingToken.value = true;
+
+  try {
+    // 进行人机验证
+    message.loading("正在进行人机验证...", { duration: 0 });
+    const captchaToken = await cdkCaptchaInstance.verify();
+    
+    message.destroyAll();
+    message.loading("正在重置访问密钥...", { duration: 0 });
+
+    const responseText = await invoke("api_reset_token", {
+      captchaToken: captchaToken,
+    });
+    const result = JSON.parse(responseText as string);
+
+    message.destroyAll();
+
+    if (result.code === 200) {
+      const newToken = result.data?.newToken;
+      
+      if (newToken) {
+        // 后端已经更新了配置文件，前端只需要刷新用户信息
+        // 这会重新从配置文件加载新的 token
+        await userStore.refreshUserInfo();
+        
+        message.success("访问密钥重置成功，所有隧道已下线");
+      } else {
+        message.warning("访问密钥重置成功，但未获取到新密钥");
+      }
+    } else {
+      message.error(result.message || "重置访问密钥失败");
+      return false;
+    }
+  } catch (error) {
+    message.destroyAll();
+    const errorMessage = handleApiError(error, "重置访问密钥失败", "重置访问密钥失败");
+    message.error(errorMessage);
+    return false;
+  } finally {
+    resettingToken.value = false;
   }
 
   return true;

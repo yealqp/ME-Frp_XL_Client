@@ -22,7 +22,6 @@ import { useCreateTunnelStore } from "./stores/createTunnel";
 import { useThemeStore } from "./stores/theme";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
-import Login from "./components/Login.vue";
 import type { UnifiedConfig } from "./types/config";
 
 const router = useRouter();
@@ -293,6 +292,7 @@ const autoCheckForUpdates = async () => {
       latest_version: string;
       current_version: string;
       update_info: string[];
+      changelog: Record<string, string[]>;
     }
 
     const result = await invoke<UpdateCheckResult>("check_for_updates");
@@ -370,9 +370,11 @@ onMounted(async () => {
             <!-- 加载状态 -->
             <div v-if="isCheckingAuth" class="loading-container"></div>
 
-            <!-- 登录页面 -->
+            <!-- 登录/注册页面 -->
             <div v-else-if="!isLoggedIn" class="login-fullscreen">
-              <Login @login-success="handleLoginSuccess" />
+              <router-view v-slot="{ Component }">
+                <component :is="Component" @login-success="handleLoginSuccess" />
+              </router-view>
             </div>
 
             <!-- 主应用界面 - 使用 NLayout -->

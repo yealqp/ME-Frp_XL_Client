@@ -69,6 +69,8 @@ pub async fn start_webui(
         .arg(port.to_string())
         .arg("--webui-pass")
         .arg(&pass)
+        .arg("--api-root-url")
+        .arg("https://api.mefrp.yealqp.cn")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 

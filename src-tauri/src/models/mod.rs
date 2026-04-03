@@ -14,7 +14,7 @@ pub mod tunnel;
 // 重导出常用类型
 pub use api::{ApiResponse, FrpTokenData, RemoteVersion, VersionCheckResult};
 pub use auth::{LoginData, LoginRequest, UserDetailInfo, UserInfo};
-pub use config::{AppSettings, Config, UnifiedConfig};
+pub use config::UnifiedConfig;
 pub use tunnel::{
     CreateTunnelRequest, DeleteTunnelRequest, FreePortRequest, KickTunnelRequest, ProcessManager,
     ToggleTunnelRequest, TunnelConfigRequest, TunnelProcess, UpdateTunnelRequest,

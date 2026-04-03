@@ -170,7 +170,7 @@
               <span>资源与文档</span>
             </div>
             <p class="section-description">
-              查看下载页面、隐私政策和更新日志等相关资源。
+              查看下载页面、隐私政策和更新历史等相关资源。
             </p>
             <n-space :size="12" style="flex-wrap: wrap">
               <n-button type="primary" @click="OpenDownloadpage">
@@ -189,7 +189,7 @@
                 <template #icon>
                   <FileText :size="16" />
                 </template>
-                更新日志
+                更新历史
               </n-button>
             </n-space>
           </div>
@@ -224,8 +224,12 @@
     <n-modal
       v-model:show="showUpdateModal"
       preset="card"
-      :style="{ width: '500px' }"
+      :style="{ width: '600px', maxHeight: '85vh' }"
       title="发现新版本"
+      :segmented="{
+        content: true,
+        footer: 'soft'
+      }"
     >
       <div class="update-modal-content">
         <div class="version-info">
@@ -240,7 +244,30 @@
           </n-space>
         </div>
 
-        <div v-if="updateInfo.length > 0" class="update-info">
+        <!-- 显示差异版本的更新日志 -->
+        <div v-if="Object.keys(changelog).length > 0" class="update-changelog">
+          <p class="update-info-title">更新内容：</p>
+          <div class="changelog-info">
+            <div v-for="version in sortedChangelog" :key="version" class="changelog-version">
+              <div class="version-header">
+                <span class="version-badge">v{{ version }}</span>
+              </div>
+              <ul class="changelog-list">
+                <li v-for="(change, index) in changelog[version]" :key="index" class="changelog-item">
+                  <span class="changelog-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                      <path d="M5 8L7 10L11 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </span>
+                  <span class="changelog-text">{{ change }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <!-- 如果没有 changelog，显示 updateInfo -->
+        <div v-else-if="updateInfo.length > 0" class="update-info">
           <p class="update-info-title">更新内容：</p>
           <div class="markdown-content update-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
         </div>
@@ -259,36 +286,51 @@
       </template>
     </n-modal>
 
-    <!-- 更新日志模态框 -->
+    <!-- 更新历史模态框 -->
     <n-modal
       v-model:show="showChangelogModal"
       preset="card"
-      :style="{ width: '600px', maxHeight: '80vh' }"
-      title="更新日志"
+      :style="{ width: '720px', maxHeight: '85vh' }"
+      title="更新历史"
+      :segmented="{
+        content: true,
+        footer: 'soft'
+      }"
     >
       <div class="changelog-modal-content">
-        <div class="version-info">
-          <n-space align="center" :size="16">
-            <n-tag type="info" :bordered="false" size="large">
-              当前版本: v{{ currentVersion }}
-            </n-tag>
-            <n-tag type="success" :bordered="false" size="large">
-              最新版本: v{{ latestVersion }}
-            </n-tag>
-          </n-space>
+        <div v-if="Object.keys(changelog).length > 0" class="changelog-info">
+          <div v-for="version in sortedChangelog" :key="version" class="changelog-version">
+            <div class="version-header">
+              <span class="version-badge">v{{ version }}</span>
+            </div>
+            <ul class="changelog-list">
+              <li v-for="(change, index) in changelog[version]" :key="index" class="changelog-item">
+                <span class="changelog-icon">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M5 8L7 10L11 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="changelog-text">{{ change }}</span>
+              </li>
+            </ul>
+          </div>
         </div>
-
-        <div v-if="updateInfo.length > 0" class="changelog-info">
+        <div v-else-if="updateInfo.length > 0" class="changelog-info">
           <div class="markdown-content changelog-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
         </div>
         <div v-else class="no-changelog">
-          <p>暂无更新日志信息</p>
+          <n-empty description="暂无更新历史信息">
+            <template #icon>
+              <FileText :size="48" />
+            </template>
+          </n-empty>
         </div>
       </div>
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showChangelogModal = false">关闭</n-button>
+          <n-button @click="showChangelogModal = false" size="medium">关闭</n-button>
         </n-space>
       </template>
     </n-modal>
@@ -330,7 +372,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import {
   useMessage,
@@ -369,6 +411,7 @@ interface UpdateCheckResult {
   latest_version: string;
   current_version: string;
   update_info: string[];
+  changelog: Record<string, string[]>;
 }
 
 interface Hitokoto {
@@ -385,9 +428,24 @@ const showUpdateModal = ref(false);
 const latestVersion = ref("");
 const currentVersion = ref("");
 const updateInfo = ref<string[]>([]);
+const changelog = ref<Record<string, string[]>>({});
 const appVersion = ref("加载中...");
 const changelogLoading = ref(false);
 const showChangelogModal = ref(false);
+
+const sortedChangelog = computed(() => {
+  const versions = Object.keys(changelog.value);
+  return versions.sort((a, b) => {
+    const partsA = a.split('.').map(Number);
+    const partsB = b.split('.').map(Number);
+    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+      const numA = partsA[i] || 0;
+      const numB = partsB[i] || 0;
+      if (numA !== numB) return numB - numA;
+    }
+    return 0;
+  });
+});
 
 // 反馈表单相关
 const showFeedbackModal = ref(false);
@@ -460,6 +518,7 @@ const checkForUpdates = async () => {
       latestVersion.value = result.latest_version;
       currentVersion.value = result.current_version;
       updateInfo.value = result.update_info || [];
+      changelog.value = result.changelog || {};
       showUpdateModal.value = true;
     } else {
       message.success(`当前已是最新版本 ${result.current_version}`);
@@ -484,17 +543,18 @@ const parseUpdateInfo = (infoArray: string[]): string => {
   return parseMarkdown(markdownContent);
 };
 
-// 查看更新日志
+// 查看更新历史
 const viewChangelog = async () => {
   changelogLoading.value = true;
   try {
-    const result = (await invoke("check_for_updates")) as UpdateCheckResult;
+    const result = (await invoke("get_update_history")) as UpdateCheckResult;
     latestVersion.value = result.latest_version;
     currentVersion.value = result.current_version;
     updateInfo.value = result.update_info || [];
+    changelog.value = result.changelog || {};
     showChangelogModal.value = true;
   } catch (error) {
-    message.error(`获取更新日志失败: ${error}`);
+    message.error(`获取更新历史失败: ${error}`);
   } finally {
     changelogLoading.value = false;
   }
@@ -973,19 +1033,39 @@ const submitFeedback = async () => {
 
 /* 更新模态框样式 */
 .update-modal-content {
-  padding: 16px 0;
+  padding: 0;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 
-.version-info {
+.update-modal-content .version-info {
   display: flex;
   justify-content: center;
   padding: 20px;
   background: var(--app-card-color);
   border-radius: 8px;
+  margin-bottom: 20px;
 }
 
-.version-info :deep(svg) {
+.update-modal-content .version-info :deep(svg) {
   color: #349ff4;
+}
+
+.update-changelog {
+  margin-top: 0;
+}
+
+.update-changelog .update-info-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text-color-1);
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+
+.update-changelog .changelog-info {
+  margin-top: 0;
+  padding: 0 4px;
 }
 
 .update-info {
@@ -1210,19 +1290,20 @@ const submitFeedback = async () => {
   border-bottom: none;
 }
 
-/* 更新日志模态框样式 */
+/* 更新历史模态框样式 */
 .changelog-modal-content {
-  padding: 16px 0;
-  max-height: 60vh;
+  padding: 0;
+  max-height: 65vh;
   overflow-y: auto;
 }
 
 .changelog-info {
-  margin-top: 20px;
+  margin-top: 0;
+  padding: 0 4px;
 }
 
 .changelog-content-markdown {
-  padding: 12px 0;
+  padding: 16px;
   line-height: 1.8;
   font-size: 14px;
   color: var(--app-text-color-2);
@@ -1237,21 +1318,21 @@ const submitFeedback = async () => {
 .changelog-content-markdown :deep(h4),
 .changelog-content-markdown :deep(h5),
 .changelog-content-markdown :deep(h6) {
-  margin: 16px 0 10px 0;
+  margin: 20px 0 12px 0;
   font-weight: 600;
   line-height: 1.4;
   color: var(--app-text-color);
 }
 
 .changelog-content-markdown :deep(h1) {
-  font-size: 20px;
-  border-bottom: 1px solid var(--app-divider-color);
-  padding-bottom: 8px;
+  font-size: 22px;
+  border-bottom: 2px solid var(--app-divider-color);
+  padding-bottom: 10px;
 }
 
 .changelog-content-markdown :deep(h2) {
-  font-size: 18px;
-  margin-bottom: 4px;
+  font-size: 19px;
+  margin-bottom: 8px;
 }
 
 .changelog-content-markdown :deep(h3) {
@@ -1269,7 +1350,7 @@ const submitFeedback = async () => {
 }
 
 .changelog-content-markdown :deep(p) {
-  margin: 10px 0;
+  margin: 12px 0;
   line-height: 1.8;
   color: var(--app-text-color-2);
 }
@@ -1277,11 +1358,11 @@ const submitFeedback = async () => {
 .changelog-content-markdown :deep(ul),
 .changelog-content-markdown :deep(ol) {
   margin: 12px 0;
-  padding-left: 24px;
+  padding-left: 28px;
 }
 
 .changelog-content-markdown :deep(li) {
-  margin: 0;
+  margin: 6px 0;
   line-height: 1.8;
   padding-left: 8px;
   color: var(--app-text-color-2);
@@ -1292,8 +1373,8 @@ const submitFeedback = async () => {
 }
 
 .changelog-content-markdown :deep(ul li::marker) {
-  font-size: 0.8em;
-  color: #4da8f5;
+  font-size: 0.9em;
+  color: var(--primary-color);
 }
 
 .changelog-content-markdown :deep(ol li) {
@@ -1302,37 +1383,38 @@ const submitFeedback = async () => {
 
 .changelog-content-markdown :deep(ol li::marker) {
   font-weight: 600;
-  color: #4da8f5;
+  color: var(--primary-color);
 }
 
 .changelog-content-markdown :deep(ul ul),
 .changelog-content-markdown :deep(ol ol),
 .changelog-content-markdown :deep(ul ol),
 .changelog-content-markdown :deep(ol ul) {
-  margin: 0;
+  margin: 4px 0;
   padding-left: 24px;
 }
 
 .changelog-content-markdown :deep(li p) {
-  margin: 2px 0;
+  margin: 4px 0;
 }
 
 .changelog-content-markdown :deep(code.inline-code) {
   background: var(--app-card-color);
   color: #ff6b6b;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
   font-size: 13px;
   border: 1px solid var(--app-border-color);
+  font-weight: 500;
 }
 
 .changelog-content-markdown :deep(pre) {
   background: var(--app-card-color);
-  padding: 12px;
-  border-radius: 4px;
+  padding: 16px;
+  border-radius: 8px;
   overflow-x: auto;
-  margin: 12px 0;
+  margin: 16px 0;
   border: 1px solid var(--app-border-color);
 }
 
@@ -1347,42 +1429,29 @@ const submitFeedback = async () => {
 }
 
 .changelog-content-markdown :deep(blockquote.custom-blockquote) {
-  border-left: 4px solid #4da8f5;
-  margin: 12px 0;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0 4px 4px 0;
+  border-left: 4px solid var(--primary-color);
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: rgba(24, 144, 255, 0.05);
+  border-radius: 0 6px 6px 0;
 }
 
 .changelog-content-markdown :deep(blockquote.custom-blockquote p) {
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 .changelog-content-markdown :deep(a) {
-  color: #4da8f5;
+  color: var(--primary-color);
   text-decoration: none;
-  transition: color 0.2s;
+  transition: all 0.2s;
   font-weight: 500;
   position: relative;
-}
-
-.changelog-content-markdown :deep(a::after) {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 0;
-  height: 1px;
-  background-color: #6bb8f7;
-  transition: width 0.3s ease;
+  border-bottom: 1px solid transparent;
 }
 
 .changelog-content-markdown :deep(a:hover) {
-  color: #6bb8f7;
-}
-
-.changelog-content-markdown :deep(a:hover::after) {
-  width: 100%;
+  color: var(--primary-color-hover);
+  border-bottom-color: var(--primary-color-hover);
 }
 
 .changelog-content-markdown :deep(strong) {
@@ -1392,21 +1461,155 @@ const submitFeedback = async () => {
 
 .changelog-content-markdown :deep(em) {
   font-style: italic;
+  color: var(--app-text-color-2);
 }
 
 .changelog-content-markdown :deep(del) {
   text-decoration: line-through;
+  opacity: 0.7;
 }
 
 .changelog-content-markdown :deep(hr) {
   border: none;
   border-top: 1px solid var(--app-divider-color);
-  margin: 16px 0;
+  margin: 20px 0;
 }
 
 .no-changelog {
   text-align: center;
-  padding: 40px 20px;
+  padding: 60px 20px;
+  color: var(--app-text-color-3);
+}
+
+.changelog-version {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--app-card-color);
+  border-radius: 12px;
+  border: 1px solid var(--app-border-color);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.changelog-version::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-color-hover) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.changelog-version:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.changelog-version:hover::before {
+  opacity: 1;
+}
+
+.changelog-version:last-child {
+  margin-bottom: 0;
+}
+
+.version-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--app-divider-color);
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-text-color);
+  background: var(--app-card-color);
+  border: 1px solid var(--app-border-color);
+  border-radius: 6px;
+}
+
+.version-date {
+  font-size: 13px;
+  color: var(--app-text-color-3);
+  font-weight: 500;
+}
+
+.changelog-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.changelog-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 8px;
   color: var(--app-text-color-2);
+  font-size: 14px;
+  line-height: 1.7;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.changelog-item:last-child {
+  padding-bottom: 0;
+}
+
+.changelog-item:hover {
+  background: rgba(24, 144, 255, 0.05);
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.changelog-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  margin-top: 2px;
+}
+
+.changelog-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.changelog-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* 滚动条样式 */
+.changelog-modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.changelog-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.changelog-modal-content::-webkit-scrollbar-thumb {
+  background: var(--app-border-color);
+  border-radius: 4px;
+}
+
+.changelog-modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--app-text-color-3);
 }
 </style>

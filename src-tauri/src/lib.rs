@@ -43,20 +43,9 @@ pub mod webui;
 // 导入模块中的类型
 use models::api::VersionCheckResult;
 use models::auth::UserDetailInfo;
-use models::config::{Config, UnifiedConfig};
+use models::config::UnifiedConfig;
 use models::tunnel::{CreateTunnelRequest, FreePortRequest, UpdateTunnelRequest};
 use tunnel::ProcessManager;
-
-#[tauri::command]
-async fn save_config(_app_handle: tauri::AppHandle, config: Config) -> Result<String, String> {
-    config::save_config(&config).await?;
-    Ok("Config saved successfully".to_string())
-}
-
-#[tauri::command]
-async fn read_config(_app_handle: tauri::AppHandle) -> Result<Option<Config>, String> {
-    config::read_config().await
-}
 
 #[tauri::command]
 async fn clear_config(_app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -90,6 +79,28 @@ async fn api_login(
 
     // 直接返回 UnifiedConfig
     Ok(unified_config)
+}
+
+// 发送邮箱验证码API命令
+#[tauri::command]
+async fn api_send_email_code(
+    _app_handle: tauri::AppHandle,
+    email: String,
+    captcha_token: String,
+) -> Result<String, String> {
+    api::auth::send_email_code(email, captcha_token).await
+}
+
+// 用户注册API命令
+#[tauri::command]
+async fn api_register(
+    _app_handle: tauri::AppHandle,
+    username: String,
+    email: String,
+    password: String,
+    email_code: String,
+) -> Result<String, String> {
+    api::auth::register(username, email, password, email_code).await
 }
 
 // 获取用户信息API命令
@@ -339,6 +350,43 @@ async fn api_kick_all_proxies(_app_handle: tauri::AppHandle) -> Result<String, S
     }
 
     api::tunnel::kick_all_proxies(&config.user_token).await
+}
+
+// 重置访问密钥API命令
+#[tauri::command]
+async fn api_reset_token(_app_handle: tauri::AppHandle, captcha_token: String) -> Result<String, String> {
+    let mut config = config::load_unified_config()
+        .await
+        .map_err(|_| "未找到配置文件")?;
+
+    if config.user_token.is_empty() {
+        return Err("未找到有效的token".to_string());
+    }
+
+    let old_token = config.user_token.clone();
+    
+    // 调用重置 token API
+    let response = api::auth::reset_token(&old_token, &captcha_token).await?;
+    
+    // 解析响应获取新的 token
+    let result: serde_json::Value = serde_json::from_str(&response)
+        .map_err(|e| format!("解析响应失败: {}", e))?;
+    
+    if result["code"].as_i64() == Some(200) {
+        if let Some(new_token) = result["data"]["newToken"].as_str() {
+            // 更新配置中的 token
+            config.user_token = new_token.to_string();
+            
+            // 保存配置文件
+            config::save_unified_config(&config)
+                .await
+                .map_err(|e| format!("保存配置失败: {}", e))?;
+            
+            println!("访问密钥已更新并保存到配置文件");
+        }
+    }
+    
+    Ok(response)
 }
 
 // 启用/禁用隧道API命令
@@ -591,6 +639,12 @@ fn get_app_version() -> String {
 #[tauri::command]
 async fn check_for_updates() -> Result<VersionCheckResult, String> {
     system::update::check_for_updates().await
+}
+
+// 获取完整更新历史
+#[tauri::command]
+async fn get_update_history() -> Result<VersionCheckResult, String> {
+    system::update::get_update_history().await
 }
 
 // 下载并安装更新
@@ -1057,10 +1111,10 @@ pub fn run() {
         .manage(webui_manager)
         .manage(minimize_to_tray_state)
         .invoke_handler(tauri::generate_handler![
-            save_config,
-            read_config,
             clear_config,
             api_login,
+            api_send_email_code,
+            api_register,
             api_get_user_info,
             api_user_sign,
             api_redeem_cdk,
@@ -1085,6 +1139,7 @@ pub fn run() {
             api_update_tunnel,
             api_kick_tunnel,
             api_kick_all_proxies,
+            api_reset_token,
             api_toggle_tunnel,
             api_get_node_name_list,
             api_get_tunnel_logs,
@@ -1106,6 +1161,7 @@ pub fn run() {
             quit_app,
             get_app_version,
             check_for_updates,
+            get_update_history,
             download_and_install_update,
             fetch_privacy_policy,
             api_send_feedback,

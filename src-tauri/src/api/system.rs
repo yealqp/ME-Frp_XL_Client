@@ -22,7 +22,7 @@ pub async fn get_announcements(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/notice")
+        .get("https://api.mefrp.yealqp.cn/api/auth/notice")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -57,7 +57,7 @@ pub async fn get_system_status(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/system/status")
+        .get("https://api.mefrp.yealqp.cn/api/auth/system/status")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -87,7 +87,7 @@ pub async fn get_popup_notice(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/popupNotice")
+        .get("https://api.mefrp.yealqp.cn/api/auth/popupNotice")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -118,7 +118,7 @@ pub async fn get_traffic_stats(token: &str, date_period: u32) -> Result<String, 
     let client = create_http_client();
 
     let response = client
-        .post("https://api.mefrp.com/api/auth/user/trafficStats")
+        .post("https://api.mefrp.yealqp.cn/api/auth/user/trafficStats")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&serde_json::json!({
@@ -177,7 +177,7 @@ pub async fn get_operation_logs(token: &str, params: &str) -> Result<String, Str
     }
 
     let query_string = query_params.join("&");
-    let url = format!("https://api.mefrp.com/api/auth/operationLog/list?{query_string}");
+    let url = format!("https://api.mefrp.yealqp.cn/api/auth/operationLog/list?{query_string}");
 
     let client = create_http_client();
     let response = client
@@ -258,7 +258,7 @@ pub async fn get_statistics() -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/public/statistics")
+        .get("https://api.mefrp.yealqp.cn/api/public/statistics")
         .header("Content-Type", "application/json")
         .send()
         .await

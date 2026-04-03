@@ -21,7 +21,7 @@ pub async fn get_node_list(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/node/list")
+        .get("https://api.mefrp.yealqp.cn/api/auth/node/list")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -52,7 +52,7 @@ pub async fn get_node_status(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/node/status")
+        .get("https://api.mefrp.yealqp.cn/api/auth/node/status")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -83,7 +83,7 @@ pub async fn get_node_name_list(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/node/nameList")
+        .get("https://api.mefrp.yealqp.cn/api/auth/node/nameList")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()
@@ -118,7 +118,7 @@ pub async fn get_free_port(token: &str, request: &FreePortRequest) -> Result<Str
     let client = create_http_client();
 
     let response = client
-        .post("https://api.mefrp.com/api/auth/node/freePort")
+        .post("https://api.mefrp.yealqp.cn/api/auth/node/freePort")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .json(&serde_json::json!({
@@ -153,7 +153,7 @@ pub async fn get_create_proxy_data(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
     let response = client
-        .get("https://api.mefrp.com/api/auth/createProxyData")
+        .get("https://api.mefrp.yealqp.cn/api/auth/createProxyData")
         .header("authorization", format!("Bearer {token}"))
         .header("Content-Type", "application/json")
         .send()

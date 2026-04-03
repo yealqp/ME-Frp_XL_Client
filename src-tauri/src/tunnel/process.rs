@@ -74,12 +74,14 @@ pub async fn start_tunnel(
         // 使用配置文件启动：mefrpc -c {config}路径
         command.arg("-c").arg(&config_path);
     } else {
-        // 使用传统参数启动
+        // 使用传统参数启动（快速启动模式）
         command
             .arg("-t")
             .arg(frp_token)
             .arg("-p")
-            .arg(proxy_id.to_string());
+            .arg(proxy_id.to_string())
+            .arg("--api-root-url")
+            .arg("https://api.mefrp.yealqp.cn");
     }
 
     command.stdout(Stdio::piped()).stderr(Stdio::piped());

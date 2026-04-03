@@ -1,10 +1,9 @@
 //! 配置相关数据结构
 //!
-//! 本模块定义了应用配置相关的数据结构，包括统一配置、应用设置等。
+//! 本模块定义了应用配置相关的数据结构，包括统一配置等。
 //! 优化后的配置结构移除了冗余字段（api_status, theme, login_time, user_info），
 //! 并将 user_info.group 提升到顶层作为 group 字段。
 
-use super::auth::UserInfo;
 use serde::{Deserialize, Serialize};
 
 /// 统一配置结构体（优化后）
@@ -96,66 +95,4 @@ impl Default for UnifiedConfig {
             theme_mode: None,
         }
     }
-}
-
-/// 应用设置结构体
-///
-/// 用于管理应用的各项设置，包括自动启动、窗口置顶、自动更新等
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct AppSettings {
-    #[serde(rename = "autoStart")]
-    pub auto_start: bool,
-    #[serde(rename = "alwaysOnTop")]
-    pub always_on_top: bool,
-    #[serde(rename = "autoUpdate")]
-    pub auto_update: bool,
-    #[serde(rename = "autoStartTunnels")]
-    pub auto_start_tunnels: Vec<i32>,
-    #[serde(rename = "startupDelay")]
-    pub startup_delay: i32,
-    pub theme: String,
-    #[serde(rename = "minimizeToTray")]
-    pub minimize_to_tray: bool,
-    #[serde(rename = "showAd")]
-    pub show_ad: bool,
-    #[serde(rename = "hideWebuiEntry")]
-    pub hide_webui_entry: bool,
-    #[serde(rename = "sidebarWidth", skip_serializing_if = "Option::is_none")]
-    pub sidebar_width: Option<i32>,
-    #[serde(rename = "sidebarCollapsible", skip_serializing_if = "Option::is_none")]
-    pub sidebar_collapsible: Option<bool>,
-    #[serde(rename = "sidebarCollapsed", skip_serializing_if = "Option::is_none")]
-    pub sidebar_collapsed: Option<bool>,
-}
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        Self {
-            auto_start: false,
-            always_on_top: false,
-            auto_update: true,
-            auto_start_tunnels: Vec::new(),
-            startup_delay: 5,
-            theme: "dark".to_string(),
-            minimize_to_tray: true,
-            show_ad: true,
-            hide_webui_entry: false,
-            sidebar_width: Some(200),
-            sidebar_collapsible: Some(true),
-            sidebar_collapsed: Some(false),
-        }
-    }
-}
-
-/// 旧的配置结构体（保留用于向后兼容和配置迁移）
-///
-/// 此结构体用于读取旧格式的配置文件，并迁移到新的 UnifiedConfig 格式
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Config {
-    pub api_status: String,
-    pub login_time: String,
-    pub user_token: String,
-    pub frp_token: String,
-    pub username: String,
-    pub user_info: UserInfo,
 }

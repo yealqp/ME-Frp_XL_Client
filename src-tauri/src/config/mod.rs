@@ -6,6 +6,6 @@ pub mod manager;
 
 // 重导出配置管理函数
 pub use manager::{
-    clear_config, load_unified_config, migrate_old_configs, read_config, save_config,
+    clear_config, load_unified_config, migrate_old_configs,
     save_unified_config,
 };
