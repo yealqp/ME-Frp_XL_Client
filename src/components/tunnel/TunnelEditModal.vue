@@ -210,7 +210,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
-import { 
+import {
   NModal, 
   NForm, 
   NFormItem,
@@ -228,6 +228,7 @@ import {
 import { invokeTauriResponse } from '@/utils/tauriResponse'
 import { extractErrorMessage } from '@/utils/errorHandler'
 import { formatDomainForDisplay, formatDomainForSave } from '@/utils/domainUtils'
+import type { EditFormData, Tunnel } from '@/types/tunnel'
 
 // Props 接口
 interface TunnelEditModalProps {
@@ -241,60 +242,6 @@ interface TunnelEditModalEmits {
   (e: 'update:show', value: boolean): void
   (e: 'save', tunnelId: number, formData: EditFormData): void
   (e: 'cancel'): void
-}
-
-// Tunnel 接口
-interface Tunnel {
-  proxyId: number
-  username: string
-  proxyName: string
-  proxyType: string
-  isBanned: boolean
-  isDisabled: boolean
-  localIp: string
-  localPort: number
-  remotePort: number
-  nodeId: number
-  runId: string
-  isOnline: boolean
-  domain: string
-  lastStartTime: number
-  lastCloseTime: number
-  clientVersion: string
-  proxyProtocolVersion: string
-  useEncryption: boolean
-  useCompression: boolean
-  location: string
-  accessKey: string
-  hostHeaderRewrite: string
-  headerXFromWhere: string
-  httpUser?: string
-  httpPassword?: string
-  crtPath?: string
-  keyPath?: string
-  transportProtocol?: string
-}
-
-// EditFormData 接口
-interface EditFormData {
-  proxyName: string
-  localIp: string
-  localPort: number
-  remotePort: number
-  domain: string
-  sourceProtocol: string
-  securityMode: string
-  accessKey: string
-  httpUser: string
-  httpPassword: string
-  crtPath: string
-  keyPath: string
-  useEncryption: boolean
-  useCompression: boolean
-  proxyProtocolVersion: string
-  transportProtocol: string
-  proxyType: string
-  nodeId: number
 }
 
 const props = defineProps<TunnelEditModalProps>()

@@ -307,6 +307,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { extractProxyList, invokeTauriResponse, invokeTauriText } from "@/utils/tauriResponse";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import type { Tunnel as TunnelRecord } from "@/types/tunnel";
 
 const message = useMessage();
 const webuiStore = useWebuiStore();
@@ -316,14 +317,10 @@ let statusCheckInterval: number | null = null;
 let saveSettingsDebounceTimer: number | null = null;
 
 // 隧道列表相关
-interface Tunnel {
-  proxyId: number;
-  proxyName: string;
-  proxyType: string;
-  isOnline: boolean;
-  remotePort: number;
-  nodeId: number;
-}
+type Tunnel = Pick<
+  TunnelRecord,
+  "proxyId" | "proxyName" | "proxyType" | "isOnline" | "remotePort" | "nodeId"
+>;
 
 const tunnels = ref<Tunnel[]>([]);
 const tunnelsLoading = ref(false);

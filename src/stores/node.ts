@@ -8,21 +8,8 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { extractErrorMessage } from '@/utils/errorHandler';
+import type { NodeStatusData } from '@/types/node';
 import { invokeTauriResponse } from '@/utils/tauriResponse';
-
-export interface NodeStatusData {
-  nodeId: number;
-  name: string;
-  totalTrafficIn: number;
-  totalTrafficOut: number;
-  onlineClient: number;
-  onlineProxy: number;
-  isOnline: boolean;
-  version: string;
-  uptime: number;
-  curConns: number;
-  loadPercent: number;
-}
 
 export const useNodeStore = defineStore('node', () => {
   // State

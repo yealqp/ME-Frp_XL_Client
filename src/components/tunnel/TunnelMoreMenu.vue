@@ -30,13 +30,9 @@ import {
   LogOut,
   Trash2,
 } from 'lucide-vue-next';
+import type { Tunnel as TunnelRecord } from '@/types/tunnel';
 
-interface Tunnel {
-  proxyId: number;
-  proxyName: string;
-  isDisabled: boolean;
-  [key: string]: any;
-}
+type Tunnel = Pick<TunnelRecord, 'proxyId' | 'proxyName' | 'isDisabled'>
 
 interface Props {
   tunnel: Tunnel;

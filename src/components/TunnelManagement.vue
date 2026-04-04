@@ -217,16 +217,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
-import { useMessage, NDataTable, NAlert } from "naive-ui";
-import { storeToRefs } from "pinia";
-import { extractErrorMessage } from "@/utils/errorHandler";
+import { NDataTable, NAlert } from "naive-ui";
 import type { Tunnel } from "@/types/tunnel";
-import { useTunnelStore } from "@/stores/tunnel";
 import { useTunnelBatchActions } from "@/composables/useTunnelBatchActions";
 import { useTunnelConfigFiles } from "@/composables/useTunnelConfigFiles";
 import { useTunnelDialogs } from "@/composables/useTunnelDialogs";
 import { useTunnelMoreActions } from "@/composables/useTunnelMoreActions";
+import { useTunnelPageState } from "@/composables/useTunnelPageState";
 import { useTunnelTableView } from "@/composables/useTunnelTableView";
 import {
   RefreshCw,
@@ -253,124 +250,6 @@ interface Emits {
 }
 
 const emit = defineEmits<Emits>();
-const message = useMessage();
-const tunnelStore = useTunnelStore();
-const {
-  tunnels,
-  loading,
-  error,
-  nodeNameMap,
-  nodeHostnameMap,
-  runningTunnels,
-  actionLoading,
-} = storeToRefs(tunnelStore);
-
-// 视图模式（从 localStorage 读取，默认为 grid）
-const viewMode = ref<'grid' | 'table'>(
-  (localStorage.getItem('tunnel-view-mode') as 'grid' | 'table') || 'grid'
-);
-
-// 监听视图模式变化，保存到 localStorage
-watch(viewMode, (newMode) => {
-  localStorage.setItem('tunnel-view-mode', newMode);
-});
-
-// 加载隧道列表
-async function loadTunnels() {
-  try {
-    // 同时加载隧道列表、节点映射、运行状态和配置文件状态
-    await Promise.all([
-      tunnelStore.refreshTunnels(),
-      loadConfigFileStatus(),
-    ]);
-
-    if (!error.value) {
-      message.success(`成功加载 ${tunnels.value.length} 个隧道`);
-    }
-  } catch (err) {
-    console.error("加载隧道列表失败:", err);
-    message.error(extractErrorMessage(err, error.value || "加载隧道列表失败"));
-  }
-}
-
-const loadRunningTunnels = async () => {
-  try {
-    await tunnelStore.loadRunningTunnels();
-  } catch (error) {
-    console.error("获取运行状态失败:", error);
-  }
-};
-
-const {
-  batchMode,
-  selectedTunnels,
-  enterBatchMode,
-  exitBatchMode,
-  toggleTunnelSelection,
-  selectAll,
-  clearSelection,
-  batchStartTunnels,
-  batchStopTunnels,
-  batchEnableTunnels,
-  batchDisableTunnels,
-  batchKickTunnels,
-  batchDeleteTunnels,
-} = useTunnelBatchActions({
-  tunnels,
-  loadTunnels,
-  loadRunningTunnels,
-});
-
-// 启动隧道
-async function startTunnel(id: number) {
-  try {
-    await tunnelStore.startTunnel(id);
-    message.success("隧道启动成功");
-
-    emit("tunnel-start", id);
-  } catch (err) {
-    console.error("启动隧道失败:", err);
-    message.error(extractErrorMessage(err, "启动隧道失败"));
-  }
-}
-
-// 停止隧道
-async function stopTunnel(id: number) {
-  try {
-    await tunnelStore.stopTunnel(id);
-    message.success("隧道停止成功");
-
-    emit("tunnel-stop", id);
-  } catch (err) {
-    console.error("停止隧道失败:", err);
-    message.error(extractErrorMessage(err, "停止隧道失败"));
-  }
-}
-
-async function handleReload() {
-  tunnelStore.clearError();
-  await loadTunnels();
-}
-
-const {
-  showLogs,
-  currentLogs,
-  currentTunnelId,
-  loadingLogs,
-  showDetails,
-  currentTunnelDetails,
-  showEditModal,
-  editingTunnel,
-  viewLogs,
-  viewTunnelDetails,
-  editTunnel,
-  updateTunnel,
-  saveEdit,
-  cancelEdit,
-} = useTunnelDialogs({
-  tunnels,
-  runningTunnels,
-});
 
 const {
   showConfigModal,
@@ -394,6 +273,67 @@ const {
   switchToQuickStart,
   getLanguageForFormat,
 } = useTunnelConfigFiles();
+
+const {
+  tunnels,
+  loading,
+  error,
+  nodeNameMap,
+  nodeHostnameMap,
+  runningTunnels,
+  actionLoading,
+  viewMode,
+  loadTunnels,
+  loadRunningTunnels,
+  startTunnel,
+  stopTunnel,
+  handleReload,
+  refreshTunnels,
+} = useTunnelPageState({
+  loadConfigFileStatus,
+  onTunnelStart: (id) => emit("tunnel-start", id),
+  onTunnelStop: (id) => emit("tunnel-stop", id),
+});
+
+const {
+  batchMode,
+  selectedTunnels,
+  enterBatchMode,
+  exitBatchMode,
+  toggleTunnelSelection,
+  selectAll,
+  clearSelection,
+  batchStartTunnels,
+  batchStopTunnels,
+  batchEnableTunnels,
+  batchDisableTunnels,
+  batchKickTunnels,
+  batchDeleteTunnels,
+} = useTunnelBatchActions({
+  tunnels,
+  loadTunnels,
+  loadRunningTunnels,
+});
+
+const {
+  showLogs,
+  currentLogs,
+  currentTunnelId,
+  loadingLogs,
+  showDetails,
+  currentTunnelDetails,
+  showEditModal,
+  editingTunnel,
+  viewLogs,
+  viewTunnelDetails,
+  editTunnel,
+  updateTunnel,
+  saveEdit,
+  cancelEdit,
+} = useTunnelDialogs({
+  tunnels,
+  runningTunnels,
+});
 
 const {
   kickTunnel,
@@ -432,34 +372,9 @@ const {
   onMoreAction: handleMoreAction,
 });
 
-function refreshTunnels() {
-  loadTunnels();
-}
-
 function goToCreateTunnel() {
   emit("go-to-create");
 }
-
-// 定时器引用
-let statusUpdateTimer: number | null = null;
-
-// 组件挂载时初始化
-onMounted(() => {
-  loadTunnels();
-  
-  // 定期更新运行状态
-  statusUpdateTimer = window.setInterval(() => {
-    loadRunningTunnels();
-  }, 5000);
-});
-
-// 组件卸载时清理
-onUnmounted(() => {
-  if (statusUpdateTimer) {
-    clearInterval(statusUpdateTimer);
-    statusUpdateTimer = null;
-  }
-});
 
 // 暴露给模板的变量和方法
 defineExpose({

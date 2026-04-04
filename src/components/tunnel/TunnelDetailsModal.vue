@@ -129,38 +129,7 @@ import { ref, computed, watch } from "vue";
 import { NModal, NDescriptions, NDescriptionsItem, NTag, NButton, NAlert, NSelect, useMessage } from "naive-ui";
 import QrcodeVue from "qrcode-vue3";
 import { parseDomainArray } from "@/utils/domainUtils";
-
-// Tunnel 接口定义
-interface Tunnel {
-  proxyId: number;
-  username: string;
-  proxyName: string;
-  proxyType: string;
-  isBanned: boolean;
-  isDisabled: boolean;
-  localIp: string;
-  localPort: number;
-  remotePort: number;
-  nodeId: number;
-  runId: string;
-  isOnline: boolean;
-  domain: string;
-  lastStartTime: number;
-  lastCloseTime: number;
-  clientVersion: string;
-  proxyProtocolVersion: string;
-  useEncryption: boolean;
-  useCompression: boolean;
-  location: string;
-  accessKey: string;
-  hostHeaderRewrite: string;
-  headerXFromWhere: string;
-  httpUser?: string;
-  httpPassword?: string;
-  crtPath?: string;
-  keyPath?: string;
-  transportProtocol?: string;
-}
+import type { Tunnel } from "@/types/tunnel";
 
 // Props 接口
 interface Props {

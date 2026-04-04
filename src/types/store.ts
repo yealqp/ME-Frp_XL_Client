@@ -5,7 +5,9 @@
  * These types ensure type safety across the state management layer.
  */
 
-import type { UnifiedConfig, AppSettings } from './config';
+import type { AppSettings } from './config';
+import type { Node } from './node';
+import type { Tunnel } from './tunnel';
 
 // ============================================================================
 // Auth Store Types
@@ -61,28 +63,6 @@ export interface TunnelState {
   actionLoading: Record<number, boolean>;   // 单个隧道操作加载状态
 }
 
-export interface Tunnel {
-  proxyId: number;
-  username: string;
-  proxyName: string;
-  proxyType: string;
-  isBanned: boolean;
-  isDisabled: boolean;
-  localIp: string;
-  localPort: number;
-  remotePort: number;
-  nodeId: number;
-  runId: string;
-  isOnline: boolean;
-  domain: string;
-  lastStartTime: number;
-  lastCloseTime: number;
-  useEncryption: boolean;
-  useCompression: boolean;
-  sk: string;
-  remark: string;
-}
-
 // ============================================================================
 // Settings Store Types
 // ============================================================================
@@ -93,9 +73,6 @@ export interface SettingsState {
   error: string;          // 错误信息
 }
 
-// Re-export AppSettings from config
-export type { AppSettings } from './config';
-
 // ============================================================================
 // CreateTunnel Store Types
 // ============================================================================
@@ -103,28 +80,6 @@ export type { AppSettings } from './config';
 export interface CreateTunnelState {
   currentPage: 'node-selection' | 'tunnel-config';  // 当前页面
   selectedNode: Node | null;                        // 选中的节点
-}
-
-export interface Node {
-  nodeId: number;
-  name: string;
-  hostname: string;
-  description: string;
-  token: string;
-  servicePort: number;
-  adminPort: number;
-  adminPass: string;
-  allowGroup: string;
-  allowPort: string;
-  allowType: string;
-  region: string;
-  bandwidth: string;
-  isOnline: boolean;
-  isDisabled: boolean;
-  totalTrafficIn: number;
-  totalTrafficOut: number;
-  upTime: number;
-  version: string;
 }
 
 // ============================================================================
@@ -142,3 +97,6 @@ export interface UIState {
 // ============================================================================
 
 export type { UnifiedConfig } from './config';
+export type { AppSettings } from './config';
+export type { Node, NodeStatusData } from './node';
+export type { Tunnel } from './tunnel';

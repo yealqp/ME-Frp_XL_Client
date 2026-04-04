@@ -55,20 +55,3 @@ export interface EditFormData {
   proxyType: string;
   nodeId: number;
 }
-
-/**
- * 统一 API 响应格式
- */
-export interface ApiResponse<T = unknown> {
-  code: number;
-  data: T;
-  message: string;
-}
-
-/**
- * 隧道列表 API 响应数据
- */
-export interface TunnelListData {
-  nodes: Record<number, { name: string; hostname: string }>;
-  proxies: Tunnel[];
-}

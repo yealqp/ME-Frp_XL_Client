@@ -297,6 +297,7 @@ import { useAuthStore } from "../stores/auth";
 import type { ECharts } from "echarts/core";
 import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
+import { invokeTauriResponse } from "@/utils/tauriResponse";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
 import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
@@ -324,27 +325,28 @@ interface CdkHistoryLog {
   userAgent: string;
 }
 
-interface CdkHistoryResponse {
-  code: number;
-  data: {
-    logs: CdkHistoryLog[];
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
-  message: string;
+interface CdkHistoryData {
+  logs: CdkHistoryLog[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
 }
 
-interface TrafficStatsResponse {
-  code: number;
-  data: {
-    dates: string[];
-    trafficIn: number[];
-    trafficOut: number[];
-    totalTraffic: number[];
-  };
-  message: string;
+interface TrafficStatsData {
+  dates: string[];
+  trafficIn: number[];
+  trafficOut: number[];
+  totalTraffic: number[];
+}
+
+interface ResetTokenData {
+  newToken?: string;
+}
+
+interface RedeemCdkData {
+  type: string;
+  value: number;
 }
 
 // 下线所有隧道相关
@@ -442,8 +444,7 @@ const handleKickAllProxies = async () => {
   kickingAllProxies.value = true;
 
   try {
-    const responseText = await invoke("api_kick_all_proxies");
-    const result = JSON.parse(responseText as string);
+    const result = await invokeTauriResponse<null>("api_kick_all_proxies");
 
     if (result.code === 200) {
       message.success(result.message || "强制下线隧道成功");
@@ -478,10 +479,9 @@ const handleResetToken = async () => {
     message.destroyAll();
     message.loading("正在重置访问密钥...", { duration: 0 });
 
-    const responseText = await invoke("api_reset_token", {
+    const result = await invokeTauriResponse<ResetTokenData>("api_reset_token", {
       captchaToken: captchaToken,
     });
-    const result = JSON.parse(responseText as string);
 
     message.destroyAll();
 
@@ -542,12 +542,10 @@ const performCdkRedeem = async () => {
     message.destroyAll();
     message.loading("正在兑换中...", { duration: 0 });
 
-    const responseText = await invoke("api_redeem_cdk", {
+    const result = await invokeTauriResponse<RedeemCdkData>("api_redeem_cdk", {
       code: cdkCode.value.trim(),
       captchaToken: cdkCaptchaToken.value,
     });
-
-    const result = JSON.parse(responseText as string);
     message.destroyAll();
 
     if (result.code === 200) {
@@ -592,8 +590,7 @@ const performCdkRedeem = async () => {
 const loadCdkHistory = async () => {
   cdkHistoryLoading.value = true;
   try {
-    const responseText = await invoke("api_get_cdk_history");
-    const result: CdkHistoryResponse = JSON.parse(responseText as string);
+    const result = await invokeTauriResponse<CdkHistoryData>("api_get_cdk_history");
 
     if (result.code === 200 && result.data) {
       cdkHistory.value = Array.isArray(result.data.logs)
@@ -723,10 +720,9 @@ const loadTrafficStats = async () => {
   showCustomTooltip.value = false;
 
   try {
-    const responseText = await invoke("api_get_traffic_stats", {
+    const result = await invokeTauriResponse<TrafficStatsData>("api_get_traffic_stats", {
       datePeriod: datePeriod.value,
     });
-    const result: TrafficStatsResponse = JSON.parse(responseText as string);
 
     if (result.code === 200 && result.data) {
       // 确保图表已初始化
@@ -761,7 +757,7 @@ const loadTrafficStats = async () => {
 };
 
 // 更新图表
-const updateChart = (data: TrafficStatsResponse["data"]) => {
+const updateChart = (data: TrafficStatsData) => {
   if (!chartInstance.value || !echartsModule) {
     console.error("图表实例未初始化");
     return;

@@ -7,7 +7,7 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import type { CreateTunnelState, Node } from '@/types/store';
+import type { Node } from '@/types/node';
 
 export const useCreateTunnelStore = defineStore('createTunnel', () => {
   // ============================================================================
