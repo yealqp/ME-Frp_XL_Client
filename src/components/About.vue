@@ -342,7 +342,7 @@
       :style="{ width: '500px' }"
       title="表单反馈"
     >
-      <n-form ref="feedbackFormRef" :model="feedbackForm" label-placement="top">
+      <n-form :model="feedbackForm" label-placement="top">
         <n-form-item label="反馈内容" path="content" required>
           <n-input
             v-model:value="feedbackForm.content"

@@ -449,11 +449,6 @@ const handleCreate = async () => {
 const handleGetFreePort = () => {
   emit('get-free-port');
 };
-
-// Expose validate method
-defineExpose({
-  validate: () => formRef.value?.validate()
-});
 </script>
 
 <style scoped>

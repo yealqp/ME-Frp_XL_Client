@@ -244,7 +244,6 @@ import TunnelGridView from "./tunnel/TunnelGridView.vue";
 interface Emits {
   (e: "tunnel-start", id: number): void;
   (e: "tunnel-stop", id: number): void;
-  (e: "tunnel-edit", id: number): void;
   (e: "tunnel-delete", id: number): void;
   (e: "go-to-create"): void;
 }
@@ -262,7 +261,6 @@ const {
   usingConfigFile,
   isEditingConfig,
   loadConfigFileStatus,
-  getTunnelConfig,
   saveConfigFile,
   useConfigFile,
   startEditConfig,
@@ -271,7 +269,6 @@ const {
   handleConfigTypeChange,
   viewConfigFile,
   switchToQuickStart,
-  getLanguageForFormat,
 } = useTunnelConfigFiles();
 
 const {
@@ -327,7 +324,6 @@ const {
   viewLogs,
   viewTunnelDetails,
   editTunnel,
-  updateTunnel,
   saveEdit,
   cancelEdit,
 } = useTunnelDialogs({
@@ -336,8 +332,6 @@ const {
 });
 
 const {
-  kickTunnel,
-  toggleTunnel,
   copyRemoteAddress,
   handleMoreAction,
 } = useTunnelMoreActions({
@@ -375,59 +369,6 @@ const {
 function goToCreateTunnel() {
   emit("go-to-create");
 }
-
-// 暴露给模板的变量和方法
-defineExpose({
-  tunnels,
-  loading,
-  runningTunnels,
-  showLogs,
-  currentLogs,
-  currentTunnelId,
-  showDetails,
-  currentTunnelDetails,
-  showEditModal,
-  editingTunnel,
-  showConfigModal,
-  currentConfigTunnelId,
-  configTypes,
-  activeConfigType,
-  configContents,
-  editableConfigContents,
-  loadingConfig,
-  usingConfigFile,
-  isEditingConfig,
-  refreshTunnels: loadTunnels,
-  startTunnel,
-  stopTunnel,
-  editTunnel,
-  updateTunnel,
-  kickTunnel,
-  toggleTunnel,
-  copyRemoteAddress,
-  handleMoreAction,
-  viewLogs,
-  viewTunnelDetails,
-  saveEdit,
-  cancelEdit,
-  getTunnelConfig,
-  saveConfigFile,
-  useConfigFile,
-  viewConfigFile,
-  getLanguageForFormat,
-  loadConfigFileStatus,
-  switchToQuickStart,
-  startEditConfig,
-  cancelEditConfig,
-  saveEditedConfig,
-  handleConfigTypeChange,
-  batchStartTunnels,
-  batchStopTunnels,
-  batchEnableTunnels,
-  batchDisableTunnels,
-  batchKickTunnels,
-  batchDeleteTunnels,
-});
 </script>
 
 <style scoped>

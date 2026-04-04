@@ -75,11 +75,9 @@ const loading = ref(true);
 const error = ref("");
 const selectedNode = ref<Node | null>(null);
 const userGroup = ref<string>("default");
-const userGroups = ref<string[]>([]); // 用户组列表
 
 interface CreateProxyDataPayload {
   nodes?: Node[];
-  groups?: string[];
   currentGroup?: string;
 }
 
@@ -112,9 +110,8 @@ const tunnelForm = ref<TunnelForm>({
 });
 
 const creating = ref(false);
-const gettingPort = ref(false);
 
-// 获取创建隧道所需的所有数据（节点列表 + 用户组信息）
+// 获取创建隧道所需的基础数据（节点列表 + 当前用户组）
 async function fetchCreateProxyData() {
   try {
     const response = await invokeTauriResponse<CreateProxyDataPayload>("api_get_create_proxy_data");
@@ -122,16 +119,8 @@ async function fetchCreateProxyData() {
     if (response.code === 200) {
       // 设置节点列表
       nodes.value = response.data.nodes || [];
-      
-      // 设置用户组信息
-      userGroups.value = response.data.groups || [];
+
       userGroup.value = (response.data.currentGroup || "default").toLowerCase();
-      
-      console.log("获取创建隧道数据成功:", {
-        节点数量: nodes.value.length,
-        当前用户组: userGroup.value,
-        用户组列表: userGroups.value
-      });
     } else {
       error.value = response.message || "获取数据失败";
       message.error(response.message || "获取数据失败");
@@ -299,7 +288,6 @@ async function getFreePort() {
   }
   
   try {
-    gettingPort.value = true;
     const requestData = {
       nodeId: selectedNode.value?.nodeId,
       protocol: tunnelForm.value.type,
@@ -317,8 +305,6 @@ async function getFreePort() {
   } catch (error) {
     console.error("获取空闲端口失败:", error);
     message.error(`获取空闲端口失败: ${extractErrorMessage(error, "获取空闲端口失败")}`);
-  } finally {
-    gettingPort.value = false;
   }
 }
 

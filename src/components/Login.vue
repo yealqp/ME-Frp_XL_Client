@@ -274,8 +274,7 @@ async function openTokenPage() {
 
 async function openWebWievPage() {
   await openExternalPage(
-    "https://alist.yealqp.cn/mefrp-desktop/ME-Frp%20XL%20%E5%AE%A2%E6%88%B7%E7%AB%AF",
-    "https://alist.yealqp.cn/mefrp-desktop/ME-Frp XL客户端",
+    "https://alist.yealqp.cn/ME-Frp%20XL%20Client",
   );
 }
 
