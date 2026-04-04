@@ -103,15 +103,6 @@
         >
           {{ isTokenMode ? "账号登录" : "Token登录" }}
         </n-button>
-        <span class="separator">|</span>
-        <n-button
-          text
-          type="primary"
-          class="mode-switch-btn auth-link-btn"
-          @click="goToRegister"
-        >
-          注册账号
-        </n-button>
       </div>
     </div>
   </AuthShell>
@@ -121,7 +112,6 @@
 import { computed, onMounted, ref, useTemplateRef } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
-import { useRouter } from "vue-router";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
 import type { UnifiedConfig } from "../types/config";
@@ -133,7 +123,6 @@ import AuthShell from "./AuthShell.vue";
 
 const emit = defineEmits(["login-success"]);
 const message = useMessage();
-const router = useRouter();
 const authStore = useAuthStore();
 const { ensureCaptcha, verifyWithFeedback } = useCaptchaVerifier();
 
@@ -276,13 +265,6 @@ function toggleLoginMode() {
 }
 
 /**
- * 跳转到注册页面
- */
-function goToRegister() {
-  router.push("/register");
-}
-
-/**
  * 打开Token获取页面
  * 使用Tauri的opener插件在默认浏览器中打开链接
  */
@@ -399,11 +381,6 @@ const panelSubtitle = computed(() =>
   gap: 4px;
 }
 
-.separator {
-  margin: 0 8px;
-  color: var(--auth-muted-color);
-}
-
 .mode-switch-btn {
   font-size: 13px;
 }
@@ -420,10 +397,6 @@ const panelSubtitle = computed(() =>
   .mode-switch-container {
     margin-top: 16px;
     padding-top: 14px;
-  }
-
-  .separator {
-    display: none;
   }
 
   .mode-switch-btn {

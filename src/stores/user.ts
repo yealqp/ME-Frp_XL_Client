@@ -8,7 +8,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
-import type { UserDetailInfo } from '@/types/store';
+import type { UserDetailInfo } from '@/types/user';
 
 export const useUserStore = defineStore('user', () => {
   // State

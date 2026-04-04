@@ -1,37 +1,51 @@
-/**
- * User Information Types
- * 
- * This file defines the user information data structures used throughout the application.
- */
-
-/**
- * User information interface
- */
-export interface UserInfo {
-  /** Username */
-  username: string;
-  /** User ID */
-  userId: number;
-  /** Whether the user has completed real-name verification */
-  isRealname: boolean;
-  /** User group name (friendly display) */
-  friendlyGroup: string;
-  /** Registration timestamp (Unix timestamp in seconds) */
-  regTime: number;
-  /** User email address */
+export interface UserDetailInfo {
   email: string;
-  /** Number of proxies/tunnels currently in use */
-  usedProxies: number;
-  /** Maximum number of proxies/tunnels allowed */
-  maxProxies: number;
-  /** Remaining traffic in MB */
-  traffic: number;
-  /** Inbound bandwidth limit (in KB/s, multiply by 128 to get Mbps) */
+  friendlyGroup: string;
+  group: string;
   inBound: number;
-  /** Outbound bandwidth limit (in KB/s, multiply by 128 to get Mbps) */
+  isRealname: boolean;
+  maxProxies: number;
   outBound: number;
-  /** Whether the user has signed in today (optional) */
-  todaySigned?: boolean;
-  /** Additional user properties */
-  [key: string]: any;
+  regTime: number;
+  status: number;
+  todaySigned: boolean;
+  traffic: number;
+  usedProxies: number;
+  userId: number;
+  username: string;
+}
+
+export interface CdkHistoryLog {
+  logId: number;
+  code: string;
+  username: string;
+  type: string;
+  value: number;
+  useTime: number;
+  clientIp: string;
+  userAgent: string;
+}
+
+export interface CdkHistoryData {
+  logs: CdkHistoryLog[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface TrafficStatsData {
+  dates: string[];
+  trafficIn: number[];
+  trafficOut: number[];
+  totalTraffic: number[];
+}
+
+export interface ResetTokenData {
+  newToken?: string;
+}
+
+export interface RedeemCdkData {
+  type: string;
+  value: number;
 }

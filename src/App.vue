@@ -24,6 +24,7 @@ import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
 import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
 import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
+import type { UpdateCheckResult } from "@/types/update";
 
 interface TunnelSummary {
   proxyId: number;
@@ -286,14 +287,6 @@ const autoCheckForUpdates = async () => {
     }
 
     console.log("开始自动检查更新...");
-
-    interface UpdateCheckResult {
-      has_update: boolean;
-      latest_version: string;
-      current_version: string;
-      update_info: string[];
-      changelog: Record<string, string[]>;
-    }
 
     const result = await invoke<UpdateCheckResult>("check_for_updates");
 

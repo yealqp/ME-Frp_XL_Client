@@ -20,7 +20,7 @@ const themeClass = computed(() =>
         <p class="auth-shell__eyebrow">ME-Frp XL Client</p>
         <h2 class="auth-shell__headline">在桌面端继续管理你的隧道。</h2>
         <p class="auth-shell__description">
-          登录或注册后即可在 XL Client 中完成隧道创建与隧道启停。
+          登录后即可在 XL Client 中完成隧道创建与隧道启停。
         </p>
       </div>
 
@@ -73,15 +73,6 @@ const themeClass = computed(() =>
   --auth-submit-text: #061321;
   --auth-submit-shadow: 0 10px 24px rgba(75, 142, 255, 0.18);
   --auth-submit-shadow-hover: 0 12px 28px rgba(75, 142, 255, 0.2);
-  --auth-send-btn-bg: rgba(255, 255, 255, 0.12);
-  --auth-send-btn-bg-hover: rgba(255, 255, 255, 0.2);
-  --auth-send-btn-bg-pressed: rgba(255, 255, 255, 0.14);
-  --auth-send-btn-bg-disabled: rgba(255, 255, 255, 0.08);
-  --auth-send-btn-border: rgba(255, 255, 255, 0.16);
-  --auth-send-btn-border-hover: rgba(150, 220, 255, 0.52);
-  --auth-send-btn-text: #f7fbff;
-  --auth-send-btn-text-hover: #ffffff;
-  --auth-send-btn-text-disabled: rgba(247, 251, 255, 0.46);
   --auth-alert-base-bg: rgba(255, 255, 255, 0.06);
   --auth-alert-base-border: rgba(255, 255, 255, 0.1);
   --auth-alert-base-text: rgba(236, 244, 255, 0.88);
@@ -109,7 +100,7 @@ const themeClass = computed(() =>
   overflow: auto;
   background-image:
     var(--auth-overlay),
-    url("https://t.alcy.cc/pc");
+    url("https://t.alcy.cc/ycy");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -155,15 +146,6 @@ const themeClass = computed(() =>
   --auth-submit-text: #ffffff;
   --auth-submit-shadow: 0 10px 24px color-mix(in srgb, var(--app-primary-color) 18%, transparent);
   --auth-submit-shadow-hover: 0 12px 28px color-mix(in srgb, var(--app-primary-color) 22%, transparent);
-  --auth-send-btn-bg: rgba(255, 255, 255, 0.82);
-  --auth-send-btn-bg-hover: rgba(255, 255, 255, 0.96);
-  --auth-send-btn-bg-pressed: rgba(246, 249, 255, 0.92);
-  --auth-send-btn-bg-disabled: rgba(242, 244, 247, 0.8);
-  --auth-send-btn-border: color-mix(in srgb, var(--app-primary-color) 18%, var(--app-border-color));
-  --auth-send-btn-border-hover: color-mix(in srgb, var(--app-primary-color) 34%, var(--app-border-color));
-  --auth-send-btn-text: color-mix(in srgb, var(--app-primary-color) 76%, #152030);
-  --auth-send-btn-text-hover: color-mix(in srgb, var(--app-primary-color) 88%, #152030);
-  --auth-send-btn-text-disabled: rgba(52, 70, 94, 0.42);
   --auth-alert-base-bg: rgba(255, 255, 255, 0.72);
   --auth-alert-base-border: rgba(255, 255, 255, 0.84);
   --auth-alert-base-text: #223041;

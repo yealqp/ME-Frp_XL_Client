@@ -391,6 +391,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { invokeTauriText } from "@/utils/tauriResponse";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { UpdateCheckResult } from "@/types/update";
 import {
   MessageCircle,
   MessageSquare,
@@ -405,15 +406,6 @@ import {
   Shield,
 } from "lucide-vue-next";
 import { parseMarkdown } from "@/utils/markdownParser";
-
-
-interface UpdateCheckResult {
-  has_update: boolean;
-  latest_version: string;
-  current_version: string;
-  update_info: string[];
-  changelog: Record<string, string[]>;
-}
 
 interface Hitokoto {
   sentence: string;

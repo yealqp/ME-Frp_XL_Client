@@ -81,28 +81,6 @@ async fn api_login(
     Ok(unified_config)
 }
 
-// 发送邮箱验证码API命令
-#[tauri::command]
-async fn api_send_email_code(
-    _app_handle: tauri::AppHandle,
-    email: String,
-    captcha_token: String,
-) -> Result<String, String> {
-    api::auth::send_email_code(email, captcha_token).await
-}
-
-// 用户注册API命令
-#[tauri::command]
-async fn api_register(
-    _app_handle: tauri::AppHandle,
-    username: String,
-    email: String,
-    password: String,
-    email_code: String,
-) -> Result<String, String> {
-    api::auth::register(username, email, password, email_code).await
-}
-
 // 获取用户信息API命令
 #[tauri::command]
 async fn api_get_user_info(_app_handle: tauri::AppHandle) -> Result<UserDetailInfo, String> {
@@ -1113,8 +1091,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             clear_config,
             api_login,
-            api_send_email_code,
-            api_register,
             api_get_user_info,
             api_user_sign,
             api_redeem_cdk,

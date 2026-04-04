@@ -8,6 +8,7 @@
 import type { AppSettings } from './config';
 import type { Node } from './node';
 import type { Tunnel } from './tunnel';
+import type { UserDetailInfo } from './user';
 
 // ============================================================================
 // Auth Store Types
@@ -30,23 +31,6 @@ export interface UserState {
   userInfo: UserDetailInfo | null;  // 用户详细信息
   loading: boolean;                 // 加载状态
   error: string;                    // 错误信息
-}
-
-export interface UserDetailInfo {
-  email: string;
-  friendlyGroup: string;
-  group: string;
-  inBound: number;
-  isRealname: boolean;
-  maxProxies: number;
-  outBound: number;
-  regTime: number;
-  status: number;
-  todaySigned: boolean;
-  traffic: number;
-  usedProxies: number;
-  userId: number;
-  username: string;
 }
 
 // ============================================================================
@@ -100,3 +84,4 @@ export type { UnifiedConfig } from './config';
 export type { AppSettings } from './config';
 export type { Node, NodeStatusData } from './node';
 export type { Tunnel } from './tunnel';
+export type { UserDetailInfo } from './user';

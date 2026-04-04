@@ -300,6 +300,13 @@ import { handleApiError } from "@/utils/errorHandler";
 import { invokeTauriResponse } from "@/utils/tauriResponse";
 import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
+import type {
+  CdkHistoryData,
+  CdkHistoryLog,
+  RedeemCdkData,
+  ResetTokenData,
+  TrafficStatsData,
+} from "@/types/user";
 import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
 
 type EChartsModule = typeof import("echarts/core");
@@ -313,41 +320,6 @@ const userStore = useUserStore();
 const authStore = useAuthStore();
 const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
 const { formattedBandwidth, formattedTraffic, formattedRegTime } = userStore;
-
-interface CdkHistoryLog {
-  logId: number;
-  code: string;
-  username: string;
-  type: string;
-  value: number;
-  useTime: number;
-  clientIp: string;
-  userAgent: string;
-}
-
-interface CdkHistoryData {
-  logs: CdkHistoryLog[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
-
-interface TrafficStatsData {
-  dates: string[];
-  trafficIn: number[];
-  trafficOut: number[];
-  totalTraffic: number[];
-}
-
-interface ResetTokenData {
-  newToken?: string;
-}
-
-interface RedeemCdkData {
-  type: string;
-  value: number;
-}
 
 // 下线所有隧道相关
 const kickingAllProxies = ref(false);

@@ -11,26 +11,6 @@
 use crate::models::api::{ApiResponse, FrpTokenData};
 use crate::models::auth::{LoginData, LoginRequest, UserDetailInfo};
 use crate::utils::create_http_client;
-use serde::{Deserialize, Serialize};
-
-/// 注册请求结构体
-#[derive(Serialize, Deserialize, Debug)]
-pub struct RegisterRequest {
-    pub username: String,
-    pub email: String,
-    pub password: String,
-    #[serde(rename = "emailCode")]
-    pub email_code: String,
-}
-
-/// 邮箱验证码请求结构体
-#[derive(Serialize, Deserialize, Debug)]
-pub struct EmailCodeRequest {
-    pub email: String,
-    #[serde(rename = "captchaToken")]
-    pub captcha_token: String,
-}
-
 /// 用户登录
 ///
 /// # 参数
@@ -273,90 +253,6 @@ pub async fn get_cdk_history(token: &str) -> Result<String, String> {
         .text()
         .await
         .map_err(|e| format!("解析CDK兑换历史响应失败: {e}"))?;
-
-    Ok(response_text)
-}
-
-/// 发送邮箱验证码
-///
-/// # 参数
-/// - email: 邮箱地址
-/// - captcha_token: 验证码token
-///
-/// # 返回
-/// 成功返回响应文本
-pub async fn send_email_code(email: String, captcha_token: String) -> Result<String, String> {
-    let client = create_http_client();
-
-    let request_data = EmailCodeRequest {
-        email,
-        captcha_token,
-    };
-
-    let response = client
-        .post("https://api.mefrp.com/api/public/register/emailCode")
-        .header("Content-Type", "application/json")
-        .json(&request_data)
-        .send()
-        .await
-        .map_err(|e| format!("发送邮箱验证码请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!(
-            "发送邮箱验证码失败，状态码: {}",
-            response.status()
-        ));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析邮箱验证码响应失败: {e}"))?;
-
-    Ok(response_text)
-}
-
-/// 用户注册
-///
-/// # 参数
-/// - username: 用户名
-/// - email: 邮箱地址
-/// - password: 密码
-/// - email_code: 邮箱验证码
-///
-/// # 返回
-/// 成功返回响应文本
-pub async fn register(
-    username: String,
-    email: String,
-    password: String,
-    email_code: String,
-) -> Result<String, String> {
-    let client = create_http_client();
-
-    let request_data = RegisterRequest {
-        username,
-        email,
-        password,
-        email_code,
-    };
-
-    let response = client
-        .post("https://api.mefrp.com/api/public/register")
-        .header("Content-Type", "application/json")
-        .json(&request_data)
-        .send()
-        .await
-        .map_err(|e| format!("注册请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("注册失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析注册响应失败: {e}"))?;
 
     Ok(response_text)
 }
