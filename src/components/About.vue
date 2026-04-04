@@ -389,6 +389,7 @@ import {
   NDivider,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
+import { invokeTauriText } from "@/utils/tauriResponse";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   MessageCircle,
@@ -495,7 +496,7 @@ const refreshHitokoto = async () => {
 // 获取应用版本号
 const getAppVersion = async () => {
   try {
-    const version = await invoke<string>("get_app_version");
+    const version = await invokeTauriText("get_app_version");
     appVersion.value = version;
   } catch (error) {
     console.error("获取版本号失败:", error);

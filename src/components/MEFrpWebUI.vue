@@ -304,7 +304,7 @@ import {
 } from "lucide-vue-next";
 import { useWebuiStore } from "../stores/webui";
 import { invoke } from "@tauri-apps/api/core";
-import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
+import { extractProxyList, invokeTauriResponse, invokeTauriText } from "@/utils/tauriResponse";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
 
@@ -407,7 +407,7 @@ const handleStop = async () => {
 // 登录 WebUI
 const loginWebUI = async () => {
   try {
-    const session = await invoke<string>("webui_login", {
+    const session = await invokeTauriText("webui_login", {
       password: webuiStore.settings.pass,
     });
     
@@ -418,7 +418,7 @@ const loginWebUI = async () => {
     startTunnelsRefresh();
   } catch (error) {
     console.error("登录 WebUI 失败:", error);
-    tunnelsError.value = `登录 WebUI 失败: ${error}`;
+    tunnelsError.value = `登录 WebUI 失败: ${extractErrorMessage(error, "登录 WebUI 失败")}`;
   }
 };
 
@@ -618,43 +618,43 @@ const colorizeLog = (log: string): string => {
   // 时间戳 - 灰色
   cleanLog = cleanLog.replace(
     /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)/g,
-    '<span style="color: #888;">$1</span>',
+    '<span style="color: var(--app-log-timestamp-color);">$1</span>',
   );
 
   // 日志级别 [I] - 蓝色
   cleanLog = cleanLog.replace(
     /\[I\]/g,
-    '<span style="color: #42a5f5;">[I]</span>',
+    '<span style="color: var(--app-log-info-color);">[I]</span>',
   );
 
   // 日志级别 [W] - 黄色
   cleanLog = cleanLog.replace(
     /\[W\]/g,
-    '<span style="color: #ffc107;">[W]</span>',
+    '<span style="color: var(--app-log-warning-color);">[W]</span>',
   );
 
   // 日志级别 [E] - 红色
   cleanLog = cleanLog.replace(
     /\[E\]/g,
-    '<span style="color: #ff6b6b;">[E]</span>',
+    '<span style="color: var(--app-log-error-color);">[E]</span>',
   );
 
   // 文件路径 [xxx.go:123] - 绿色（先处理，避免被后续规则匹配）
   cleanLog = cleanLog.replace(
     /(\[[^\]]+\.go:\d+\])/g,
-    '<span style="color: #7cb342;">$1</span>',
+    '<span style="color: var(--app-log-path-color);">$1</span>',
   );
 
   // HTTP/HTTPS URL - 红色加粗（在处理 IP 和域名之前）
   cleanLog = cleanLog.replace(
     /\b(https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(?::\d+)?(?:\/[^\s\]]*)?)\b/g,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>',
+    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>',
   );
 
   // IP地址:端口 - 红色加粗
   cleanLog = cleanLog.replace(
     /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+)\b/g,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>',
+    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>',
   );
 
   // 域名:端口 - 红色加粗（排除 .go: 文件路径）
@@ -665,14 +665,14 @@ const colorizeLog = (log: string): string => {
       if (/\.go:\d+$/.test(match)) {
         return match;
       }
-      return `<span style="color: #ff6b6b; font-weight: 600;">${match}</span>`;
+      return `<span style="color: var(--app-log-highlight-color); font-weight: 600;">${match}</span>`;
     },
   );
 
   // 访问密钥（32位十六进制字符串）- 红色加粗
   cleanLog = cleanLog.replace(
     /\b([0-9a-f]{32})\b/gi,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>',
+    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>',
   );
 
   return cleanLog;

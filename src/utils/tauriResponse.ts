@@ -13,6 +13,13 @@ export async function invokeTauriResponse<T>(
   return parseTauriResponse<T>(responseText);
 }
 
+export async function invokeTauriText(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<string> {
+  return invoke<string>(command, args);
+}
+
 export function extractProxyList<T>(
   payload: { proxies?: T[] } | T[] | null | undefined,
 ): T[] {

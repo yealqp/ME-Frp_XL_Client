@@ -440,8 +440,13 @@ body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  color: #333;
-  background-color: #f5f5f5;
+  color: var(--app-text-color, #333333);
+  background-color: var(--app-bg-color, #f5f5f5);
+}
+
+body {
+  color: var(--app-text-color, #333333);
+  background-color: var(--app-bg-color, #f5f5f5);
 }
 
 .app-container {
@@ -486,12 +491,16 @@ body {
   justify-content: center;
   height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #1c1c1c 0%, #1c1c1c 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--app-bg-color) 92%, var(--app-card-color)) 0%,
+    color-mix(in srgb, var(--app-card-color) 86%, var(--app-bg-color)) 100%
+  );
 }
 
 .loading-spinner {
   text-align: center;
-  color: white;
+  color: var(--app-text-color);
 }
 
 .loading-spinner i {
@@ -531,7 +540,7 @@ body {
 /* 自定义滚动条样式 */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(128, 128, 128, 0.5) var(--app-card-color);
+  scrollbar-color: color-mix(in srgb, var(--app-text-color-3) 58%, transparent) var(--app-card-color);
 }
 
 *::-webkit-scrollbar {
@@ -545,17 +554,17 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.5);
+  background: color-mix(in srgb, var(--app-text-color-3) 58%, transparent);
   border-radius: 0;
   border: none;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.7);
+  background: color-mix(in srgb, var(--app-text-color-2) 68%, transparent);
 }
 
 *::-webkit-scrollbar-thumb:active {
-  background: rgba(128, 128, 128, 0.9);
+  background: color-mix(in srgb, var(--app-text-color-1) 76%, transparent);
 }
 
 *::-webkit-scrollbar-corner {
@@ -568,12 +577,12 @@ body {
 }
 
 .n-scrollbar-rail__scrollbar {
-  background: rgba(128, 128, 128, 0.5) !important;
+  background: color-mix(in srgb, var(--app-text-color-3) 58%, transparent) !important;
   border-radius: 0 !important;
 }
 
 .n-scrollbar-rail__scrollbar:hover {
-  background: rgba(128, 128, 128, 0.7) !important;
+  background: color-mix(in srgb, var(--app-text-color-2) 68%, transparent) !important;
 }
 
 .n-modal-body-wrapper::-webkit-scrollbar,
@@ -599,7 +608,7 @@ body {
 .n-data-table-base-table-body::-webkit-scrollbar-thumb,
 .n-select-menu::-webkit-scrollbar-thumb,
 .n-dropdown-menu::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.5);
+  background: color-mix(in srgb, var(--app-text-color-3) 58%, transparent);
   border-radius: 0;
 }
 
@@ -608,7 +617,7 @@ body {
 .n-data-table-base-table-body::-webkit-scrollbar-thumb:hover,
 .n-select-menu::-webkit-scrollbar-thumb:hover,
 .n-dropdown-menu::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.7);
+  background: color-mix(in srgb, var(--app-text-color-2) 68%, transparent);
 }
 
 /* 路由过渡动画 */

@@ -55,8 +55,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
+import { extractErrorMessage } from "@/utils/errorHandler";
+import { invokeTauriResponse } from "@/utils/tauriResponse";
 import NodeFilterBar from "./create-tunnel/NodeFilterBar.vue";
 import NodeSelector from "./create-tunnel/NodeSelector.vue";
 import TunnelConfigForm from "./create-tunnel/TunnelConfigForm.vue";
@@ -74,7 +75,13 @@ const loading = ref(true);
 const error = ref("");
 const selectedNode = ref<Node | null>(null);
 const userGroup = ref<string>("default");
-const userGroups = ref<any[]>([]); // 用户组列表
+const userGroups = ref<string[]>([]); // 用户组列表
+
+interface CreateProxyDataPayload {
+  nodes?: Node[];
+  groups?: string[];
+  currentGroup?: string;
+}
 
 // 筛选条件
 const searchKeyword = ref("");
@@ -110,8 +117,7 @@ const gettingPort = ref(false);
 // 获取创建隧道所需的所有数据（节点列表 + 用户组信息）
 async function fetchCreateProxyData() {
   try {
-    const responseText = await invoke<string>("api_get_create_proxy_data");
-    const response = JSON.parse(responseText);
+    const response = await invokeTauriResponse<CreateProxyDataPayload>("api_get_create_proxy_data");
     
     if (response.code === 200) {
       // 设置节点列表
@@ -131,8 +137,8 @@ async function fetchCreateProxyData() {
       message.error(response.message || "获取数据失败");
     }
   } catch (err) {
-    error.value = "网络请求失败: " + String(err);
-    message.error("网络请求失败: " + String(err));
+    error.value = extractErrorMessage(err, "网络请求失败");
+    message.error(error.value);
     console.error("获取创建隧道数据失败:", err);
   }
 }
@@ -140,8 +146,7 @@ async function fetchCreateProxyData() {
 // 获取节点状态
 async function fetchNodeStatus() {
   try {
-    const responseText = await invoke<string>("api_get_node_status");
-    const response = JSON.parse(responseText);
+    const response = await invokeTauriResponse<NodeStatus[]>("api_get_node_status");
     if (response.code === 200) {
       nodeStatus.value = response.data;
     } else {
@@ -299,10 +304,10 @@ async function getFreePort() {
       nodeId: selectedNode.value?.nodeId,
       protocol: tunnelForm.value.type,
     };
-    const responseText = await invoke<string>("api_get_free_port", {
+    const response = await invokeTauriResponse<number>("api_get_free_port", {
       data: JSON.stringify(requestData),
     });
-    const response = JSON.parse(responseText);
+
     if (response.code === 200) {
       tunnelForm.value.remotePort = response.data;
       message.success(`获取到空闲端口: ${response.data}`);
@@ -311,13 +316,7 @@ async function getFreePort() {
     }
   } catch (error) {
     console.error("获取空闲端口失败:", error);
-    const errorMessage =
-      error && typeof error === "string"
-        ? error
-        : error && typeof error === "object" && "message" in error
-          ? (error as any).message
-          : "获取空闲端口失败";
-    message.error(`获取空闲端口失败: ${errorMessage}`);
+    message.error(`获取空闲端口失败: ${extractErrorMessage(error, "获取空闲端口失败")}`);
   } finally {
     gettingPort.value = false;
   }
@@ -374,10 +373,9 @@ async function createTunnel() {
       transportProtocol: tunnelForm.value.transportProtocol || "",
     };
     
-    const responseText = await invoke<string>("api_create_tunnel", {
+    const response = await invokeTauriResponse<null>("api_create_tunnel", {
       data: JSON.stringify(requestData),
     });
-    const response = JSON.parse(responseText);
     
     if (response.code === 200) {
       message.success("隧道创建成功");
@@ -408,13 +406,7 @@ async function createTunnel() {
     }
   } catch (error) {
     console.error("创建隧道失败:", error);
-    const errorMessage =
-      error && typeof error === "string"
-        ? error
-        : error && typeof error === "object" && "message" in error
-          ? (error as any).message
-          : "创建隧道失败";
-    message.error(`创建隧道失败: ${errorMessage}`);
+    message.error(`创建隧道失败: ${extractErrorMessage(error, "创建隧道失败")}`);
   } finally {
     creating.value = false;
   }

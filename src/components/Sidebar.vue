@@ -187,9 +187,9 @@ const menuOptions = computed<MenuOption[]>(() => [
     key: 'divider-before-logout',
   },
   {
-    label: () => h('span', { style: { color: '#e74c3c' } }, '退出登录'),
+    label: () => h('span', { style: { color: 'var(--app-error-color)' } }, '退出登录'),
     key: 'logout',
-    icon: () => h(NIcon, { size: 18, color: '#e74c3c' }, { default: () => h(LogOut) }),
+    icon: () => h(NIcon, { size: 18, color: 'var(--app-error-color)' }, { default: () => h(LogOut) }),
   },
 ]);
 
@@ -251,7 +251,7 @@ onMounted(async () => {
 <style scoped>
 .sidebar {
   background-color: var(--app-card-color) !important;
-  color: white;
+  color: var(--app-text-color);
   display: flex;
   flex-direction: column;
   height: 100vh;

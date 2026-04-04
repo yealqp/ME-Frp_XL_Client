@@ -294,16 +294,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import { useAuthStore } from "../stores/auth";
-// 按需导入 ECharts 核心和需要的组件
-import * as echarts from "echarts/core";
-import { LineChart } from "echarts/charts";
-import {
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-} from "echarts/components";
-import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts } from "echarts/core";
 import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
@@ -311,15 +301,7 @@ import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
 import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
 
-// 注册 ECharts 组件
-echarts.use([
-  LineChart,
-  TitleComponent,
-  TooltipComponent,
-  GridComponent,
-  LegendComponent,
-  CanvasRenderer,
-]);
+type EChartsModule = typeof import("echarts/core");
 
 const router = useRouter();
 const message = useMessage();
@@ -396,6 +378,8 @@ const chartContainer = ref<HTMLElement | null>(null);
 const chartInstance = ref<ECharts | null>(null);
 const trafficStatsLoading = ref(false);
 const datePeriod = ref(7);
+let echartsModule: EChartsModule | null = null;
+let echartsRegistered = false;
 
 // 自定义 tooltip 相关
 const showCustomTooltip = ref(false);
@@ -673,7 +657,22 @@ const formatTimestamp = (timestamp: number): string => {
 };
 
 // 初始化图表
-const initChart = () => {
+const ensureECharts = async (): Promise<EChartsModule> => {
+  if (echartsModule) {
+    return echartsModule;
+  }
+
+  const { echarts } = await import("@/utils/echartsLoader");
+
+  if (!echartsRegistered) {
+    echartsRegistered = true;
+  }
+
+  echartsModule = echarts;
+  return echarts;
+};
+
+const initChart = async () => {
   if (!chartContainer.value) {
     console.error(
       "图表容器未找到，chartContainer.value 为:",
@@ -694,6 +693,7 @@ const initChart = () => {
   }
 
   try {
+    const echarts = await ensureECharts();
     // 使用 SVG 渲染器，在某些环境下 tooltip 支持更好
     chartInstance.value = echarts.init(chartContainer.value, "dark", {
       renderer: "svg",
@@ -733,7 +733,7 @@ const loadTrafficStats = async () => {
       if (!chartInstance.value) {
         console.log("图表未初始化，尝试初始化");
         await nextTick();
-        const success = initChart();
+        const success = await initChart();
         if (!success) {
           console.error("图表初始化失败，无法更新数据");
           return;
@@ -762,10 +762,12 @@ const loadTrafficStats = async () => {
 
 // 更新图表
 const updateChart = (data: TrafficStatsResponse["data"]) => {
-  if (!chartInstance.value) {
+  if (!chartInstance.value || !echartsModule) {
     console.error("图表实例未初始化");
     return;
   }
+
+  const echarts = echartsModule;
 
   // 获取 CSS 变量值的辅助函数
   const getCSSVar = (varName: string): string => {
@@ -1156,6 +1158,10 @@ watch(trafficStatsLoading, (newVal, oldVal) => {
   }
 });
 
+const resizeHandler = () => {
+  chartInstance.value?.resize();
+};
+
 onMounted(() => {
   console.log("UserCenter 组件已挂载");
   userStore.loadUserInfo();
@@ -1164,19 +1170,18 @@ onMounted(() => {
   // 初始化图表 - 确保 DOM 完全渲染后再初始化
   nextTick(() => {
 
-    setTimeout(() => {
+    setTimeout(async () => {
       if (chartContainer.value) {
-        initChart();
-        loadTrafficStats();
+        const success = await initChart();
+        if (success) {
+          await loadTrafficStats();
+        }
       } else {
       }
     }, 200);
   });
 
   // 监听窗口大小变化
-  const resizeHandler = () => {
-    chartInstance.value?.resize();
-  };
   window.addEventListener("resize", resizeHandler);
 });
 
@@ -1188,9 +1193,7 @@ onBeforeUnmount(() => {
   }
 
   // 移除事件监听
-  window.removeEventListener("resize", () => {
-    chartInstance.value?.resize();
-  });
+  window.removeEventListener("resize", resizeHandler);
   
   // 清理验证码实例
   cdkCaptchaInstance.destroy();

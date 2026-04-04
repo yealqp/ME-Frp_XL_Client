@@ -112,6 +112,12 @@ export const useUIStore = defineStore('ui', () => {
     }
   }
 
+  function setSidebarWidth(width: number) {
+    if (width >= 150 && width <= 300) {
+      sidebarWidth.value = width;
+    }
+  }
+
   /**
    * Update sidebar collapsible setting
    * @param collapsible - Whether sidebar can be collapsed
@@ -233,6 +239,7 @@ export const useUIStore = defineStore('ui', () => {
     loadSidebarSettings,
     saveSidebarSettings,
     updateSidebarWidth,
+    setSidebarWidth,
     updateSidebarCollapsible,
     toggleSidebarCollapsed,
     setSidebarCollapsed,

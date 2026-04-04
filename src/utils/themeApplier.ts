@@ -77,6 +77,16 @@ export function applyCSSVariables(theme: Theme): void {
     root.style.setProperty('--app-primary-color', config.common.primaryColor);
     root.style.setProperty('--app-primary-color-hover', config.common.primaryColorHover);
     root.style.setProperty('--app-primary-color-pressed', config.common.primaryColorPressed);
+    root.style.setProperty('--app-info-color', config.common.infoColor);
+    root.style.setProperty('--app-success-color', config.common.successColor);
+    root.style.setProperty('--app-warning-color', config.common.warningColor);
+    root.style.setProperty('--app-error-color', config.common.errorColor);
+    root.style.setProperty('--app-log-timestamp-color', config.common.textColor3);
+    root.style.setProperty('--app-log-info-color', config.common.infoColor);
+    root.style.setProperty('--app-log-warning-color', config.common.warningColor);
+    root.style.setProperty('--app-log-error-color', config.common.errorColor);
+    root.style.setProperty('--app-log-path-color', config.common.successColor);
+    root.style.setProperty('--app-log-highlight-color', config.common.errorColor);
     root.style.setProperty('--app-box-shadow-1', config.common.boxShadow1);
     root.style.setProperty('--app-box-shadow-2', config.common.boxShadow2);
     root.style.setProperty('--app-box-shadow-3', config.common.boxShadow3);

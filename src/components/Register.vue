@@ -1,14 +1,17 @@
 <template>
-  <div class="register-container">
-    <n-card class="register-card" :bordered="true">
-      <!-- 注册标题 -->
-      <h1 class="register-title">注册ME-Frp账号</h1>
+  <AuthShell>
+    <div class="auth-panel-view register-view">
+      <div class="auth-panel-header">
+        <p class="auth-panel-kicker">快速创建账号</p>
+        <h1 class="auth-panel-title">注册 ME-Frp 账号</h1>
+        <p class="auth-panel-subtitle">{{ panelSubtitle }}</p>
+      </div>
 
-      <!-- 注册表单 -->
       <n-form
         ref="formRef"
         :model="registerForm"
         :rules="rules"
+        class="auth-form"
         @submit.prevent="handleRegister"
       >
         <n-form-item path="username">
@@ -34,15 +37,14 @@
               size="large"
               :disabled="!canSendCode || countdown > 0"
               :loading="isSendingCode"
-              @click="sendEmailCode"
               class="send-code-btn"
+              @click="sendEmailCode"
             >
-              {{ countdown > 0 ? `${countdown}秒` : '发送验证码' }}
+              {{ countdown > 0 ? `${countdown}秒` : "发送验证码" }}
             </n-button>
           </div>
         </n-form-item>
 
-        <!-- 验证码输入框 - 仅在发送验证码后显示 -->
         <n-form-item v-if="emailSent" path="emailCode">
           <n-input
             v-model:value="registerForm.emailCode"
@@ -63,12 +65,11 @@
           />
         </n-form-item>
 
-        <!-- 密码强度提示 -->
         <n-alert
           v-if="registerForm.password && passwordStrength.type !== 'default'"
           :type="passwordStrength.type"
           :show-icon="false"
-          style="margin-bottom: 18px"
+          class="auth-inline-alert password-strength-alert"
           size="small"
         >
           {{ passwordStrength.text }}
@@ -91,36 +92,35 @@
           block
           :loading="isRegistering"
           :disabled="!canRegister"
+          class="register-btn auth-submit-btn"
           @click="handleRegister"
-          class="register-btn"
         >
           {{ isRegistering ? "注册中..." : "注册" }}
         </n-button>
       </n-form>
 
-      <!-- 返回登录 -->
       <div class="back-to-login">
         <n-button
           text
           type="primary"
+          class="back-btn auth-link-btn"
           @click="goToLogin"
-          class="back-btn"
         >
           已有账号？返回登录
         </n-button>
       </div>
-    </n-card>
-  </div>
+    </div>
+  </AuthShell>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useTemplateRef } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
-import type { ApiResponse } from "@/types/api";
 import { useCaptchaVerifier } from "@/composables/useCaptchaVerifier";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { invokeTauriResponse } from "@/utils/tauriResponse";
+import AuthShell from "./AuthShell.vue";
 
 const emit = defineEmits(["register-success"]);
 const message = useMessage();
@@ -153,10 +153,6 @@ let countdownTimer: number | null = null;
 
 // 是否已发送验证码
 const emailSent = ref(false);
-
-function parseApiResponse<T>(response: string): ApiResponse<T> {
-  return JSON.parse(response) as ApiResponse<T>;
-}
 
 function clearCountdown() {
   if (countdownTimer) {
@@ -251,6 +247,12 @@ const canRegister = computed(() => {
   );
 });
 
+const panelSubtitle = computed(() =>
+  emailSent.value
+    ? "验证码已发送，请继续完成账号创建。"
+    : "注册后即可在 XL Client 中集中管理节点、隧道与运行状态。",
+);
+
 // 密码强度检查
 const passwordStrength = computed(() => {
   const password = registerForm.value.password;
@@ -293,12 +295,11 @@ async function sendEmailCode() {
     message.loading("正在发送验证码...", { duration: 0 });
 
     // 调用后端API发送验证码
-    const response = await invoke<string>("api_send_email_code", {
+    const result = await invokeTauriResponse<null>("api_send_email_code", {
       email: registerForm.value.email,
       captchaToken,
     });
 
-    const result = parseApiResponse<null>(response);
     if (result.code === 200) {
       message.destroyAll();
       message.success("验证码已发送至您的邮箱，请注意查收");
@@ -339,14 +340,13 @@ async function handleRegister() {
     message.loading("正在注册中，请稍候...", { duration: 0 });
 
     // 调用后端API注册
-    const response = await invoke<string>("api_register", {
+    const result = await invokeTauriResponse<null>("api_register", {
       username: registerForm.value.username,
       email: registerForm.value.email,
       password: registerForm.value.password,
       emailCode: registerForm.value.emailCode,
     });
 
-    const result = parseApiResponse<null>(response);
     if (result.code === 200) {
       message.destroyAll();
       message.success(result.message || "注册成功！请登录");
@@ -387,9 +387,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 邮箱输入框和按钮的容器 */
+.register-view {
+  width: 100%;
+}
+
 .email-input-wrapper {
   display: flex;
+  align-items: stretch;
   gap: 8px;
   width: 100%;
 }
@@ -400,75 +404,38 @@ onUnmounted(() => {
 
 .send-code-btn {
   flex-shrink: 0;
-  min-width: 120px;
-}
-
-.register-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--app-bg-color);
-  padding: 20px;
-}
-
-.register-card {
-  width: 100%;
-  max-width: 400px;
-  padding: 40px;
-  animation: slideUp 0.6s ease-out;
-  background: var(--app-card-color);
-  border: 1px solid var(--app-border-color);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.register-title {
-  text-align: center;
-  color: var(--app-primary-color);
-  margin-bottom: 30px;
-  font-size: 24px;
-  font-weight: 600;
+  min-width: 124px;
 }
 
 .register-btn {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
-/* 注册按钮使用与登录按钮相同的颜色 */
-:deep(.register-btn.n-button--primary-type) {
-  background-color: var(--login-btn-bg, #349ff4) !important;
-  border-color: var(--login-btn-bg, #349ff4) !important;
-  color: #ffffff !important;
+:deep(.send-code-btn.n-button) {
+  height: 48px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  --n-border: 1px solid var(--auth-send-btn-border) !important;
+  --n-border-hover: 1px solid var(--auth-send-btn-border-hover) !important;
+  --n-border-pressed: 1px solid var(--auth-send-btn-border-hover) !important;
+  --n-color: var(--auth-send-btn-bg) !important;
+  --n-color-hover: var(--auth-send-btn-bg-hover) !important;
+  --n-color-pressed: var(--auth-send-btn-bg-pressed) !important;
+  --n-color-disabled: var(--auth-send-btn-bg-disabled) !important;
+  --n-text-color: var(--auth-send-btn-text) !important;
+  --n-text-color-hover: var(--auth-send-btn-text-hover) !important;
+  --n-text-color-pressed: var(--auth-send-btn-text-hover) !important;
+  --n-text-color-disabled: var(--auth-send-btn-text-disabled) !important;
 }
 
-:deep(.register-btn.n-button--primary-type:hover:not(.n-button--disabled)) {
-  background-color: var(--login-btn-bg-hover, #4da8f5) !important;
-  border-color: var(--login-btn-bg-hover, #4da8f5) !important;
-  color: #ffffff !important;
+.password-strength-alert {
+  margin-bottom: 18px;
 }
 
-:deep(.register-btn.n-button--primary-type:active:not(.n-button--disabled)) {
-  background-color: var(--login-btn-bg-pressed, #2891f3) !important;
-  border-color: var(--login-btn-bg-pressed, #2891f3) !important;
-  color: #ffffff !important;
-}
-
-/* 返回登录按钮容器 */
 .back-to-login {
   margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--app-border-color);
+  padding-top: 16px;
+  border-top: 1px solid var(--auth-divider-color);
   text-align: center;
 }
 
@@ -484,21 +451,13 @@ onUnmounted(() => {
   font-size: 13px;
 }
 
-/* 响应式设计 */
 @media (max-width: 480px) {
-  .register-card {
-    padding: 30px 20px;
-    margin: 10px;
+  .email-input-wrapper {
+    flex-direction: column;
   }
 
-  .register-title {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-
-  .back-to-login {
-    margin-top: 16px;
-    padding-top: 16px;
+  .send-code-btn {
+    width: 100%;
   }
 
   .back-btn {

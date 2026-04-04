@@ -7,7 +7,8 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { invoke } from '@tauri-apps/api/core';
+import { extractErrorMessage } from '@/utils/errorHandler';
+import { invokeTauriResponse } from '@/utils/tauriResponse';
 
 export interface NodeStatusData {
   nodeId: number;
@@ -21,12 +22,6 @@ export interface NodeStatusData {
   uptime: number;
   curConns: number;
   loadPercent: number;
-}
-
-interface NodeStatusResponse {
-  code: number;
-  data: NodeStatusData[];
-  message: string;
 }
 
 export const useNodeStore = defineStore('node', () => {
@@ -107,8 +102,7 @@ export const useNodeStore = defineStore('node', () => {
     error.value = null;
 
     try {
-      const response = await invoke<string>('api_get_node_status');
-      const parsedResponse: NodeStatusResponse = JSON.parse(response);
+      const parsedResponse = await invokeTauriResponse<NodeStatusData[]>('api_get_node_status');
       
       if (parsedResponse.code === 200) {
         // Sort by node ID
@@ -119,7 +113,7 @@ export const useNodeStore = defineStore('node', () => {
         console.error('获取节点状态失败:', parsedResponse.message);
       }
     } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err);
+      error.value = extractErrorMessage(err, '获取节点状态失败');
       console.error('获取节点状态失败:', err);
       throw err;
     } finally {

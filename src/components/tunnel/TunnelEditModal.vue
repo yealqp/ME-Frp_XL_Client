@@ -209,6 +209,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useMessage } from 'naive-ui'
 import { 
   NModal, 
   NForm, 
@@ -224,6 +225,8 @@ import {
   NDivider,
   NText
 } from 'naive-ui'
+import { invokeTauriResponse } from '@/utils/tauriResponse'
+import { extractErrorMessage } from '@/utils/errorHandler'
 import { formatDomainForDisplay, formatDomainForSave } from '@/utils/domainUtils'
 
 // Props 接口
@@ -231,7 +234,6 @@ interface TunnelEditModalProps {
   show: boolean
   tunnel: Tunnel | null
   nodeNameMap: Record<number, string>
-  gettingPort: boolean
 }
 
 // Emits 接口
@@ -239,7 +241,6 @@ interface TunnelEditModalEmits {
   (e: 'update:show', value: boolean): void
   (e: 'save', tunnelId: number, formData: EditFormData): void
   (e: 'cancel'): void
-  (e: 'get-free-port', nodeId: number, protocol: string): void
 }
 
 // Tunnel 接口
@@ -298,6 +299,8 @@ interface EditFormData {
 
 const props = defineProps<TunnelEditModalProps>()
 const emit = defineEmits<TunnelEditModalEmits>()
+const message = useMessage()
+const gettingPort = ref(false)
 
 const editForm = ref<EditFormData>({
   proxyName: '',
@@ -339,9 +342,35 @@ const securityModeOptions = [
 ]
 
 // 处理获取空闲端口
-const handleGetFreePort = () => {
+const handleGetFreePort = async () => {
   if (!props.tunnel) return
-  emit('get-free-port', props.tunnel.nodeId, props.tunnel.proxyType)
+
+  if (props.tunnel.proxyType !== 'tcp' && props.tunnel.proxyType !== 'udp') {
+    message.warning('只有TCP和UDP隧道支持获取空闲端口')
+    return
+  }
+
+  gettingPort.value = true
+  try {
+    const result = await invokeTauriResponse<number>('api_get_free_port', {
+      data: JSON.stringify({
+        nodeId: props.tunnel.nodeId,
+        protocol: props.tunnel.proxyType,
+      }),
+    })
+
+    if (result.code === 200 && result.data) {
+      editForm.value.remotePort = result.data
+      message.success(`获取到空闲端口: ${result.data}`)
+    } else {
+      throw new Error(result.message || '获取空闲端口失败')
+    }
+  } catch (error) {
+    console.error('获取空闲端口失败:', error)
+    message.error(extractErrorMessage(error, '获取空闲端口失败'))
+  } finally {
+    gettingPort.value = false
+  }
 }
 
 // 处理保存

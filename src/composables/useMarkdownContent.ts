@@ -1,7 +1,8 @@
 import { ref } from 'vue';
 import { useMessage } from 'naive-ui';
-import { invoke } from '@tauri-apps/api/core';
+import { extractErrorMessage } from '@/utils/errorHandler';
 import { parseMarkdown } from '@/utils/markdownParser';
+import { invokeTauriText } from '@/utils/tauriResponse';
 
 export interface MarkdownContentOptions {
   fetchCommand: string;
@@ -19,15 +20,11 @@ export function useMarkdownContent(options: MarkdownContentOptions) {
     error.value = '';
     
     try {
-      const markdownText = await invoke<string>(options.fetchCommand);
+      const markdownText = await invokeTauriText(options.fetchCommand);
       parsedContent.value = parseMarkdown(markdownText);
     } catch (err) {
       console.error(`加载内容失败:`, err);
-      error.value = err instanceof Error 
-        ? err.message 
-        : typeof err === 'string' 
-        ? err 
-        : '加载失败，请检查网络连接';
+      error.value = extractErrorMessage(err, '加载失败，请检查网络连接');
       message.error(options.errorMessage || '加载内容失败');
     } finally {
       loading.value = false;

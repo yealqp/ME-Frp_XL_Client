@@ -7,7 +7,9 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
+import { invoke } from '@tauri-apps/api/core';
 import type { AppSettings } from '@/types/config';
+import { extractErrorMessage } from '@/utils/errorHandler';
 import { showAdGlobal } from '@/utils/eventBus';
 import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
@@ -72,7 +74,7 @@ export const useSettingsStore = defineStore('settings', () => {
         autoUpdate: config.autoUpdate ?? true,
         autoStartTunnels: config.autoStartTunnels ?? [],
         startupDelay: config.startupDelay ?? 5,
-        theme: 'light', // Theme is not stored in UnifiedConfig
+        theme: localStorage.getItem('mefrp_theme') || 'dark',
         minimizeToTray: config.minimizeToTray ?? true,
         showAd: config.showAd ?? true,
         hideWebuiEntry: config.hideWebuiEntry ?? false,
@@ -108,6 +110,7 @@ export const useSettingsStore = defineStore('settings', () => {
         showAd: settings.value.showAd,
         hideWebuiEntry: settings.value.hideWebuiEntry,
       });
+      localStorage.setItem('mefrp_theme', settings.value.theme);
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err);
       console.error('保存设置失败:', err);
@@ -147,25 +150,146 @@ export const useSettingsStore = defineStore('settings', () => {
    * @param tunnelIds - Array of tunnel IDs to auto-start
    */
   async function updateAutoStartTunnels(tunnelIds: number[]): Promise<void> {
-    // Validate tunnel IDs against Tunnel Store
+    settings.value.autoStartTunnels = [...new Set(tunnelIds)];
+    await saveSettings();
+  }
+
+  async function initializeSettings(): Promise<void> {
+    await loadSettings();
+
     try {
-      const { useTunnelStore } = await import('./tunnel');
-      const tunnelStore = useTunnelStore();
-      
-      // Filter out invalid tunnel IDs
-      const validTunnelIds = tunnelIds.filter(id => 
-        tunnelStore.tunnels.some(tunnel => tunnel.proxyId === id)
-      );
-      
-      // Update setting
-      settings.value.autoStartTunnels = validTunnelIds;
+      const isEnabled = await invoke<boolean>('is_auto_start_enabled');
+      if (settings.value.autoStart !== isEnabled) {
+        settings.value.autoStart = isEnabled;
+        await saveSettings();
+      }
+    } catch (err) {
+      console.error('检查开机自启动状态失败:', err);
+    }
+
+    try {
+      await invoke('set_minimize_to_tray', {
+        minimizeToTray: settings.value.minimizeToTray,
+      });
+    } catch (err) {
+      console.error('同步最小化到托盘设置失败:', err);
+    }
+  }
+
+  async function setAutoStart(value: boolean): Promise<void> {
+    const previousValue = settings.value.autoStart;
+    settings.value.autoStart = value;
+
+    try {
+      await invoke('set_auto_start', { enable: value });
       await saveSettings();
     } catch (err) {
-      // If Tunnel Store is not available, save without validation
-      console.warn('Tunnel Store not available for validation:', err);
-      settings.value.autoStartTunnels = tunnelIds;
-      await saveSettings();
+      settings.value.autoStart = previousValue;
+      error.value = extractErrorMessage(err, '设置开机自启动失败');
+      throw err;
     }
+  }
+
+  async function setAlwaysOnTop(value: boolean): Promise<void> {
+    const previousValue = settings.value.alwaysOnTop;
+    settings.value.alwaysOnTop = value;
+
+    try {
+      await invoke('set_always_on_top', { alwaysOnTop: value });
+      await saveSettings();
+    } catch (err) {
+      settings.value.alwaysOnTop = previousValue;
+      error.value = extractErrorMessage(err, '设置窗口置顶失败');
+      throw err;
+    }
+  }
+
+  async function setMinimizeToTray(value: boolean): Promise<void> {
+    const previousValue = settings.value.minimizeToTray;
+    settings.value.minimizeToTray = value;
+
+    try {
+      await invoke('set_minimize_to_tray', { minimizeToTray: value });
+      await saveSettings();
+    } catch (err) {
+      settings.value.minimizeToTray = previousValue;
+      error.value = extractErrorMessage(err, '设置最小化到托盘失败');
+      throw err;
+    }
+  }
+
+  async function updateStartupDelay(value: number): Promise<void> {
+    settings.value.startupDelay = value;
+    await saveSettings();
+  }
+
+  async function toggleAutoStartTunnel(proxyId: number, checked: boolean): Promise<void> {
+    if (checked) {
+      if (!settings.value.autoStartTunnels.includes(proxyId)) {
+        await updateAutoStartTunnels([...settings.value.autoStartTunnels, proxyId]);
+      }
+      return;
+    }
+
+    await updateAutoStartTunnels(
+      settings.value.autoStartTunnels.filter((id) => id !== proxyId),
+    );
+  }
+
+  async function selectAllAutoStartTunnels(proxyIds: number[]): Promise<void> {
+    const mergedIds = [...new Set([...settings.value.autoStartTunnels, ...proxyIds])];
+    await updateAutoStartTunnels(mergedIds);
+  }
+
+  async function clearAutoStartTunnels(): Promise<void> {
+    await updateAutoStartTunnels([]);
+  }
+
+  async function moveAutoStartTunnel(proxyId: number, direction: 'up' | 'down'): Promise<boolean> {
+    const index = settings.value.autoStartTunnels.indexOf(proxyId);
+    const offset = direction === 'up' ? -1 : 1;
+    const targetIndex = index + offset;
+
+    if (
+      index < 0 ||
+      targetIndex < 0 ||
+      targetIndex >= settings.value.autoStartTunnels.length
+    ) {
+      return false;
+    }
+
+    const updatedTunnels = [...settings.value.autoStartTunnels];
+    [updatedTunnels[index], updatedTunnels[targetIndex]] = [
+      updatedTunnels[targetIndex],
+      updatedTunnels[index],
+    ];
+
+    await updateAutoStartTunnels(updatedTunnels);
+    return true;
+  }
+
+  async function removeAutoStartTunnel(proxyId: number): Promise<boolean> {
+    if (!settings.value.autoStartTunnels.includes(proxyId)) {
+      return false;
+    }
+
+    await updateAutoStartTunnels(
+      settings.value.autoStartTunnels.filter((id) => id !== proxyId),
+    );
+    return true;
+  }
+
+  async function cleanupInvalidAutoStartTunnels(validTunnelIds: number[]): Promise<number> {
+    const filteredIds = settings.value.autoStartTunnels.filter((id) =>
+      validTunnelIds.includes(id),
+    );
+    const removedCount = settings.value.autoStartTunnels.length - filteredIds.length;
+
+    if (removedCount > 0) {
+      await updateAutoStartTunnels(filteredIds);
+    }
+
+    return removedCount;
   }
 
   /**
@@ -190,8 +314,19 @@ export const useSettingsStore = defineStore('settings', () => {
     // Actions
     loadSettings,
     saveSettings,
+    initializeSettings,
     updateSetting,
     updateAutoStartTunnels,
+    setAutoStart,
+    setAlwaysOnTop,
+    setMinimizeToTray,
+    updateStartupDelay,
+    toggleAutoStartTunnel,
+    selectAllAutoStartTunnels,
+    clearAutoStartTunnels,
+    moveAutoStartTunnel,
+    removeAutoStartTunnel,
+    cleanupInvalidAutoStartTunnels,
     clearError,
   };
 });

@@ -72,9 +72,10 @@
 <script setup lang="ts">
 import { ref, h, onMounted, reactive } from "vue";
 import { useMessage, NTag, NDataTable } from "naive-ui";
-import { invoke } from "@tauri-apps/api/core";
 import type { DataTableColumns } from "naive-ui";
 import { RefreshCw, Filter, RotateCcw } from "lucide-vue-next";
+import { extractErrorMessage } from "@/utils/errorHandler";
+import { invokeTauriResponse } from "@/utils/tauriResponse";
 
 interface OperationLog {
   logId: number;
@@ -85,16 +86,12 @@ interface OperationLog {
   createdAt: string;
 }
 
-interface LogResponse {
-  code: number;
-  data: {
-    data: OperationLog[];
-    total: number;
-    page: number;
-    pageSize: number;
-    totalPages: number;
-  };
-  message: string;
+interface LogPageData {
+  data: OperationLog[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 const message = useMessage();
@@ -292,11 +289,9 @@ const loadLogs = async () => {
       params.endTime = formatDateForApi(filters.dateRange[1]);
     }
 
-    const responseText = await invoke<string>("api_get_operation_logs", {
+    const result = await invokeTauriResponse<LogPageData>("api_get_operation_logs", {
       params: JSON.stringify(params),
     });
-
-    const result: LogResponse = JSON.parse(responseText);
 
     if (result.code === 200) {
       logs.value = result.data.data;
@@ -330,7 +325,7 @@ const loadLogs = async () => {
     }
   } catch (err) {
     console.error("加载操作日志失败:", err);
-    message.error(err instanceof Error ? err.message : "加载操作日志失败");
+    message.error(extractErrorMessage(err, "加载操作日志失败"));
   } finally {
     loading.value = false;
   }

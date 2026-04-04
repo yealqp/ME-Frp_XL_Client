@@ -1,121 +1,120 @@
 <template>
-  <div class="login-container">
-    <n-card class="login-card" :bordered="true">
-      <!-- 登录标题 -->
-      <h1 class="login-title">登录到ME-Frp XL客户端</h1>
+  <AuthShell>
+    <div class="auth-panel-view login-view">
+      <div class="auth-panel-header">
+        <p class="auth-panel-kicker">欢迎回来</p>
+        <h1 class="auth-panel-title">登录到 ME-Frp XL Client</h1>
+        <p class="auth-panel-subtitle">{{ panelSubtitle }}</p>
+      </div>
 
-        <!-- 登录表单 -->
-        <n-form
-          ref="formRef"
-          :model="loginForm"
-          :rules="rules"
-          @submit.prevent="handleLogin"
+      <n-form
+        ref="formRef"
+        :model="loginForm"
+        :rules="rules"
+        class="auth-form"
+        @submit.prevent="handleLogin"
+      >
+        <template v-if="!isTokenMode">
+          <n-form-item path="username">
+            <n-input
+              v-model:value="loginForm.username"
+              placeholder="用户名 / 邮箱"
+              size="large"
+              :disabled="isLogging"
+            />
+          </n-form-item>
+
+          <n-form-item path="password">
+            <n-input
+              v-model:value="loginForm.password"
+              type="password"
+              placeholder="密码"
+              size="large"
+              :disabled="isLogging"
+              show-password-on="mousedown"
+            />
+          </n-form-item>
+
+          <n-alert type="warning" :show-icon="false" class="auth-inline-alert">
+            如果无法点击或输入，请重装 webview 运行时（
+            <n-button
+              text
+              type="primary"
+              size="small"
+              class="auth-inline-link inline-link-btn"
+              @click="openWebWievPage"
+            >
+              Openlist
+            </n-button>
+            内有安装包）后重启应用。
+          </n-alert>
+        </template>
+
+        <template v-else>
+          <n-form-item path="userToken">
+            <n-input
+              v-model:value="loginForm.userToken"
+              placeholder="请输入您的 Token"
+              size="large"
+              :disabled="isLogging"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 5 }"
+            />
+          </n-form-item>
+
+          <n-alert type="info" :show-icon="false" class="auth-inline-alert">
+            Token 即为用户令牌 / 访问秘钥，请在
+            <n-button
+              text
+              type="primary"
+              size="small"
+              class="auth-inline-link inline-link-btn"
+              @click="openTokenPage"
+            >
+              官网用户中心
+            </n-button>
+            最底部复制您的 Token。
+          </n-alert>
+        </template>
+
+        <n-button
+          type="primary"
+          size="large"
+          block
+          :loading="isLogging"
+          :disabled="
+            isTokenMode
+              ? !loginForm.userToken
+              : !loginForm.username || !loginForm.password
+          "
+          class="login-btn auth-submit-btn"
+          @click="handleLogin"
         >
-          <!-- 普通登录模式 -->
-          <template v-if="!isTokenMode">
-            <n-form-item path="username">
-              <n-input
-                v-model:value="loginForm.username"
-                placeholder="用户名/邮箱"
-                size="large"
-                :disabled="isLogging"
-              />
-            </n-form-item>
+          {{ isLogging ? "登录中..." : "登录" }}
+        </n-button>
+      </n-form>
 
-            <n-form-item path="password">
-              <n-input
-                v-model:value="loginForm.password"
-                type="password"
-                placeholder="密码"
-                size="large"
-                :disabled="isLogging"
-                show-password-on="mousedown"
-              />
-            </n-form-item>
-
-            <!-- 登录提示 -->
-            <n-alert type="warning" :show-icon="false">
-                如果无法点击/输入 请重装webview运行时(
-                  <n-button
-                  text
-                  type="primary"
-                  size="small"
-                  @click="openWebWievPage"
-                  style="padding: 0; font-size: 14px"
-                >
-                  Openlist
-                </n-button>内有安装包)后重启应用
-            </n-alert>
-          </template>
-
-          <!-- Token登录模式 -->
-          <template v-else>
-            <n-form-item path="userToken">
-              <n-input
-                v-model:value="loginForm.userToken"
-                placeholder="请输入您的Token"
-                size="large"
-                :disabled="isLogging"
-                type="textarea"
-                :autosize="{ minRows: 3, maxRows: 5 }"
-              />
-            </n-form-item>
-               <!-- Token说明提示 -->
-            <n-alert type="info" :show-icon="false">
-             
-                Token即为用户令牌/访问秘钥，请在
-                <n-button
-                  text
-                  type="primary"
-                  size="small"
-                  @click="openTokenPage"
-                  style="padding: 0; font-size: 14px"
-                >
-                  官网用户中心
-                </n-button>
-                最底部复制您的token
-            </n-alert>
-          </template>
-
-          <n-button
-            type="primary"
-            size="large"
-            block
-            :loading="isLogging"
-            :disabled="
-              isTokenMode
-                ? !loginForm.userToken
-                : !loginForm.username || !loginForm.password
-            "
-            @click="handleLogin"
-            class="login-btn"
-          >
-            {{ isLogging ? "登录中..." : "登录" }}
-          </n-button>
-        </n-form>
-
-        <!-- 模式切换按钮 -->
-        <div class="mode-switch-container">
-          <n-button
-            text
-            type="primary"
-            @click="toggleLoginMode"
-            class="mode-switch-btn"
-          >
-            {{ isTokenMode ? "账号登录" : "Token登录" }}
-          </n-button>
-          <span class="separator">|</span>
-          <n-button
-            text
-            type="primary"
-            @click="goToRegister"
-            class="mode-switch-btn"
-          >
-            注册账号
-          </n-button>
-        </div>
-    </n-card>
-  </div>
+      <div class="mode-switch-container">
+        <n-button
+          text
+          type="primary"
+          class="mode-switch-btn auth-link-btn"
+          @click="toggleLoginMode"
+        >
+          {{ isTokenMode ? "账号登录" : "Token登录" }}
+        </n-button>
+        <span class="separator">|</span>
+        <n-button
+          text
+          type="primary"
+          class="mode-switch-btn auth-link-btn"
+          @click="goToRegister"
+        >
+          注册账号
+        </n-button>
+      </div>
+    </div>
+  </AuthShell>
 </template>
 
 <script setup lang="ts">
@@ -128,7 +127,9 @@ import { useAuthStore } from "../stores/auth";
 import type { UnifiedConfig } from "../types/config";
 import { useCaptchaVerifier } from "@/composables/useCaptchaVerifier";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { invokeTauriText } from "@/utils/tauriResponse";
 import { mergeUnifiedConfig } from "@/utils/unifiedConfig";
+import AuthShell from "./AuthShell.vue";
 
 const emit = defineEmits(["login-success"]);
 const message = useMessage();
@@ -249,7 +250,7 @@ async function buildTokenLoginConfig(userToken: string): Promise<UnifiedConfig> 
   await mergeUnifiedConfig({ userToken: normalizedToken });
 
   const userInfo = await invoke<TokenLoginUserInfo>("api_get_user_info");
-  const frpToken = await invoke<string>("api_get_frp_token");
+  const frpToken = await invokeTauriText("api_get_frp_token");
 
   return mergeUnifiedConfig({
     userToken: normalizedToken,
@@ -365,90 +366,42 @@ onMounted(async () => {
     ensureCaptcha();
   }
 });
+
+const panelSubtitle = computed(() =>
+  isTokenMode.value
+    ? "复制官网 Token 后即可直接进入 XL Client。"
+    : "使用 ME-Frp 账号继续管理你的节点与隧道。",
+);
 </script>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--app-bg-color);
-  padding: 20px;
-}
-
-.login-card {
+.login-view {
   width: 100%;
-  max-width: 400px;
-  padding: 40px;
-  animation: slideUp 0.6s ease-out;
-  position: relative;
-  background: var(--app-card-color);
-  border: 1px solid var(--app-border-color);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.login-title {
-  text-align: center;
-  color: var(--app-primary-color);
-  margin-bottom: 30px;
-  font-size: 24px;
-  font-weight: 600;
 }
 
 .login-btn {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
-/* 使用 :deep() 确保样式优先级 */
-/* 登录按钮使用反向的颜色：浅色模式用浅蓝，深色模式用深蓝 */
-:deep(.login-btn.n-button--primary-type) {
-  background-color: var(--login-btn-bg, #349ff4) !important;
-  border-color: var(--login-btn-bg, #349ff4) !important;
-  color: #ffffff !important;
+.inline-link-btn {
+  padding: 0;
+  font-size: 14px;
 }
 
-:deep(.login-btn.n-button--primary-type:hover:not(.n-button--disabled)) {
-  background-color: var(--login-btn-bg-hover, #4da8f5) !important;
-  border-color: var(--login-btn-bg-hover, #4da8f5) !important;
-  color: #ffffff !important;
-}
-
-:deep(.login-btn.n-button--primary-type:active:not(.n-button--disabled)) {
-  background-color: var(--login-btn-bg-pressed, #2891f3) !important;
-  border-color: var(--login-btn-bg-pressed, #2891f3) !important;
-  color: #ffffff !important;
-}
-
-.vaptcha-section {
-  margin: 15px 0;
-}
-
-/* 模式切换按钮容器 */
 .mode-switch-container {
   margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--app-border-color);
+  padding-top: 16px;
+  border-top: 1px solid var(--auth-divider-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .separator {
   margin: 0 8px;
-  color: var(--app-text-color-3);
+  color: var(--auth-muted-color);
 }
 
 .mode-switch-btn {
@@ -464,19 +417,13 @@ onMounted(async () => {
 }
 
 @media (max-width: 480px) {
-  .login-card {
-    padding: 30px 20px;
-    margin: 10px;
-  }
-
-  .login-title {
-    font-size: 20px;
-    margin-bottom: 20px;
-  }
-
   .mode-switch-container {
     margin-top: 16px;
-    padding-top: 16px;
+    padding-top: 14px;
+  }
+
+  .separator {
+    display: none;
   }
 
   .mode-switch-btn {

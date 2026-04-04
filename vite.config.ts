@@ -60,6 +60,12 @@ export default defineConfig({
                 id.includes('/space/') || id.includes('/form/')) {
               return 'naive-ui-basic';
             }
+            // 选择与输入扩展组件
+            if (id.includes('/input-number/') || id.includes('/radio/') ||
+                id.includes('/checkbox/') || id.includes('/switch/') ||
+                id.includes('/slider/') || id.includes('/select/')) {
+              return 'naive-ui-selection';
+            }
             // 反馈组件（消息、通知、对话框等）
             if (id.includes('/message/') || id.includes('/notification/') || 
                 id.includes('/dialog/') || id.includes('/modal/') || 
@@ -68,8 +74,19 @@ export default defineConfig({
             }
             // 数据展示组件（表格、骨架屏、空状态等）
             if (id.includes('/table/') || id.includes('/skeleton/') || 
-                id.includes('/empty/') || id.includes('/spin/')) {
+                id.includes('/empty/') || id.includes('/spin/') ||
+                id.includes('/descriptions/')) {
               return 'naive-ui-data';
+            }
+            // 浮层与菜单组件
+            if (id.includes('/dropdown/') || id.includes('/popover/') ||
+                id.includes('/tooltip/') || id.includes('/popconfirm/')) {
+              return 'naive-ui-overlay';
+            }
+            // 布局与展示组件
+            if (id.includes('/tabs/') || id.includes('/divider/') ||
+                id.includes('/tag/') || id.includes('/text/')) {
+              return 'naive-ui-layout';
             }
             // 其他 Naive UI 组件
             return 'naive-ui-other';

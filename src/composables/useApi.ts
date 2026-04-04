@@ -22,6 +22,7 @@
 import { ref, type Ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import type { ApiResponse } from '@/types/api';
+import { parseTauriResponse } from '@/utils/tauriResponse';
 import { startLoading, finishLoading, errorLoading } from './useLoadingBar';
 
 /**
@@ -108,7 +109,7 @@ export function useApi<T = any>(options: ApiOptions<T>): ApiResult<T> {
       
       // Auto parse JSON if response is string and parseResponse is not explicitly false
       const parsedData = options.parseResponse !== false && typeof response === 'string'
-        ? JSON.parse(response)
+        ? parseTauriResponse<T>(response)
         : response;
 
       // Handle standard API response format { code, data, message }

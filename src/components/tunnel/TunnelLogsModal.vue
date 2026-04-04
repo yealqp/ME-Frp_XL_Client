@@ -165,37 +165,37 @@ const colorizeLog = (log: string): string => {
 
   cleanLog = cleanLog.replace(
     /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)/g,
-    '<span style="color: #888;">$1</span>'
+    '<span style="color: var(--app-log-timestamp-color);">$1</span>'
   )
 
   cleanLog = cleanLog.replace(
     /\[I\]/g,
-    '<span style="color: #42a5f5;">[I]</span>'
+    '<span style="color: var(--app-log-info-color);">[I]</span>'
   )
 
   cleanLog = cleanLog.replace(
     /\[W\]/g,
-    '<span style="color: #ffc107;">[W]</span>'
+    '<span style="color: var(--app-log-warning-color);">[W]</span>'
   )
 
   cleanLog = cleanLog.replace(
     /\[E\]/g,
-    '<span style="color: #ff6b6b;">[E]</span>'
+    '<span style="color: var(--app-log-error-color);">[E]</span>'
   )
 
   cleanLog = cleanLog.replace(
     /(\[[^\]]+\.go:\d+\])/g,
-    '<span style="color: #7cb342;">$1</span>'
+    '<span style="color: var(--app-log-path-color);">$1</span>'
   )
 
   cleanLog = cleanLog.replace(
     /\b(https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(?::\d+)?(?:\/[^\s\]]*)?)\b/g,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>'
+    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>'
   )
 
   cleanLog = cleanLog.replace(
     /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+)\b/g,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>'
+    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>'
   )
 
   cleanLog = cleanLog.replace(
@@ -204,13 +204,13 @@ const colorizeLog = (log: string): string => {
       if (/\.go:\d+$/.test(match)) {
         return match
       }
-      return `<span style="color: #ff6b6b; font-weight: 600;">${match}</span>`
+      return `<span style="color: var(--app-log-highlight-color); font-weight: 600;">${match}</span>`
     }
   )
 
   cleanLog = cleanLog.replace(
     /\b([0-9a-f]{32})\b/gi,
-    '<span style="color: #ff6b6b; font-weight: 600;">$1</span>'
+    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>'
   )
 
   return cleanLog

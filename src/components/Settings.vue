@@ -99,7 +99,7 @@
             </div>
             <div class="slider-control">
               <n-slider
-                v-model:value="uiSettings.sidebarWidth"
+                v-model:value="sidebarWidth"
                 :min="150"
                 :max="300"
                 :step="1"
@@ -109,7 +109,7 @@
                 style="width: 200px"
               />
               <n-input-number
-                v-model:value="uiSettings.sidebarWidth"
+                v-model:value="sidebarWidth"
                 :min="150"
                 :max="300"
                 :step="1"
@@ -132,7 +132,7 @@
               <p>开启后，可以点击按钮收缩侧边栏</p>
             </div>
             <n-switch
-              v-model:value="uiSettings.sidebarCollapsible"
+              v-model:value="sidebarCollapsible"
               @update:value="handleSidebarCollapsibleChange"
             />
           </div>
@@ -331,9 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
 import {
-  useMessage,
   NCard,
   NSwitch,
   NButton,
@@ -343,13 +341,7 @@ import {
   NTag,
   NSlider,
 } from "naive-ui";
-import { invoke } from "@tauri-apps/api/core";
-import type { UnifiedConfig, AppSettings } from "../types/config";
-import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
-import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
-import { useSettingsStore } from "../stores/settings";
-import { useUIStore } from "../stores/ui";
-import { useThemeStore } from "../stores/theme";
+import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import ThemeSwitcher from "./common/ThemeSwitcher.vue";
 import {
   Settings as SettingsIcon,
@@ -359,415 +351,31 @@ import {
   Palette,
 } from "lucide-vue-next";
 
-// 使用导入的AppSettings类型
-type Settings = AppSettings;
-
-interface TunnelOption {
-  label: string;
-  value: number;
-}
-
-interface Tunnel {
-  proxyId: number;
-  proxyName: string;
-  proxyType: string;
-  localIp: string;
-  localPort: number;
-  remotePort: number;
-  nodeId: number;
-  isDisabled: boolean;
-}
-
-const message = useMessage();
-
-// UI Store
-const uiStore = useUIStore();
-const uiSettings = ref({
-  sidebarWidth: 200,
-  sidebarCollapsible: true,
-});
-
-// Theme Store
-const themeStore = useThemeStore();
-
-// 防抖定时器
-let sidebarWidthDebounceTimer: number | null = null;
-
-// 设置数据
-const settings = ref<Settings>({
-  autoStart: false,
-  alwaysOnTop: false,
-  autoUpdate: true,
-  autoStartTunnels: [],
-  startupDelay: 5,
-  theme: "dark",
-  minimizeToTray: false,
-  showAd: true,
-  hideWebuiEntry: false,
-  webuiAddr: "127.0.0.1",
-  webuiPort: 1201,
-  webuiPass: "admin",
-});
-
-// 隧道数据
-const tunnels = ref<Tunnel[]>([]);
-const tunnelLoading = ref(false);
-
-// 隧道选项（保留兼容性）
-const tunnelOptions = ref<TunnelOption[]>([]);
-
-// 计算属性：已删除的隧道（配置中存在但API中不存在）
-const deletedTunnels = computed(() => {
-  const existingTunnelIds = tunnels.value.map((tunnel) => tunnel.proxyId);
-  return settings.value.autoStartTunnels.filter(
-    (tunnelId) => !existingTunnelIds.includes(tunnelId),
-  );
-});
-
-// 计算属性：按自启动顺序排序的隧道列表
-const sortedTunnels = computed(() => {
-  const autoStartIds = settings.value.autoStartTunnels;
-  const autoStartTunnels: Tunnel[] = [];
-  const otherTunnels: Tunnel[] = [];
-
-  // 按照autoStartTunnels的顺序添加自启动隧道
-  autoStartIds.forEach((id) => {
-    const tunnel = tunnels.value.find((t) => t.proxyId === id);
-    if (tunnel) {
-      autoStartTunnels.push(tunnel);
-    }
-  });
-
-  // 添加非自启动隧道
-  tunnels.value.forEach((tunnel) => {
-    if (!autoStartIds.includes(tunnel.proxyId)) {
-      otherTunnels.push(tunnel);
-    }
-  });
-
-  return [...autoStartTunnels, ...otherTunnels];
-});
-// 处理开机自启动变化
-const handleAutoStartChange = async (value: boolean) => {
-  try {
-    await invoke("set_auto_start", { enable: value });
-    message.success(value ? "已开启开机自启动" : "已关闭开机自启动");
-    saveSettings();
-  } catch (error) {
-    message.error("设置开机自启动失败");
-    settings.value.autoStart = !value; // 回滚
-  }
-};
-
-// 处理窗口置顶变化
-const handleAlwaysOnTopChange = async (value: boolean) => {
-  try {
-    await invoke("set_always_on_top", { alwaysOnTop: value });
-    message.success(value ? "已开启窗口置顶" : "已关闭窗口置顶");
-    saveSettings();
-  } catch (error) {
-    message.error("设置窗口置顶失败");
-    settings.value.alwaysOnTop = !value; // 回滚
-  }
-};
-
-// 处理单个隧道自启动变化
-const handleTunnelAutoStartChange = (proxyId: number, checked: boolean) => {
-  if (checked) {
-    // 确保不重复添加
-    if (!settings.value.autoStartTunnels.includes(proxyId)) {
-      settings.value.autoStartTunnels.push(proxyId);
-    }
-  } else {
-    // 移除所有匹配的项（防止重复）
-    settings.value.autoStartTunnels = settings.value.autoStartTunnels.filter(
-      (id) => id !== proxyId,
-    );
-  }
-  message.success("自启动隧道设置已更新");
-  saveSettings();
-};
-
-// 处理启动延迟变化
-const handleStartupDelayChange = (value: number | null) => {
-  if (value !== null) {
-    saveSettings();
-  }
-};
-
-// 处理最小化到托盘变化
-const handleMinimizeToTrayChange = async (value: boolean) => {
-  try {
-    await invoke("set_minimize_to_tray", { minimizeToTray: value });
-    message.success(value ? "已开启最小化到托盘" : "已关闭最小化到托盘");
-    saveSettings();
-  } catch (error) {
-    message.error("设置最小化到托盘失败");
-    settings.value.minimizeToTray = !value; // 回滚
-  }
-};
-
-// 处理显示广告变化
-const handleShowAdChange = async (value: boolean) => {
-  const settingsStore = useSettingsStore();
-  await settingsStore.updateSetting('showAd', value);
-  message.success(value ? "已开启侧边栏广告" : "已关闭侧边栏广告");
-};
-
-// 处理隐藏 WebUI 入口变化
-const handleHideWebuiEntryChange = async (value: boolean) => {
-  const settingsStore = useSettingsStore();
-  await settingsStore.updateSetting('hideWebuiEntry', value);
-  message.success(value ? "已隐藏 WebUI 入口" : "已显示 WebUI 入口");
-};
-
-// 处理侧边栏宽度变化（带防抖）
-const handleSidebarWidthChange = (value: number | null) => {
-  if (value === null) return;
-  
-  // 立即更新本地显示和 store（触发动画）
-  uiSettings.value.sidebarWidth = value;
-  // 直接更新 store 的响应式值，触发 Sidebar 组件立即响应
-  if (value >= 150 && value <= 300) {
-    uiStore.$patch({ sidebarWidth: value });
-  }
-  
-  // 清除之前的定时器
-  if (sidebarWidthDebounceTimer !== null) {
-    clearTimeout(sidebarWidthDebounceTimer);
-  }
-  
-  // 设置新的定时器，300ms 后保存到配置文件（与侧栏动画时长一致）
-  sidebarWidthDebounceTimer = window.setTimeout(async () => {
-    try {
-      // 只保存，不再更新 store（已经更新过了）
-      await uiStore.saveSidebarSettings();
-      message.success(`侧边栏宽度已设置为 ${value}px`);
-    } catch (error) {
-      message.error('保存侧边栏宽度失败');
-      console.error('保存侧边栏宽度失败:', error);
-      // 保存失败时回滚
-      await uiStore.loadSidebarSettings();
-      uiSettings.value.sidebarWidth = uiStore.sidebarWidth;
-    }
-  }, 300);
-};
-
-// 处理侧边栏收缩功能变化
-const handleSidebarCollapsibleChange = async (value: boolean) => {
-  try {
-    await uiStore.updateSidebarCollapsible(value);
-    message.success(value ? "已开启侧边栏收缩功能" : "已关闭侧边栏收缩功能");
-  } catch (error) {
-    message.error('保存侧边栏收缩设置失败');
-    console.error('保存侧边栏收缩设置失败:', error);
-  }
-};
-
-// 保存设置
-const saveSettings = async () => {
-  try {
-    const currentConfig = await loadUnifiedConfig();
-
-    // 更新设置部分（不包含 theme，theme 由前端管理）
-    const updatedConfig: UnifiedConfig = {
-      ...currentConfig,
-      autoStart: settings.value.autoStart,
-      alwaysOnTop: settings.value.alwaysOnTop,
-      autoUpdate: settings.value.autoUpdate,
-      autoStartTunnels: settings.value.autoStartTunnels,
-      startupDelay: settings.value.startupDelay,
-      minimizeToTray: settings.value.minimizeToTray,
-      showAd: settings.value.showAd,
-      hideWebuiEntry: settings.value.hideWebuiEntry,
-    };
-
-    await saveUnifiedConfig(updatedConfig);
-
-    // theme 保存到 localStorage
-    localStorage.setItem("mefrp_theme", settings.value.theme);
-  } catch (error) {
-    console.error("保存设置失败:", error);
-  }
-};
-
-// 加载设置
-const loadSettings = async () => {
-  try {
-    const unifiedConfig = await loadUnifiedConfig();
-    if (unifiedConfig) {
-      settings.value = {
-        autoStart: unifiedConfig.autoStart || false,
-        alwaysOnTop: unifiedConfig.alwaysOnTop || false,
-        autoUpdate:
-          unifiedConfig.autoUpdate !== undefined
-            ? unifiedConfig.autoUpdate
-            : true,
-        autoStartTunnels: unifiedConfig.autoStartTunnels || [],
-        startupDelay: unifiedConfig.startupDelay || 5,
-        theme: localStorage.getItem("mefrp_theme") || "dark",
-        minimizeToTray:
-          unifiedConfig.minimizeToTray !== undefined
-            ? unifiedConfig.minimizeToTray
-            : true,
-        showAd:
-          unifiedConfig.showAd !== undefined ? unifiedConfig.showAd : true,
-        hideWebuiEntry:
-          unifiedConfig.hideWebuiEntry !== undefined
-            ? unifiedConfig.hideWebuiEntry
-            : false,
-      };
-    }
-
-    // 同步开机自启动状态
-    try {
-      const isEnabled = await invoke<boolean>("is_auto_start_enabled");
-      settings.value.autoStart = isEnabled;
-      // 如果配置文件中的状态与实际状态不一致，更新配置文件
-      if (unifiedConfig && unifiedConfig.autoStart !== isEnabled) {
-        saveSettings();
-      }
-    } catch (error) {
-      console.error("检查开机自启动状态失败:", error);
-    }
-
-    // 同步最小化到托盘设置到后端
-    try {
-      await invoke("set_minimize_to_tray", {
-        minimizeToTray: settings.value.minimizeToTray,
-      });
-    } catch (error) {
-      console.error("同步最小化到托盘设置失败:", error);
-    }
-  } catch (error) {
-    console.error("加载设置失败:", error);
-  }
-};
-
-// 加载隧道列表
-const loadTunnels = async () => {
-  tunnelLoading.value = true;
-  try {
-    const result = await invokeTauriResponse<{ proxies?: Tunnel[] } | Tunnel[]>("api_get_tunnel_list");
-
-    if (result.code === 200) {
-      const tunnelData = extractProxyList(result.data);
-      tunnels.value = tunnelData;
-
-      // 清理无效的自启动隧道ID
-      const validTunnelIds = tunnelData.map(
-        (tunnel: Tunnel) => tunnel.proxyId,
-      );
-      const originalCount = settings.value.autoStartTunnels.length;
-      settings.value.autoStartTunnels = settings.value.autoStartTunnels.filter(
-        (id) => validTunnelIds.includes(id),
-      );
-
-      // 如果清理了无效ID，保存设置并提示用户
-      if (originalCount !== settings.value.autoStartTunnels.length) {
-        const removedCount =
-          originalCount - settings.value.autoStartTunnels.length;
-        message.warning(`已自动清理 ${removedCount} 个无效的自启动隧道配置`);
-        saveSettings();
-      }
-
-      // 更新隧道选项（保留兼容性）
-      tunnelOptions.value = tunnelData.map((tunnel: Tunnel) => ({
-        label: `${tunnel.proxyName} (ID: ${tunnel.proxyId})`,
-        value: tunnel.proxyId,
-      }));
-      console.log(`成功加载 ${tunnelData.length} 个隧道`);
-    } else {
-      console.error("获取隧道列表失败:", result.message);
-      message.error(result.message || "获取隧道列表失败");
-    }
-  } catch (error) {
-    console.error("加载隧道列表失败:", error);
-    message.error("加载隧道列表失败，请检查网络连接");
-  } finally {
-    tunnelLoading.value = false;
-  }
-};
-
-// 刷新隧道列表
-const refreshTunnels = async () => {
-  await loadTunnels();
-  message.success("隧道列表已刷新");
-};
-
-// 全选隧道
-const selectAllTunnels = () => {
-  const enabledTunnels = tunnels.value.filter((tunnel) => !tunnel.isDisabled);
-  const allEnabledIds = enabledTunnels.map((tunnel) => tunnel.proxyId);
-
-  // 先清理无效的隧道ID，然后添加所有可用的隧道
-  const validExistingIds = settings.value.autoStartTunnels.filter((id) =>
-    tunnels.value.some((tunnel) => tunnel.proxyId === id),
-  );
-
-  // 合并有效的现有选择和所有可用隧道，去重
-  const newSelection = [...new Set([...validExistingIds, ...allEnabledIds])];
-  settings.value.autoStartTunnels = newSelection;
-
-  message.success(`已选择 ${enabledTunnels.length} 个可用隧道`);
-  saveSettings();
-};
-
-// 清空所有选择
-const clearAllTunnels = () => {
-  settings.value.autoStartTunnels = [];
-  message.success("已清空所有自启动隧道选择");
-  saveSettings();
-};
-
-// 获取隧道在自启动列表中的索引
-const getAutoStartIndex = (proxyId: number) => {
-  return settings.value.autoStartTunnels.indexOf(proxyId);
-};
-
-// 向上移动隧道
-const moveTunnelUp = (tunnelId: number) => {
-  const index = settings.value.autoStartTunnels.indexOf(tunnelId);
-  if (index > 0) {
-    const tunnels = [...settings.value.autoStartTunnels];
-    [tunnels[index], tunnels[index - 1]] = [tunnels[index - 1], tunnels[index]];
-    settings.value.autoStartTunnels = tunnels;
-    message.success("启动顺序已调整");
-    saveSettings();
-  }
-};
-
-// 向下移动隧道
-const moveTunnelDown = (tunnelId: number) => {
-  const index = settings.value.autoStartTunnels.indexOf(tunnelId);
-  if (index >= 0 && index < settings.value.autoStartTunnels.length - 1) {
-    const tunnels = [...settings.value.autoStartTunnels];
-    [tunnels[index], tunnels[index + 1]] = [tunnels[index + 1], tunnels[index]];
-    settings.value.autoStartTunnels = tunnels;
-    message.success("启动顺序已调整");
-    saveSettings();
-  }
-};
-
-// 删除已删除隧道的配置
-const removeDeletedTunnelConfig = (tunnelId: number) => {
-  const index = settings.value.autoStartTunnels.indexOf(tunnelId);
-  if (index > -1) {
-    settings.value.autoStartTunnels.splice(index, 1);
-    message.success(`已删除隧道 ${tunnelId} 的自启动配置`);
-    saveSettings();
-  }
-};
-
-onMounted(async () => {
-  loadSettings();
-  loadTunnels();
-  
-  // 加载 UI 设置
-  await uiStore.loadSidebarSettings();
-  uiSettings.value.sidebarWidth = uiStore.sidebarWidth;
-  uiSettings.value.sidebarCollapsible = uiStore.sidebarCollapsible;
-});
+const {
+  settings,
+  sidebarWidth,
+  sidebarCollapsible,
+  tunnels,
+  tunnelLoading,
+  deletedTunnels,
+  sortedTunnels,
+  handleAutoStartChange,
+  handleAlwaysOnTopChange,
+  handleMinimizeToTrayChange,
+  handleShowAdChange,
+  handleHideWebuiEntryChange,
+  handleTunnelAutoStartChange,
+  handleStartupDelayChange,
+  handleSidebarWidthChange,
+  handleSidebarCollapsibleChange,
+  refreshTunnels,
+  selectAllTunnels,
+  clearAllTunnels,
+  getAutoStartIndex,
+  moveTunnelUp,
+  moveTunnelDown,
+  removeDeletedTunnelConfig,
+} = useSettingsPanel();
 </script>
 
 <style scoped>
