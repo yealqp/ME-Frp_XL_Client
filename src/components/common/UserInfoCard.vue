@@ -63,7 +63,7 @@
             <!-- 剩余流量 -->
             <div class="spec-card traffic-card">
               <div class="spec-icon">
-                <n-icon size="24" :component="Database" color="#18a058" />
+                <n-icon size="24" :component="Database" color="var(--app-success-color)" />
               </div>
               <div class="spec-content">
                 <n-text depth="3" class="spec-label">剩余流量</n-text>
@@ -75,7 +75,7 @@
             <!-- 隧道数量 -->
             <div class="spec-card tunnel-card">
               <div class="spec-icon">
-                <n-icon size="24" :component="Network" color="#f0a020" />
+                <n-icon size="24" :component="Network" color="var(--app-warning-color)" />
               </div>
               <div class="spec-content">
                 <n-text depth="3" class="spec-label">隧道数量</n-text>
@@ -92,7 +92,7 @@
             <!-- 入站带宽 -->
             <div class="spec-card inbound-card">
               <div class="spec-icon">
-                <n-icon size="24" :component="ArrowDown" color="#2080f0" />
+                <n-icon size="24" :component="ArrowDown" color="var(--app-primary-color)" />
               </div>
               <div class="spec-content">
                 <n-text depth="3" class="spec-label">入站带宽</n-text>
@@ -105,7 +105,7 @@
             <!-- 出站带宽 -->
             <div class="spec-card outbound-card">
               <div class="spec-icon">
-                <n-icon size="24" :component="ArrowUp" color="#9333ea" />
+                <n-icon size="24" :component="ArrowUp" color="var(--app-info-color)" />
               </div>
               <div class="spec-content">
                 <n-text depth="3" class="spec-label">出站带宽</n-text>

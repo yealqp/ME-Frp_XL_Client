@@ -5,6 +5,7 @@
 //! 并将 user_info.group 提升到顶层作为 group 字段。
 
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// 统一配置结构体（优化后）
 ///
@@ -40,7 +41,7 @@ pub struct UnifiedConfig {
     pub show_ad: bool,
     #[serde(rename = "hideWebuiEntry")]
     pub hide_webui_entry: bool,
-    
+
     // UI 设置
     #[serde(rename = "sidebarWidth", skip_serializing_if = "Option::is_none")]
     pub sidebar_width: Option<i32>,
@@ -60,6 +61,8 @@ pub struct UnifiedConfig {
     // 主题设置
     #[serde(rename = "themeMode", skip_serializing_if = "Option::is_none")]
     pub theme_mode: Option<String>,
+    #[serde(rename = "themeCustomization", skip_serializing_if = "Option::is_none")]
+    pub theme_customization: Option<Value>,
 }
 
 impl Default for UnifiedConfig {
@@ -80,7 +83,7 @@ impl Default for UnifiedConfig {
             minimize_to_tray: true,
             show_ad: true,
             hide_webui_entry: false,
-            
+
             // UI 设置默认值
             sidebar_width: Some(200),
             sidebar_collapsible: Some(true),
@@ -93,6 +96,7 @@ impl Default for UnifiedConfig {
 
             // 主题设置默认值
             theme_mode: None,
+            theme_customization: None,
         }
     }
 }

@@ -112,7 +112,7 @@ const menuOptions = computed(() => {
       label: '删除隧道',
       key: 'delete',
       icon: () =>
-        h(NIcon, { style: { color: '#d03050' } }, { default: () => h(Trash2, { size: 16 }) }),
+        h(NIcon, { style: { color: 'var(--app-error-color)' } }, { default: () => h(Trash2, { size: 16 }) }),
     }
   );
 

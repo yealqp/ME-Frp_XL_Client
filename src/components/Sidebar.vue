@@ -142,9 +142,10 @@ const activeNav = computed(() => {
     "/node-status": "node-status",
     "/mefrp-webui": "mefrp-webui",
     "/user-center": "user-center",
-    "/operation-log": "", // 操作日志页面不高亮任何菜单项
-    "/settings": "settings",
-    "/help-center": "help-center",
+      "/operation-log": "", // 操作日志页面不高亮任何菜单项
+      "/settings": "settings",
+      "/theme-editor": "settings",
+      "/help-center": "help-center",
     "/about": "about",
   };
   // 如果路径在映射中，返回对应的值；否则返回 null（不高亮任何项）
@@ -367,11 +368,11 @@ onMounted(async () => {
 .ad-banner {
   display: block;
   padding: 16px;
-  background: var(--ad-banner-bg, #349ff4);
+  background: var(--ad-banner-bg, var(--app-primary-color));
   border-radius: 8px;
   text-decoration: none;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--ad-banner-bg, #349ff4) 30%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ad-banner-bg, var(--app-primary-color)) 30%, transparent);
   opacity: 1;
 }
 
@@ -386,8 +387,8 @@ onMounted(async () => {
 
 .ad-banner:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--ad-banner-bg, #349ff4) 40%, transparent);
-  background: var(--ad-banner-bg-hover, #4da8f5);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--ad-banner-bg, var(--app-primary-color)) 40%, transparent);
+  background: var(--ad-banner-bg-hover, var(--app-primary-color-hover));
 }
 
 .ad-content {

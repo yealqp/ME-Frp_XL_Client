@@ -773,14 +773,14 @@ const submitFeedback = async () => {
 }
 
 .version {
-  color: #3498db;
+  color: var(--app-primary-color);
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 12px;
 }
 
 .description {
-  color: #666;
+  color: var(--app-text-color-2);
   font-size: 16px;
   line-height: 1.6;
 }
@@ -805,7 +805,7 @@ const submitFeedback = async () => {
 
 .tech-item i {
   font-size: 16px;
-  color: #3498db;
+  color: var(--app-primary-color);
 }
 
 .feature-list {
@@ -818,11 +818,11 @@ const submitFeedback = async () => {
   align-items: center;
   gap: 12px;
   padding: 8px 0;
-  color: #333;
+  color: var(--app-text-color);
 }
 
 .feature-list i {
-  color: #2ecc71;
+  color: var(--app-success-color);
   font-size: 14px;
 }
 
@@ -838,20 +838,20 @@ const submitFeedback = async () => {
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  color: #3498db;
+  color: var(--app-primary-color);
   text-decoration: none;
   font-weight: 500;
-  border: 1px solid #3498db;
+  border: 1px solid var(--app-primary-color);
   border-radius: 6px;
   transition: all 0.3s ease;
   font-size: 14px;
 }
 
 .link:hover {
-  background-color: #3498db;
-  color: white;
+  background-color: var(--app-primary-color);
+  color: var(--preview-button-text, #ffffff);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--app-primary-color) 30%, transparent);
 }
 
 .link i {
@@ -865,18 +865,18 @@ const submitFeedback = async () => {
 .copyright {
   text-align: center;
   padding-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--app-divider-color);
 }
 
 .copyright p {
-  color: #666;
+  color: var(--app-text-color-2);
   font-size: 14px;
   margin: 4px 0;
 }
 
 .build-info {
   font-size: 12px !important;
-  color: #999 !important;
+  color: var(--app-text-color-3) !important;
 }
 
 /* 团队信息样式 */
@@ -926,7 +926,7 @@ const submitFeedback = async () => {
 }
 
 .section-header :deep(svg) {
-  color: #349ff4;
+  color: var(--app-primary-color);
 }
 
 .update-content {
@@ -936,7 +936,7 @@ const submitFeedback = async () => {
 }
 
 .update-description {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 14px;
   margin: 0;
   text-align: center;
@@ -967,7 +967,7 @@ const submitFeedback = async () => {
 }
 
 .section-title :deep(svg) {
-  color: #349ff4;
+  color: var(--app-primary-color);
   flex-shrink: 0;
 }
 
@@ -979,7 +979,7 @@ const submitFeedback = async () => {
 }
 
 .feedback-card :deep(.n-divider) {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: color-mix(in srgb, var(--app-divider-color) 70%, transparent);
 }
 
 /* 按钮样式优化 */
@@ -989,7 +989,7 @@ const submitFeedback = async () => {
 
 .feedback-card :deep(.n-button:not(.n-button--disabled):hover) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(52, 159, 244, 0.3);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--app-primary-color) 30%, transparent);
 }
 
 /* 仙林云计算卡片样式 */
@@ -999,7 +999,7 @@ const submitFeedback = async () => {
 }
 
 .sponsor-card .card-description {
-  color: #a0a0a0;
+  color: var(--app-text-color-3);
   font-size: 14px;
   line-height: 1.6;
   margin-bottom: 16px;
@@ -1041,7 +1041,7 @@ const submitFeedback = async () => {
 }
 
 .update-modal-content .version-info :deep(svg) {
-  color: #349ff4;
+  color: var(--app-primary-color);
 }
 
 .update-changelog {
@@ -1393,7 +1393,7 @@ const submitFeedback = async () => {
 
 .changelog-content-markdown :deep(code.inline-code) {
   background: var(--app-card-color);
-  color: #ff6b6b;
+  color: var(--app-error-color);
   padding: 3px 8px;
   border-radius: 4px;
   font-family: "Consolas", "Monaco", "Courier New", monospace;
@@ -1422,10 +1422,10 @@ const submitFeedback = async () => {
 }
 
 .changelog-content-markdown :deep(blockquote.custom-blockquote) {
-  border-left: 4px solid var(--primary-color);
+  border-left: 4px solid var(--app-primary-color);
   margin: 16px 0;
   padding: 12px 16px;
-  background: rgba(24, 144, 255, 0.05);
+  background: color-mix(in srgb, var(--app-primary-color) 8%, transparent);
   border-radius: 0 6px 6px 0;
 }
 

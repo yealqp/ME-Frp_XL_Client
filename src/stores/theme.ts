@@ -1,502 +1,411 @@
-/**
- * Theme Store
- * 
- * 主题状态管理 Store，负责管理主题状态、主题切换和持久化
- * 使用 Pinia Setup Store 语法
- * 
- * Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 8.1, 8.2, 8.3, 8.4, 10.1, 10.2, 10.3, 10.4
- */
+import { computed, ref, watch } from "vue";
+import { defineStore } from "pinia";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import type {
+  Theme,
+  ThemeCommonConfig,
+  ThemeCustomization,
+  ThemeFieldKey,
+  ThemeMode,
+  ThemePreference,
+  ThemeValidationIssue,
+  ThemeVariant,
+} from "@/types/theme";
+import { useSystemTheme } from "@/composables/useSystemTheme";
+import {
+  applyTheme,
+  buildNaiveThemeOverrides,
+  getNaiveTheme,
+} from "@/utils/themeApplier";
+import { loadUnifiedConfig, mergeUnifiedConfig } from "@/utils/unifiedConfig";
+import {
+  buildThemeCustomizationDiff,
+  cloneThemeCustomization,
+  getDefaultThemeConfig,
+  getThemeFieldValue,
+  parseThemeCustomization,
+  resolveThemeConfig,
+  sanitizeThemeCustomization,
+  serializeThemeCustomization,
+  validateThemeCustomization,
+} from "@/utils/themeConfig";
 
-import { ref, computed, watch } from 'vue';
-import { defineStore } from 'pinia';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import type { ThemeMode, Theme, ThemePreference } from '@/types/theme';
-import { useSystemTheme } from '@/composables/useSystemTheme';
-import { applyCSSVariables, getNaiveTheme, applyTransitionClass } from '@/utils/themeApplier';
-import { mergeUnifiedConfig } from '@/utils/unifiedConfig';
+const THEME_PREFERENCE_KEY = "theme-preference";
 
-/**
- * LocalStorage 键名
- */
-const THEME_PREFERENCE_KEY = 'theme-preference';
-
-/**
- * 设置窗口标题栏主题
- * 
- * @param theme - 主题类型 ('light' | 'dark')
- */
 async function setWindowTheme(theme: Theme): Promise<void> {
   try {
     const appWindow = getCurrentWindow();
     await appWindow.setTheme(theme);
   } catch (error) {
-    console.error('设置窗口主题失败:', error);
-    // 静默失败，不影响用户体验
+    console.error("设置窗口主题失败:", error);
   }
 }
 
-/**
- * 保存主题偏好到 LocalStorage
- * 
- * @param preference - 主题偏好对象
- * 
- * Requirements: 3.1
- */
 function saveThemePreference(preference: ThemePreference): void {
   try {
     localStorage.setItem(THEME_PREFERENCE_KEY, JSON.stringify(preference));
   } catch (error) {
-    console.error('保存主题偏好失败:', error);
-    // 静默失败，不影响用户体验
+    console.error("保存主题偏好失败:", error);
   }
 }
 
-/**
- * 从 LocalStorage 读取主题偏好
- * 
- * @returns 主题偏好对象或 null（如果不存在或读取失败）
- * 
- * Requirements: 3.2
- */
 function loadThemePreference(): ThemePreference | null {
   try {
     const data = localStorage.getItem(THEME_PREFERENCE_KEY);
     return data ? JSON.parse(data) : null;
   } catch (error) {
-    console.error('读取主题偏好失败:', error);
+    console.error("读取主题偏好失败:", error);
     return null;
   }
 }
 
-/**
- * Theme Store
- * 
- * 管理应用的主题状态，包括主题模式、系统主题同步和持久化
- */
-export const useThemeStore = defineStore('theme', () => {
-  // ==================== State ====================
-  
-  /**
-   * 当前主题模式
-   * - 'light': 浅色模式
-   * - 'dark': 深色模式
-   * - 'system': 跟随系统主题
-   * 
-   * Requirements: 2.1, 2.2, 4.4
-   */
-  const mode = ref<ThemeMode>('system');
-  
-  /**
-   * 实际应用的主题
-   * - 'light': 浅色主题
-   * - 'dark': 深色主题
-   * 
-   * Requirements: 2.1, 2.2
-   */
-  const activeTheme = ref<Theme>('dark');
-  
-  /**
-   * 系统主题
-   * - 'light': 系统使用浅色主题
-   * - 'dark': 系统使用深色主题
-   * - null: 系统主题未知或不支持
-   * 
-   * Requirements: 4.1, 4.2
-   */
+function createOverlay(currentTheme: Theme, targetTheme: Theme): HTMLDivElement {
+  const overlay = document.createElement("div");
+  overlay.className = "theme-overlay";
+
+  const content = document.createElement("div");
+  content.className = "theme-overlay-content";
+
+  const gearContainer = document.createElement("div");
+  gearContainer.className = "theme-overlay-gear";
+
+  const gear = document.createElement("div");
+  gear.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </svg>
+  `;
+
+  const text = document.createElement("div");
+  text.className = "theme-overlay-text";
+  text.textContent = `正在切换到${targetTheme === "light" ? "浅色" : "深色"}模式`;
+
+  gearContainer.appendChild(gear);
+  content.appendChild(gearContainer);
+  content.appendChild(text);
+  overlay.appendChild(content);
+  overlay.classList.add(currentTheme);
+
+  return overlay;
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export const useThemeStore = defineStore("theme", () => {
+  const mode = ref<ThemeMode>("system");
+  const activeTheme = ref<Theme>("dark");
   const systemTheme = ref<Theme | null>(null);
-  
-  // ==================== System Theme Listener ====================
-  
-  /**
-   * 系统主题监听器
-   * 
-   * Requirements: 4.1, 4.2, 4.3
-   */
+  const editingTarget = ref<ThemeVariant>("dark");
+  const savedCustomization = ref<ThemeCustomization>({});
+  const draftCustomization = ref<ThemeCustomization>({});
+  const validationIssues = ref<ThemeValidationIssue[]>([]);
+
   const systemThemeListener = useSystemTheme();
-  
-  // ==================== Getters ====================
-  
-  /**
-   * 获取当前激活的主题
-   * 
-   * Requirements: 8.1, 8.3
-   */
-  const currentTheme = computed<Theme>(() => activeTheme.value);
-  
-  /**
-   * 判断是否为深色模式
-   * 
-   * Requirements: 8.1, 8.3
-   */
-  const isDarkMode = computed<boolean>(() => activeTheme.value === 'dark');
-  
-  /**
-   * 判断是否为浅色模式
-   * 
-   * Requirements: 8.1, 8.3
-   */
-  const isLightMode = computed<boolean>(() => activeTheme.value === 'light');
-  
-  /**
-   * 判断是否跟随系统
-   * 
-   * Requirements: 4.4, 8.1, 8.3
-   */
-  const isSystemMode = computed<boolean>(() => mode.value === 'system');
-  
-  /**
-   * 获取 Naive UI 主题对象
-   * 
-   * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
-   */
+
+  const currentTheme = computed(() => activeTheme.value);
+  const isDarkMode = computed(() => activeTheme.value === "dark");
+  const isLightMode = computed(() => activeTheme.value === "light");
+  const isSystemMode = computed(() => mode.value === "system");
   const naiveTheme = computed(() => getNaiveTheme(activeTheme.value));
-  
-  // ==================== Internal Methods ====================
-  
-  /**
-   * 更新激活的主题
-   * 
-   * 根据当前模式和系统主题计算实际应用的主题
-   * 
-   * Requirements: 2.1, 2.2, 4.1, 4.2
-   */
+  const resolvedLightThemeConfig = computed(() =>
+    resolveThemeConfig("light", draftCustomization.value),
+  );
+  const resolvedDarkThemeConfig = computed(() =>
+    resolveThemeConfig("dark", draftCustomization.value),
+  );
+  const resolvedActiveThemeConfig = computed(() =>
+    activeTheme.value === "light"
+      ? resolvedLightThemeConfig.value
+      : resolvedDarkThemeConfig.value,
+  );
+  const currentEditingThemeConfig = computed(() =>
+    editingTarget.value === "light"
+      ? resolvedLightThemeConfig.value
+      : resolvedDarkThemeConfig.value,
+  );
+  const currentEditingDefaults = computed(() =>
+    getDefaultThemeConfig(editingTarget.value),
+  );
+  const naiveThemeOverrides = computed(() =>
+    buildNaiveThemeOverrides(resolvedActiveThemeConfig.value),
+  );
+  const hasDraftChanges = computed(
+    () =>
+      serializeThemeCustomization(draftCustomization.value) !==
+      serializeThemeCustomization(savedCustomization.value),
+  );
+  const hasBlockingValidationIssues = computed(() =>
+    validationIssues.value.some((issue) => issue.severity === "error"),
+  );
+
   function updateActiveTheme(): void {
-    if (mode.value === 'system') {
-      // 跟随系统模式：使用系统主题，如果系统主题未知则使用浅色
-      activeTheme.value = systemTheme.value || 'light';
-    } else {
-      // 手动模式：直接使用选择的模式
-      activeTheme.value = mode.value;
+    activeTheme.value = mode.value === "system" ? systemTheme.value || "light" : mode.value;
+  }
+
+  function syncSystemThemeState(): void {
+    if (systemThemeListener.isSupported.value) {
+      systemThemeListener.startListening();
+      systemTheme.value = systemThemeListener.systemTheme.value;
     }
   }
-  
-  /**
-   * 应用主题到 UI
-   * 
-   * 更新 CSS Variables，动画永久启用
-   * 
-   * Requirements: 2.3, 7.1, 7.2, 7.3, 7.4
-   */
-  function applyTheme(): void {
-    applyCSSVariables(activeTheme.value);
-    
-    // 设置窗口标题栏主题（所有模式都需要设置）
-    setWindowTheme(activeTheme.value);
+
+  function resolveTargetTheme(newMode: ThemeMode): Theme {
+    if (newMode !== "system") {
+      return newMode;
+    }
+
+    syncSystemThemeState();
+    return systemTheme.value || "dark";
   }
-  
-  /**
-   * 保存当前主题偏好
-   * 
-   * 同时保存到 LocalStorage 和 UnifiedConfig
-   * 
-   * Requirements: 3.1, 3.2
-   */
-  async function savePreference(): Promise<void> {
-    const preference: ThemePreference = {
-      mode: mode.value,
-      enableTransitions: true, // 永久启用动画
-    };
-    
-    // 保存到 LocalStorage
-    saveThemePreference(preference);
-    
-    // 同步到 UnifiedConfig
-    await syncToUnifiedConfig();
+
+  function commitThemeModeChange(newMode: ThemeMode): void {
+    mode.value = newMode;
+    if (newMode === "system") {
+      syncSystemThemeState();
+    }
+    updateActiveTheme();
+    applyResolvedTheme();
   }
-  
-  /**
-   * 同步主题设置到 Tauri UnifiedConfig
-   * 
-   * Requirements: 3.1, 3.2
-   */
-  async function syncToUnifiedConfig(): Promise<void> {
+
+  function replaceDraftCustomization(nextDraft: ThemeCustomization): void {
+    draftCustomization.value = nextDraft;
+    refreshValidationIssues();
+    applyResolvedTheme();
+  }
+
+  function applyResolvedTheme(): void {
+    applyTheme(resolvedActiveThemeConfig.value);
+    void setWindowTheme(activeTheme.value);
+  }
+
+  function refreshValidationIssues(): void {
+    validationIssues.value = validateThemeCustomization(draftCustomization.value);
+  }
+
+  async function syncToUnifiedConfig(
+    customization: ThemeCustomization = savedCustomization.value,
+  ): Promise<void> {
     try {
+      const themeCustomization = buildThemeCustomizationDiff(customization);
       await mergeUnifiedConfig({
         themeMode: mode.value,
+        themeCustomization:
+          Object.keys(themeCustomization).length > 0 ? themeCustomization : undefined,
       });
     } catch (error) {
-      console.error('同步主题到 UnifiedConfig 失败:', error);
-      // 静默失败，LocalStorage 已保存主题偏好
+      console.error("同步主题到 UnifiedConfig 失败:", error);
     }
   }
-  
-  // ==================== Actions ====================
-  
-  /**
-   * 初始化主题系统
-   * 
-   * 1. 读取持久化的主题偏好
-   * 2. 如果没有偏好，检测系统主题
-   * 3. 计算并应用激活的主题
-   * 4. 开始监听系统主题变化
-   * 
-   * Requirements: 10.1, 10.2, 10.3, 10.4
-   */
+
+  async function savePreference(): Promise<void> {
+    saveThemePreference({
+      mode: mode.value,
+      enableTransitions: true,
+    });
+
+    await syncToUnifiedConfig(savedCustomization.value);
+  }
+
+  function resetDraftFromSaved(): void {
+    draftCustomization.value = cloneThemeCustomization(savedCustomization.value);
+    refreshValidationIssues();
+  }
+
   async function initTheme(): Promise<void> {
     try {
-      // 1. 读取持久化的主题偏好
       const preference = loadThemePreference();
-      
-      if (preference) {
-        // 如果存在主题偏好，使用保存的设置
-        mode.value = preference.mode;
-        // enableTransitions 已删除，永久启用动画
-      } else {
-        // 2. 如果没有偏好，使用暗色模式作为默认主题
-        mode.value = 'dark';
+      const config = await loadUnifiedConfig().catch(() => null);
+
+      mode.value = config?.themeMode || preference?.mode || "dark";
+      savedCustomization.value = sanitizeThemeCustomization(config?.themeCustomization ?? {});
+      resetDraftFromSaved();
+
+      if (mode.value === "system" && systemThemeListener.isSupported.value) {
+        syncSystemThemeState();
+        await wait(150);
       }
-      
-      // 4. 如果模式是跟随系统，确保系统主题监听器已启动
-      if (mode.value === 'system' && systemThemeListener.isSupported.value) {
-        systemThemeListener.startListening();
-        
-        // 等待一小段时间，让系统主题检测稳定
-        await new Promise(resolve => setTimeout(resolve, 150));
-        
-        // 再次读取系统主题，确保获取到正确的值
-        systemTheme.value = systemThemeListener.systemTheme.value;
-      }
-      
-      // 5. 计算并应用激活的主题
+
       updateActiveTheme();
-      applyTheme();
-      
+      applyResolvedTheme();
     } catch (error) {
-      console.error('初始化主题系统失败:', error);
-      // 回退到默认主题（暗色模式）
-      mode.value = 'dark';
-      activeTheme.value = 'dark';
-      applyTheme();
+      console.error("初始化主题系统失败:", error);
+      mode.value = "dark";
+      activeTheme.value = "dark";
+      savedCustomization.value = {};
+      resetDraftFromSaved();
+      applyResolvedTheme();
     }
   }
-  
-  /**
-   * 设置主题模式
-   * 
-   * @param newMode - 新的主题模式
-   * 
-   * Requirements: 2.1, 2.2, 4.1, 4.2, 4.3
-   */
+
   async function setThemeMode(newMode: ThemeMode): Promise<void> {
     try {
-      // 1. 确定当前主题和目标主题
-      const currentTheme = activeTheme.value;
-      let targetTheme: Theme;
-      
-      if (newMode === 'system') {
-        // 切换到跟随系统模式时，先启动监听器并获取系统主题
-        if (systemThemeListener.isSupported.value) {
-          // 启动监听器（内部会立即同步获取系统主题）
-          systemThemeListener.startListening();
-          // 直接使用监听器中的系统主题值
-          targetTheme = systemThemeListener.systemTheme.value || 'dark';
-          // 同步更新 store 中的系统主题状态
-          systemTheme.value = systemThemeListener.systemTheme.value;
-        } else {
-          // 如果不支持系统主题检测，使用暗色作为默认
-          targetTheme = 'dark';
-        }
-      } else {
-        targetTheme = newMode;
-      }
-      
-      // 如果当前主题和目标主题相同且模式也相同，不需要切换
-      if (currentTheme === targetTheme && mode.value === newMode) {
+      const current = activeTheme.value;
+      const targetTheme = resolveTargetTheme(newMode);
+
+      if (current === targetTheme && mode.value === newMode) {
         return;
       }
-      
-      // 2. 动态导入 Settings 图标
-      const { Settings } = await import('lucide-vue-next');
-      
-      // 3. 创建蒙层容器
-      const overlay = document.createElement('div');
-      overlay.className = 'theme-overlay';
-      
-      // 4. 创建内容容器
-      const content = document.createElement('div');
-      content.className = 'theme-overlay-content';
-      
-      // 5. 创建齿轮图标容器
-      const gearContainer = document.createElement('div');
-      gearContainer.className = 'theme-overlay-gear';
-      
-      // 6. 使用 lucide Settings 图标的 SVG 路径
-      const gear = document.createElement('div');
-      gear.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      `;
-      gearContainer.appendChild(gear);
-      
-      // 7. 创建提示文字
-      const text = document.createElement('div');
-      text.className = 'theme-overlay-text';
-      const themeText = targetTheme === 'light' ? '浅色' : '深色';
-      text.textContent = `正在切换到${themeText}模式`;
-      
-      // 8. 组装元素
-      content.appendChild(gearContainer);
-      content.appendChild(text);
-      overlay.appendChild(content);
-      
-      // 9. 添加当前主题的蒙层颜色类
-      overlay.classList.add(currentTheme);
+
+      const overlay = createOverlay(current, targetTheme);
       document.body.appendChild(overlay);
-      
-      // 10. 触发蒙层淡入动画（前 0.5 秒显示当前色调）
+
       requestAnimationFrame(() => {
-        overlay.classList.add('active');
+        overlay.classList.add("active");
       });
-      
-      // 11. 等待 0.5 秒（显示当前色调）
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // 12. 切换到目标主题色调
-      overlay.classList.remove(currentTheme);
+
+      await wait(500);
+
+      overlay.classList.remove(current);
       overlay.classList.add(targetTheme);
-      
-      // 13. 在蒙层完全显示时切换主题（中间时刻）
-      mode.value = newMode;
-      if (newMode === 'system' && systemThemeListener.isSupported.value) {
-        systemThemeListener.startListening();
-        systemTheme.value = systemThemeListener.systemTheme.value;
-      }
-      updateActiveTheme();
-      applyTheme();
-      
-      // 14. 等待 0.5 秒（显示目标色调）
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // 15. 淡出蒙层
-      overlay.classList.remove('active');
-      
-      // 16. 等待蒙层完全消失后移除
-      await new Promise(resolve => setTimeout(resolve, 150));
+
+      commitThemeModeChange(newMode);
+
+      await wait(500);
+
+      overlay.classList.remove("active");
+      await wait(150);
       document.body.removeChild(overlay);
-      
-      // 17. 保存偏好
+
       await savePreference();
     } catch (error) {
-      console.error('设置主题模式失败:', error);
+      console.error("设置主题模式失败:", error);
       throw error;
     }
   }
-  
-  /**
-   * 切换到浅色模式
-   * 
-   * Requirements: 2.1
-   */
+
   async function setLightMode(): Promise<void> {
-    await setThemeMode('light');
+    await setThemeMode("light");
   }
-  
-  /**
-   * 切换到深色模式
-   * 
-   * Requirements: 2.2
-   */
+
   async function setDarkMode(): Promise<void> {
-    await setThemeMode('dark');
+    await setThemeMode("dark");
   }
-  
-  /**
-   * 切换到跟随系统模式
-   * 
-   * Requirements: 4.1, 4.2, 4.3, 4.4
-   */
+
   async function setSystemMode(): Promise<void> {
-    await setThemeMode('system');
+    await setThemeMode("system");
   }
-  
-  /**
-   * 切换主题（在浅色和深色之间）
-   * 
-   * 如果当前是跟随系统模式，则切换到相反的手动模式
-   * 
-   * Requirements: 2.1, 2.2
-   */
+
   async function toggleTheme(): Promise<void> {
-    if (mode.value === 'system') {
-      // 如果当前是跟随系统，切换到相反的手动模式
-      const newMode = activeTheme.value === 'light' ? 'dark' : 'light';
-      await setThemeMode(newMode);
-    } else {
-      // 如果是手动模式，在浅色和深色之间切换
-      const newMode = mode.value === 'light' ? 'dark' : 'light';
-      await setThemeMode(newMode);
+    if (mode.value === "system") {
+      await setThemeMode(activeTheme.value === "light" ? "dark" : "light");
+      return;
     }
+
+    await setThemeMode(mode.value === "light" ? "dark" : "light");
   }
-  
-  /**
-   * 更新系统主题
-   * 
-   * 由系统主题监听器调用，当系统主题变化时更新应用主题
-   * 
-   * @param theme - 新的系统主题
-   * 
-   * Requirements: 4.1, 4.2, 4.3
-   */
+
   function updateSystemTheme(theme: Theme): void {
     systemTheme.value = theme;
-    
-    // 如果当前模式是跟随系统，更新激活的主题
-    if (mode.value === 'system') {
+
+    if (mode.value === "system") {
       updateActiveTheme();
-      applyTheme();
+      applyResolvedTheme();
     }
   }
-  
-  /**
-   * 设置是否启用过渡动画
-   * 
-   * @deprecated 动画已永久启用，此方法保留仅用于兼容性
-   * 
-   * @param enable - 是否启用过渡动画（已忽略）
-   * 
-   * Requirements: 7.1, 7.2, 7.3, 7.4
-   */
-  async function setEnableTransitions(enable: boolean): Promise<void> {
-    console.warn('setEnableTransitions 已废弃：动画已永久启用');
-    // 不执行任何操作，动画永久启用
+
+  async function setEnableTransitions(): Promise<void> {
+    console.warn("setEnableTransitions 已废弃：动画已永久启用");
   }
-  
-  // ==================== Watchers ====================
-  
-  /**
-   * 监听系统主题变化
-   * 
-   * 当系统主题监听器检测到系统主题变化时，自动更新应用主题
-   * 
-   * Requirements: 4.3, 8.2, 8.4
-   */
+
+  function setEditingTarget(theme: ThemeVariant): void {
+    editingTarget.value = theme;
+  }
+
+  function updateThemeDraft(theme: ThemeVariant, partial: Partial<ThemeCommonConfig>): void {
+    replaceDraftCustomization({
+      ...draftCustomization.value,
+      [theme]: {
+        ...draftCustomization.value[theme],
+        ...partial,
+      },
+    });
+  }
+
+  function updateThemeDraftField(
+    theme: ThemeVariant,
+    field: ThemeFieldKey,
+    value: string,
+  ): void {
+    updateThemeDraft(theme, { [field]: value } as Partial<ThemeCommonConfig>);
+  }
+
+  function resetThemeDraft(theme: ThemeVariant): void {
+    const nextDraft = cloneThemeCustomization(draftCustomization.value);
+    delete nextDraft[theme];
+    replaceDraftCustomization(nextDraft);
+  }
+
+  function resetAllThemeDrafts(): void {
+    replaceDraftCustomization({});
+  }
+
+  function discardThemeDraft(): void {
+    resetDraftFromSaved();
+    applyResolvedTheme();
+  }
+
+  async function saveThemeCustomization(): Promise<void> {
+    refreshValidationIssues();
+    if (hasBlockingValidationIssues.value) {
+      throw new Error("当前主题配置存在必须修复的对比度问题");
+    }
+
+    const normalized = buildThemeCustomizationDiff(draftCustomization.value);
+    savedCustomization.value = cloneThemeCustomization(normalized);
+    replaceDraftCustomization(cloneThemeCustomization(normalized));
+    await syncToUnifiedConfig(savedCustomization.value);
+  }
+
+  function exportThemeDraft(): string {
+    return serializeThemeCustomization(draftCustomization.value);
+  }
+
+  function exportSavedTheme(): string {
+    return serializeThemeCustomization(savedCustomization.value);
+  }
+
+  function importThemeDraft(serialized: string): void {
+    const parsed = parseThemeCustomization(serialized);
+    replaceDraftCustomization(cloneThemeCustomization(parsed));
+  }
+
+  function getDraftFieldValue(theme: ThemeVariant, field: ThemeFieldKey): string {
+    return getThemeFieldValue(theme, field, draftCustomization.value);
+  }
+
   watch(
     () => systemThemeListener.systemTheme.value,
     (newSystemTheme) => {
       if (newSystemTheme) {
         updateSystemTheme(newSystemTheme);
       }
-    }
+    },
   );
-  
-  // ==================== Return ====================
-  
+
   return {
-    // State
     mode,
     activeTheme,
     systemTheme,
-    
-    // Getters
+    editingTarget,
+    savedCustomization,
+    draftCustomization,
+    validationIssues,
     currentTheme,
     isDarkMode,
     isLightMode,
     isSystemMode,
     naiveTheme,
-    
-    // Actions
+    naiveThemeOverrides,
+    resolvedLightThemeConfig,
+    resolvedDarkThemeConfig,
+    resolvedActiveThemeConfig,
+    currentEditingThemeConfig,
+    currentEditingDefaults,
+    hasDraftChanges,
+    hasBlockingValidationIssues,
     initTheme,
     setThemeMode,
     setLightMode,
@@ -505,5 +414,16 @@ export const useThemeStore = defineStore('theme', () => {
     toggleTheme,
     updateSystemTheme,
     setEnableTransitions,
+    setEditingTarget,
+    updateThemeDraft,
+    updateThemeDraftField,
+    resetThemeDraft,
+    resetAllThemeDrafts,
+    discardThemeDraft,
+    saveThemeCustomization,
+    exportThemeDraft,
+    exportSavedTheme,
+    importThemeDraft,
+    getDraftFieldValue,
   };
 });

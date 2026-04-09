@@ -59,6 +59,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/theme-editor",
+    name: "ThemeEditor",
+    component: () => import("../components/ThemeEditorPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/help-center",
     name: "HelpCenter",
     component: () => import("../components/HelpCenter.vue"),

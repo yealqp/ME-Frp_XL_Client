@@ -7,9 +7,8 @@
  * Requirements: 2.3, 7.1, 7.2, 7.3, 7.4
  */
 
-import { darkTheme, type GlobalTheme } from 'naive-ui';
-import { lightThemeConfig, darkThemeConfig } from '@/config/theme';
-import type { Theme } from '@/types/theme';
+import { darkTheme, type GlobalTheme, type GlobalThemeOverrides } from 'naive-ui';
+import type { Theme, ThemeConfig } from '@/types/theme';
 
 /**
  * 检查浏览器是否支持 CSS Variables
@@ -43,7 +42,7 @@ function supportsCSSVariables(): boolean {
  * applyCSSVariables('dark');  // 应用深色主题
  * ```
  */
-export function applyCSSVariables(theme: Theme): void {
+export function applyCSSVariables(config: ThemeConfig): void {
   // 检查浏览器支持
   if (!supportsCSSVariables()) {
     console.warn('浏览器不支持 CSS Variables，使用 Naive UI 主题');
@@ -51,8 +50,6 @@ export function applyCSSVariables(theme: Theme): void {
   }
   
   try {
-    // 选择对应的主题配置
-    const config = theme === 'light' ? lightThemeConfig : darkThemeConfig;
     const root = document.documentElement;
     
     // 将主题配置映射到 CSS Variables
@@ -128,6 +125,37 @@ export function getNaiveTheme(theme: Theme): GlobalTheme | null {
   return theme === 'dark' ? darkTheme : null;
 }
 
+export function buildNaiveThemeOverrides(config: ThemeConfig): GlobalThemeOverrides {
+  return {
+    common: {
+      bodyColor: config.common.bodyColor,
+      cardColor: config.common.cardColor,
+      modalColor: config.common.modalColor,
+      popoverColor: config.common.popoverColor,
+      tableHeaderColor: config.common.tableHeaderColor,
+      textColorBase: config.common.textColorBase,
+      textColor1: config.common.textColor1,
+      textColor2: config.common.textColor2,
+      textColor3: config.common.textColor3,
+      primaryColor: config.common.primaryColor,
+      primaryColorHover: config.common.primaryColorHover,
+      primaryColorPressed: config.common.primaryColorPressed,
+      primaryColorSuppl: config.common.primaryColorSuppl,
+      infoColor: config.common.infoColor,
+      successColor: config.common.successColor,
+      warningColor: config.common.warningColor,
+      errorColor: config.common.errorColor,
+      borderColor: config.common.borderColor,
+      dividerColor: config.common.dividerColor,
+      inputColor: config.common.inputColor,
+      inputColorDisabled: config.common.inputColorDisabled,
+      boxShadow1: config.common.boxShadow1,
+      boxShadow2: config.common.boxShadow2,
+      boxShadow3: config.common.boxShadow3,
+    },
+  };
+}
+
 /**
  * 应用或移除主题切换过渡动画类
  * 
@@ -182,7 +210,7 @@ export function applyTransitionClass(enable: boolean): void {
  * applyTheme('dark', false);  // 应用深色主题，禁用动画
  * ```
  */
-export function applyTheme(theme: Theme, enableTransitions: boolean = true): void {
-  applyCSSVariables(theme);
+export function applyTheme(config: ThemeConfig, enableTransitions: boolean = true): void {
+  applyCSSVariables(config);
   applyTransitionClass(enableTransitions);
 }

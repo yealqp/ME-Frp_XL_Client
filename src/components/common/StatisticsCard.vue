@@ -12,7 +12,7 @@
         <!-- 用户数量 -->
         <div class="stat-item">
           <div class="stat-icon">
-            <n-icon size="24" :component="Users" color="#2080f0" />
+            <n-icon size="24" :component="Users" color="var(--app-primary-color)" />
           </div>
           <div class="stat-content">
             <n-text depth="3" class="stat-label">用户数量</n-text>
@@ -23,7 +23,7 @@
         <!-- 节点数量 -->
         <div class="stat-item">
           <div class="stat-icon">
-            <n-icon size="24" :component="Server" color="#18a058" />
+            <n-icon size="24" :component="Server" color="var(--app-success-color)" />
           </div>
           <div class="stat-content">
             <n-text depth="3" class="stat-label">节点数量</n-text>
@@ -34,7 +34,7 @@
         <!-- 隧道数量 -->
         <div class="stat-item">
           <div class="stat-icon">
-            <n-icon size="24" :component="Network" color="#f0a020" />
+            <n-icon size="24" :component="Network" color="var(--app-warning-color)" />
           </div>
           <div class="stat-content">
             <n-text depth="3" class="stat-label">隧道数量</n-text>
@@ -45,7 +45,7 @@
         <!-- 已承载流量 -->
         <div class="stat-item">
           <div class="stat-icon">
-            <n-icon size="24" :component="HardDrive" color="#9333ea" />
+            <n-icon size="24" :component="HardDrive" color="var(--app-info-color)" />
           </div>
           <div class="stat-content">
             <n-text depth="3" class="stat-label">已承载流量</n-text>

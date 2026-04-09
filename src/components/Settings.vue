@@ -142,6 +142,25 @@
       <n-card :bordered="true" class="settings-section">
         <template #header>
           <div class="section-header">
+            <Palette :size="18" />
+            <span>主题编辑器</span>
+          </div>
+        </template>
+
+        <div class="setting-item theme-editor-entry">
+          <div class="setting-info">
+            <h4>打开完整主题编辑器</h4>
+            <p>单独页面中编辑浅色和深色主题，并使用原生 Naive UI 组件预览草稿效果。</p>
+          </div>
+          <n-button type="primary" @click="openThemeEditorPage">
+            打开主题编辑器
+          </n-button>
+        </div>
+      </n-card>
+
+      <n-card :bordered="true" class="settings-section">
+        <template #header>
+          <div class="section-header">
             <Rocket :size="18" />
             <span>隧道设置</span>
           </div>
@@ -331,6 +350,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from "vue-router";
 import {
   NCard,
   NSwitch,
@@ -350,6 +370,12 @@ import {
   ArrowDown,
   Palette,
 } from "lucide-vue-next";
+
+const router = useRouter();
+
+function openThemeEditorPage(): void {
+  router.push("/theme-editor");
+}
 
 const {
   settings,
@@ -405,7 +431,7 @@ const {
 }
 
 .section-header :deep(svg) {
-  color: #349ff4;
+  color: var(--app-primary-color);
 }
 
 .setting-item {
@@ -576,7 +602,7 @@ const {
 }
 
 .slider-value {
-  color: #349ff4;
+  color: var(--app-primary-color);
   font-size: 14px;
   font-weight: 500;
   min-width: 60px;

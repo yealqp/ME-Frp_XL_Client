@@ -122,19 +122,19 @@
           <div class="card-actions">
             <n-button-group style="width: 100%">
               <n-button
-                type="success"
+                type="primary"
                 @click="openPolicy('content')"
                 style="flex: 1"
                 >内容策略</n-button
               >
               <n-button
-                type="success"
+                type="primary"
                 @click="openPolicy('terms')"
                 style="flex: 1"
                 >服务条款</n-button
               >
               <n-button
-                type="success"
+                type="primary"
                 @click="openPolicy('privacy')"
                 style="flex: 1"
                 >隐私政策</n-button

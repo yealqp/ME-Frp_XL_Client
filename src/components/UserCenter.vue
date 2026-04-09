@@ -742,6 +742,27 @@ const updateChart = (data: TrafficStatsData) => {
     return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
   };
 
+  const toRgba = (hex: string, alpha: number): string => {
+    const normalized = hex.replace("#", "");
+    if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+      return `rgba(52, 159, 244, ${alpha})`;
+    }
+
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const textColor = getCSSVar('--app-text-color') || 'rgba(255, 255, 255, 0.82)';
+  const borderColor = getCSSVar('--app-border-color') || 'rgba(62, 62, 66, 1)';
+  const textColorMuted = getCSSVar('--app-text-color-3') || 'rgba(160, 160, 160, 1)';
+  const dividerColor = getCSSVar('--app-divider-color') || 'rgba(42, 42, 46, 1)';
+  const primaryColor = getCSSVar('--app-primary-color') || '#349ff4';
+  const successColor = getCSSVar('--app-success-color') || '#18a058';
+  const warningColor = getCSSVar('--app-warning-color') || '#f0a020';
+
   // 将字节转换为 KB
   const trafficInKB = data.trafficIn.map((v) => Number((v / 1024).toFixed(2)));
   const trafficOutKB = data.trafficOut.map((v) =>
@@ -796,7 +817,7 @@ const updateChart = (data: TrafficStatsData) => {
     legend: {
       data: ["下载流量", "上传流量", "总流量"],
       textStyle: {
-        color: getCSSVar('--app-text-color') || '#ffffffd1',
+        color: textColor,
       },
       top: 10,
     },
@@ -813,11 +834,11 @@ const updateChart = (data: TrafficStatsData) => {
       data: data.dates,
       axisLine: {
         lineStyle: {
-          color: getCSSVar('--app-border-color') || '#3e3e42',
+          color: borderColor,
         },
       },
       axisLabel: {
-        color: getCSSVar('--app-text-color-3') || '#a0a0a0',
+        color: textColorMuted,
         formatter: (value: string) => {
           // 格式化日期，只显示月-日
           const date = new Date(value);
@@ -828,7 +849,7 @@ const updateChart = (data: TrafficStatsData) => {
         show: true,
         type: "line",
         lineStyle: {
-          color: getCSSVar('--app-primary-color') || '#349ff4',
+          color: primaryColor,
           width: 2,
           type: "solid",
         },
@@ -842,19 +863,19 @@ const updateChart = (data: TrafficStatsData) => {
       type: "value",
       name: `流量 (${unit})`,
       nameTextStyle: {
-        color: getCSSVar('--app-text-color-3') || '#a0a0a0',
+        color: textColorMuted,
       },
       axisLine: {
         lineStyle: {
-          color: getCSSVar('--app-border-color') || '#3e3e42',
+          color: borderColor,
         },
       },
       axisLabel: {
-        color: getCSSVar('--app-text-color-3') || '#a0a0a0',
+        color: textColorMuted,
       },
       splitLine: {
         lineStyle: {
-          color: getCSSVar('--app-divider-color') || '#2a2a2e',
+          color: dividerColor,
         },
       },
     },
@@ -865,12 +886,12 @@ const updateChart = (data: TrafficStatsData) => {
         smooth: true,
         data: trafficData.trafficIn,
         itemStyle: {
-          color: getCSSVar('--app-primary-color') || '#349ff4',
+          color: primaryColor,
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(52, 159, 244, 0.3)" },
-            { offset: 1, color: "rgba(52, 159, 244, 0.05)" },
+            { offset: 0, color: toRgba(primaryColor, 0.3) },
+            { offset: 1, color: toRgba(primaryColor, 0.05) },
           ]),
         },
       },
@@ -880,12 +901,12 @@ const updateChart = (data: TrafficStatsData) => {
         smooth: true,
         data: trafficData.trafficOut,
         itemStyle: {
-          color: "#63e2b7",
+          color: successColor,
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(99, 226, 183, 0.3)" },
-            { offset: 1, color: "rgba(99, 226, 183, 0.05)" },
+            { offset: 0, color: toRgba(successColor, 0.3) },
+            { offset: 1, color: toRgba(successColor, 0.05) },
           ]),
         },
       },
@@ -895,12 +916,12 @@ const updateChart = (data: TrafficStatsData) => {
         smooth: true,
         data: trafficData.totalTraffic,
         itemStyle: {
-          color: "#f0a020",
+          color: warningColor,
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(240, 160, 32, 0.3)" },
-            { offset: 1, color: "rgba(240, 160, 32, 0.05)" },
+            { offset: 0, color: toRgba(warningColor, 0.3) },
+            { offset: 1, color: toRgba(warningColor, 0.05) },
           ]),
         },
       },
@@ -1387,18 +1408,18 @@ onBeforeUnmount(() => {
 }
 
 .badge-traffic {
-  background: rgba(52, 159, 244, 0.15);
-  color: #349ff4;
+  background: color-mix(in srgb, var(--app-primary-color) 15%, transparent);
+  color: var(--app-primary-color);
 }
 
 .badge-proxy {
-  background: rgba(99, 226, 183, 0.15);
-  color: #63e2b7;
+  background: color-mix(in srgb, var(--app-success-color) 15%, transparent);
+  color: var(--app-success-color);
 }
 
 .badge-vip {
-  background: rgba(240, 138, 0, 0.15);
-  color: #f08a00;
+  background: color-mix(in srgb, var(--app-warning-color) 15%, transparent);
+  color: var(--app-warning-color);
 }
 
 .cdk-card-info {

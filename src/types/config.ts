@@ -1,3 +1,5 @@
+import type { ThemeCustomization, ThemeMode } from "@/types/theme";
+
 // 统一配置类型定义（优化后）
 // 移除了冗余字段：apiStatus, theme, loginTime, userInfo
 // 将 userInfo.group 提升到顶层作为 group 字段
@@ -29,7 +31,8 @@ export interface UnifiedConfig {
   hideWebuiEntry?: boolean;
   
   // 主题设置
-  themeMode?: 'light' | 'dark' | 'system';
+  themeMode?: ThemeMode;
+  themeCustomization?: ThemeCustomization;
 }
 
 // 旧的用户信息类型（保留用于向后兼容）

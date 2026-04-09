@@ -400,7 +400,7 @@ onMounted(() => {
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-  color: #333;
+  color: var(--app-text-color);
 }
 
 .filter-card {

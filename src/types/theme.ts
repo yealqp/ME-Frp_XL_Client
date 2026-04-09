@@ -67,6 +67,37 @@ export interface ThemeConfig {
   };
 }
 
+export type ThemeCommonConfig = ThemeConfig["common"];
+
+export type ThemeVariant = Theme;
+
+export type ThemeFieldKey = keyof ThemeCommonConfig;
+
+export interface ThemeCustomization {
+  light?: Partial<ThemeCommonConfig>;
+  dark?: Partial<ThemeCommonConfig>;
+}
+
+export interface ThemeFieldDefinition {
+  key: ThemeFieldKey;
+  label: string;
+  description: string;
+}
+
+export interface ThemeFieldGroup {
+  key: string;
+  label: string;
+  description: string;
+  fields: ThemeFieldDefinition[];
+}
+
+export interface ThemeValidationIssue {
+  id: string;
+  severity: "error" | "warning";
+  message: string;
+  ratio?: number;
+}
+
 /**
  * 主题偏好接口
  * 用于持久化用户的主题选择

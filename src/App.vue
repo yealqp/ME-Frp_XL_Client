@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, useTemplateRef } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { 
-  darkTheme, 
   NDialogProvider, 
   NSpin, 
   NConfigProvider,
@@ -13,8 +12,10 @@ import {
   NNotificationProvider,
   NLayout,
   NLayoutContent,
-  createDiscreteApi, 
-  type LoadingBarProviderInst 
+  type DialogProviderInst,
+  type LoadingBarProviderInst,
+  type MessageProviderInst,
+  type NotificationProviderInst,
 } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
@@ -38,26 +39,37 @@ const authStore = useAuthStore();
 const createTunnelStore = useCreateTunnelStore();
 const themeStore = useThemeStore();
 
-// Loading bar ref
-const loadingBar = ref<LoadingBarProviderInst | null>(null);
+// Provider refs
+const loadingBar = useTemplateRef<LoadingBarProviderInst>("loadingBar");
+const messageProvider = useTemplateRef<MessageProviderInst>("messageProvider");
+const dialogProvider = useTemplateRef<DialogProviderInst>("dialogProvider");
+const notificationProvider = useTemplateRef<NotificationProviderInst>("notificationProvider");
 
 // Use storeToRefs for state/getters to maintain reactivity
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
 const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 
-// 消息和对话框 - 使用 createDiscreteApi
-// Note: Discrete API uses darkTheme for now since it's created at setup time
-// The main app uses themeStore.naiveTheme which is reactive
-const { message } = createDiscreteApi(["message"], {
-  configProviderProps: {
-    theme: darkTheme,
+const appProviders = computed(() => ({
+  loadingBar: loadingBar.value,
+  message: messageProvider.value,
+  dialog: dialogProvider.value,
+  notification: notificationProvider.value,
+}));
+
+const message = {
+  success(content: Parameters<MessageProviderInst["success"]>[0], options?: Parameters<MessageProviderInst["success"]>[1]) {
+    return appProviders.value.message?.success(content, options);
   },
-  messageProviderProps: {
-    containerStyle: {
-      zIndex: 100000,
-    },
+  error(content: Parameters<MessageProviderInst["error"]>[0], options?: Parameters<MessageProviderInst["error"]>[1]) {
+    return appProviders.value.message?.error(content, options);
   },
-});
+  warning(content: Parameters<MessageProviderInst["warning"]>[0], options?: Parameters<MessageProviderInst["warning"]>[1]) {
+    return appProviders.value.message?.warning(content, options);
+  },
+  info(content: Parameters<MessageProviderInst["info"]>[0], options?: Parameters<MessageProviderInst["info"]>[1]) {
+    return appProviders.value.message?.info(content, options);
+  },
+};
 
 // 节点选择完成，进入隧道配置页面
 function handleNodeSelected(node: any) {
@@ -355,11 +367,14 @@ onMounted(async () => {
 
 <template>
   <div class="app-container">
-    <n-config-provider :theme="themeStore.naiveTheme">
+    <n-config-provider
+      :theme="themeStore.naiveTheme"
+      :theme-overrides="themeStore.naiveThemeOverrides"
+    >
       <n-loading-bar-provider ref="loadingBar">
-        <n-message-provider :container-style="{ zIndex: 100000 }">
-          <n-dialog-provider>
-            <n-notification-provider>
+        <n-message-provider ref="messageProvider" :container-style="{ zIndex: 100000 }">
+          <n-dialog-provider ref="dialogProvider">
+            <n-notification-provider ref="notificationProvider">
             <!-- 加载状态 -->
             <div v-if="isCheckingAuth" class="loading-container"></div>
 

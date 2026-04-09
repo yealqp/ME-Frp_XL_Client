@@ -494,7 +494,7 @@ const handleGetFreePort = () => {
 
 .node-description {
   margin: 0;
-  color: #666;
+  color: var(--app-text-color-2);
   font-size: 12px;
   line-height: 1.4;
 }
