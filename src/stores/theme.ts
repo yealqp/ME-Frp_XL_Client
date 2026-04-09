@@ -347,9 +347,9 @@ export const useThemeStore = defineStore("theme", () => {
     applyResolvedTheme();
   }
 
-  async function saveThemeCustomization(): Promise<void> {
+  async function saveThemeCustomization(force = false): Promise<void> {
     refreshValidationIssues();
-    if (hasBlockingValidationIssues.value) {
+    if (hasBlockingValidationIssues.value && !force) {
       throw new Error("当前主题配置存在必须修复的对比度问题");
     }
 

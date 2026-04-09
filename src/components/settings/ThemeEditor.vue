@@ -21,9 +21,12 @@ import {
   NTabs,
   NTabPane,
   NText,
+  useDialog,
   useMessage,
 } from "naive-ui";
 import { Upload, Download, RotateCcw, Save } from "lucide-vue-next";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { useThemeStore } from "@/stores/theme";
 import { THEME_FIELD_GROUPS, getThemeCustomizationTemplate } from "@/utils/themeConfig";
 import type { ThemeFieldKey, ThemeVariant } from "@/types/theme";
@@ -32,6 +35,7 @@ import ThemeColorGroup from "./ThemeColorGroup.vue";
 
 const themeStore = useThemeStore();
 const message = useMessage();
+const dialog = useDialog();
 
 const {
   editingTarget,
@@ -111,13 +115,36 @@ function handleFieldReset(key: ThemeFieldKey): void {
   );
 }
 
-async function handleSave(): Promise<void> {
+async function persistTheme(force = false): Promise<void> {
   try {
-    await themeStore.saveThemeCustomization();
+    await themeStore.saveThemeCustomization(force);
     message.success("主题配色已保存");
   } catch (error) {
     message.error(error instanceof Error ? error.message : "保存主题失败");
   }
+}
+
+function handleSave(): void {
+  if (validationIssues.value.length === 0) {
+    void persistTheme();
+    return;
+  }
+
+  const issueCount = validationIssues.value.length;
+  const blockingCount = validationIssues.value.filter((issue) => issue.severity === "error").length;
+
+  dialog.warning({
+    title: "确认保存当前主题",
+    content:
+      blockingCount > 0
+        ? `当前有 ${blockingCount} 个严重对比度问题、共 ${issueCount} 条提醒。继续保存可能导致部分文本或控件难以辨认，是否仍要保存？`
+        : `当前有 ${issueCount} 条配色提醒。继续保存可能影响部分区域的可读性，是否仍要保存？`,
+    positiveText: "仍然保存",
+    negativeText: "返回检查",
+    onPositiveClick: async () => {
+      await persistTheme(true);
+    },
+  });
 }
 
 function handleDiscard(): void {
@@ -135,15 +162,52 @@ function handleResetAll(): void {
   message.success("已恢复全部主题默认配色");
 }
 
-function handleExport(): void {
-  const blob = new Blob([themeStore.exportThemeDraft()], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "theme-customization.json";
-  link.click();
-  URL.revokeObjectURL(url);
-  message.success("主题配置已导出");
+async function handleExport(): Promise<void> {
+  try {
+    const filePath = await save({
+      defaultPath: "theme-customization.json",
+      filters: [
+        {
+          name: "JSON",
+          extensions: ["json"],
+        },
+      ],
+    });
+
+    if (!filePath) {
+      return;
+    }
+
+    await writeTextFile(filePath, themeStore.exportThemeDraft());
+    message.success("主题配置已导出");
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "导出主题配置失败");
+  }
+}
+
+async function handleImportFromFile(): Promise<void> {
+  try {
+    const filePath = await open({
+      multiple: false,
+      directory: false,
+      filters: [
+        {
+          name: "JSON",
+          extensions: ["json"],
+        },
+      ],
+    });
+
+    if (!filePath || Array.isArray(filePath)) {
+      return;
+    }
+
+    const content = await readTextFile(filePath);
+    themeStore.importThemeDraft(content);
+    message.success("主题配置已从文件导入到草稿预览");
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "导入主题配置失败");
+  }
 }
 
 function openImportModal(): void {
@@ -175,11 +239,17 @@ function handleImport(): void {
       </div>
 
       <n-space>
+        <n-button quaternary @click="handleImportFromFile">
+          <template #icon>
+            <Upload :size="16" />
+          </template>
+          导入文件
+        </n-button>
         <n-button quaternary @click="openImportModal">
           <template #icon>
             <Upload :size="16" />
           </template>
-          导入 JSON
+          粘贴 JSON
         </n-button>
         <n-button quaternary @click="handleExport">
           <template #icon>
@@ -333,7 +403,7 @@ function handleImport(): void {
             <n-button :disabled="!hasDraftChanges" @click="handleDiscard">取消未保存修改</n-button>
             <n-button
               type="primary"
-              :disabled="!hasDraftChanges || hasBlockingValidationIssues"
+              :disabled="!hasDraftChanges"
               @click="handleSave"
             >
               <template #icon>

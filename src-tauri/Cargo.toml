@@ -26,4 +26,5 @@ reqwest = { version = "0.13", features = ["json", "gzip", "brotli", "deflate"] }
 urlencoding = "2.1"
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
+tauri-plugin-dialog = "2.7.0"
 
