@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
@@ -118,7 +118,7 @@ async function syncBackgroundImage(path?: string): Promise<void> {
     const blob = new Blob([fileBytes], { type: getImageMimeType(path) });
     backgroundImageUrl.value = URL.createObjectURL(blob);
   } catch (error) {
-    console.error("加载背景图片失败:", error);
+    console.error("鍔犺浇鑳屾櫙鍥剧墖澶辫触:", error);
   }
 }
 
@@ -170,34 +170,31 @@ const message = {
   },
 };
 
-// 节点选择完成，进入隧道配置页面
+// 鑺傜偣閫夋嫨瀹屾垚锛岃繘鍏ラ毀閬撻厤缃〉闈?
 function handleNodeSelected(node: any) {
-  console.log("App.vue: 接收到节点选择事件", node);
-  console.log("App.vue: 当前页面状态", currentPage.value);
   createTunnelStore.selectNode(node);
   router.push("/tunnel-config");
-  console.log("App.vue: 切换到隧道配置页面", currentPage.value);
 }
 
-// 返回节点选择页面
+// 杩斿洖鑺傜偣閫夋嫨椤甸潰
 function handleGoBackToNodeSelection() {
   createTunnelStore.goBackToNodeSelection();
   router.push("/create-tunnel");
 }
 
-// 跳转到创建隧道页面
+// 璺宠浆鍒板垱寤洪毀閬撻〉闈?
 function handleGoToCreateTunnel() {
   createTunnelStore.resetCreateFlow();
   router.push("/create-tunnel");
 }
 
-// 根据组件类型返回相应的 props
+// 鏍规嵁缁勪欢绫诲瀷杩斿洖鐩稿簲鐨?props
 function getComponentProps(component: any) {
   if (!component) return {};
 
   const componentName = component.__name || component.name;
 
-  // 只为需要这些 props 的组件传递
+  // 鍙负闇€瑕佽繖浜?props 鐨勭粍浠朵紶閫?
   if (componentName === "CreateTunnel" || componentName === "TunnelConfig") {
     return {
       selectedNode: selectedNode.value,
@@ -208,13 +205,13 @@ function getComponentProps(component: any) {
   return {};
 }
 
-// 根据组件类型返回相应的事件监听器
+// 鏍规嵁缁勪欢绫诲瀷杩斿洖鐩稿簲鐨勪簨浠剁洃鍚櫒
 function getComponentListeners(component: any) {
   if (!component) return {};
 
   const componentName = component.__name || component.name;
 
-  // 只为需要这些事件的组件传递
+  // 鍙负闇€瑕佽繖浜涗簨浠剁殑缁勪欢浼犻€?
   if (componentName === "CreateTunnel") {
     return {
       onNodeSelected: handleNodeSelected,
@@ -241,32 +238,25 @@ function getComponentListeners(component: any) {
 const checkAuthStatus = async (retryCount = 0): Promise<void> => {
   try {
     await authStore.checkAuthStatus(retryCount);
-    
-    // 只在登录页时跳转到首页，其他情况保持当前路由
+
     if (authStore.isLoggedIn && route.path === "/login") {
       router.push("/dashboard");
     } else if (!authStore.isLoggedIn && route.path !== "/login") {
-      // 未登录且不在登录页，跳转到登录页
       router.push("/login");
     }
-  } catch (error) {
+  } catch {
     console.error("配置加载失败，已达到最大重试次数");
     router.push("/login");
   }
 };
 
 const handleLoginSuccess = (): void => {
-  console.log("收到登录成功事件，设置登录状态为true");
-  console.log("当前登录状态:", authStore.isLoggedIn);
-  
-  // 立即跳转到首页，不等待任何延迟
   router.replace("/dashboard");
 };
 
 const handleLogout = async (): Promise<void> => {
   try {
     await authStore.logout();
-    // 清除本地存储的配置
     localStorage.removeItem("mefrp_config");
     router.push("/login");
   } catch (error) {
@@ -275,10 +265,8 @@ const handleLogout = async (): Promise<void> => {
   }
 };
 
-// 自动启动隧道的函数
 const autoStartTunnels = async () => {
   try {
-    // 从统一配置读取自动启动隧道列表
     const unifiedConfig = await loadUnifiedConfig();
 
     if (
@@ -286,82 +274,57 @@ const autoStartTunnels = async () => {
       !unifiedConfig.autoStartTunnels ||
       unifiedConfig.autoStartTunnels.length === 0
     ) {
-      console.log("没有配置自动启动的隧道");
       return;
     }
 
-    // 先获取服务器上的隧道列表，验证配置中的隧道是否仍然存在
-      let validTunnelIds: number[] = [];
+    let validTunnelIds: number[] = [];
 
-      try {
-      const result = await invokeTauriResponse<{ proxies?: TunnelSummary[] } | TunnelSummary[]>("api_get_tunnel_list");
+    try {
+      const result = await invokeTauriResponse<{ proxies?: TunnelSummary[] } | TunnelSummary[]>(
+        "api_get_tunnel_list",
+      );
 
       if (result.code === 200) {
         const tunnelData = extractProxyList(result.data);
         const serverTunnelIds = tunnelData.map((tunnel) => tunnel.proxyId);
         const originalCount = unifiedConfig.autoStartTunnels.length;
 
-        // 过滤出仍然存在于服务器上的隧道
-        validTunnelIds = unifiedConfig.autoStartTunnels.filter((id) =>
-          serverTunnelIds.includes(id),
-        );
+        validTunnelIds = unifiedConfig.autoStartTunnels.filter((id) => serverTunnelIds.includes(id));
 
-        // 如果有隧道被删除，需要更新配置
         if (validTunnelIds.length !== originalCount) {
           const removedCount = originalCount - validTunnelIds.length;
-          console.log(
-            `检测到 ${removedCount} 个自启动隧道在服务器上已不存在，将自动清理配置`,
-          );
           message.warning(`已自动清理 ${removedCount} 个无效的自启动隧道配置`);
 
-          // 更新配置文件
-          const updatedConfig = {
+          await saveUnifiedConfig({
             ...unifiedConfig,
             autoStartTunnels: validTunnelIds,
-          };
-          await saveUnifiedConfig(updatedConfig);
+          });
         }
       } else {
         console.error("获取隧道列表失败，跳过自启动验证:", result.message);
-        // 如果获取隧道列表失败，仍然尝试启动配置中的隧道
         validTunnelIds = unifiedConfig.autoStartTunnels;
       }
     } catch (error) {
       console.error("验证自启动隧道时发生错误，跳过验证:", error);
-      // 如果验证失败，仍然尝试启动配置中的隧道
       validTunnelIds = unifiedConfig.autoStartTunnels;
     }
 
     if (validTunnelIds.length === 0) {
-      console.log("没有有效的自启动隧道");
       return;
     }
 
-    const startupDelay = (unifiedConfig.startupDelay || 5) * 1000; // 转换为毫秒
+    const startupDelay = (unifiedConfig.startupDelay || 5) * 1000;
 
-    console.log(
-      `准备自启动 ${validTunnelIds.length} 个隧道，延迟 ${startupDelay / 1000} 秒`,
-    );
-
-    // 延迟启动
     setTimeout(async () => {
-      console.log("开始自启动隧道...");
-
       for (let i = 0; i < validTunnelIds.length; i++) {
         const tunnelId = validTunnelIds[i];
 
         try {
-          console.log(
-            `正在启动隧道 ${tunnelId} (${i + 1}/${validTunnelIds.length})`,
-          );
-
-          // 调用API启动隧道
           const result = await invokeTauriResponse<null>("api_start_tunnel", {
             proxyId: tunnelId,
           });
 
           if (result.code === 200) {
-            console.log(`隧道 ${tunnelId} 启动成功`);
             message.success(`自启动隧道 ${tunnelId} 成功`);
           } else {
             console.error(`隧道 ${tunnelId} 启动失败:`, result.message);
@@ -372,73 +335,48 @@ const autoStartTunnels = async () => {
           message.error(`自启动隧道 ${tunnelId} 失败: ${error}`);
         }
 
-        // 如果不是最后一个隧道，等待1秒再启动下一个
         if (i < validTunnelIds.length - 1) {
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
-
-      console.log("自启动隧道流程完成");
     }, startupDelay);
   } catch (error) {
     console.error("自启动隧道失败:", error);
   }
 };
 
-// 自动检查更新的函数
 const autoCheckForUpdates = async () => {
   try {
-    // 从统一配置读取自动更新设置
     const unifiedConfig = await loadUnifiedConfig();
 
-    // 如果未开启自动更新，则跳过
     if (!unifiedConfig || unifiedConfig.autoUpdate === false) {
-      console.log("自动更新已关闭，跳过检查");
       return;
     }
-
-    console.log("开始自动检查更新...");
 
     const result = await invoke<UpdateCheckResult>("check_for_updates");
 
     if (result.has_update) {
-      console.log(`发现新版本: ${result.latest_version}`);
       message.info(`发现新版本 ${result.latest_version}，请前往关于页面查看详情`, {
         duration: 5000,
       });
-    } else {
-      console.log(`当前已是最新版本: ${result.current_version}`);
     }
   } catch (error) {
     console.error("自动检查更新失败:", error);
-    // 静默失败，不打扰用户
   }
 };
 
-// 组件挂载时检查登录状态
 onMounted(async () => {
-  console.log(`    __  _________   ______              _  __ __       _________            __ 
-   /  |/  / ____/  / ____/________     | |/ // /      / ____/ (_)__  ____  / /_
-  / /|_/ / __/    / /_  / ___/ __ \\    |   // /      / /   / / / _ \\/ __ \\/ __/
- / /  / / /___   / __/ / /  / /_/ /   /   |/ /___   / /___/ / /  __/ / / / /_  
-/_/  /_/_____/  /_/   /_/  / .___/   /_/|_/_____/   \\____/_/_/\\___/_/ /_/\\__/  
-                          /_/                                                  `);
-
-  // Initialize theme system BEFORE first render
   await themeStore.initTheme();
   await settingsStore.loadSettings().catch((error) => {
     console.error("加载外观设置失败:", error);
   });
   await syncBackgroundImage(settings.value.backgroundImagePath);
 
-  // Set loading bar instance immediately - this must happen before any navigation
-  // Use nextTick to ensure the ref is available
-  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
   if (loadingBar.value) {
     setLoadingBar(loadingBar.value);
   }
 
-  // 监听系统托盘退出事件
   await listen("quit-app", async () => {
     try {
       await invoke("quit_app");
@@ -449,21 +387,17 @@ onMounted(async () => {
 
   checkAuthStatus();
 
-  // 等待登录完成后再启动自启动隧道和检查更新
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
       autoStartTunnels();
-      // 延迟3秒后检查更新，避免与自启动隧道冲突
       setTimeout(() => {
         autoCheckForUpdates();
       }, 3000);
     } else {
-      // 每500ms检查一次登录状态
       setTimeout(waitForLogin, 500);
     }
   };
 
-  // 开始等待登录
   waitForLogin();
 });
 
@@ -493,22 +427,22 @@ onUnmounted(() => {
         <n-message-provider ref="messageProvider" :container-style="{ zIndex: 100000 }">
           <n-dialog-provider ref="dialogProvider">
             <n-notification-provider ref="notificationProvider">
-            <!-- 加载状态 -->
+            <!-- 鍔犺浇鐘舵€?-->
             <div v-if="isCheckingAuth" class="loading-container"></div>
 
-            <!-- 登录/注册页面 -->
+            <!-- 鐧诲綍/娉ㄥ唽椤甸潰 -->
             <div v-else-if="!isLoggedIn" class="login-fullscreen">
               <router-view v-slot="{ Component }">
                 <component :is="Component" @login-success="handleLoginSuccess" />
               </router-view>
             </div>
 
-            <!-- 主应用界面 - 使用 NLayout -->
+            <!-- 涓诲簲鐢ㄧ晫闈?- 浣跨敤 NLayout -->
             <n-layout v-else has-sider position="absolute" class="main-layout">
-              <!-- 左侧导航栏 -->
+              <!-- 宸︿晶瀵艰埅鏍?-->
               <Sidebar @logout="handleLogout" />
 
-              <!-- 右侧内容区域 -->
+              <!-- 鍙充晶鍐呭鍖哄煙 -->
               <n-layout class="content-layout">
                 <n-layout-content class="content-body">
                   <router-view v-slot="{ Component, route }">
@@ -782,7 +716,7 @@ body {
   }
 }
 
-/* 自定义滚动条样式 */
+/* 鑷畾涔夋粴鍔ㄦ潯鏍峰紡 */
 * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--app-text-color-3) 58%, transparent) var(--app-card-color);
@@ -816,7 +750,7 @@ body {
   background: var(--app-card-color);
 }
 
-/* Naive UI 组件滚动条样式 */
+/* Naive UI 缁勪欢婊氬姩鏉℃牱寮?*/
 .n-scrollbar-rail {
   background: var(--app-card-color) !important;
 }
@@ -865,8 +799,8 @@ body {
   background: color-mix(in srgb, var(--app-text-color-2) 68%, transparent);
 }
 
-/* 路由过渡动画 */
-/* 淡入淡出 + 滑动效果 */
+/* 璺敱杩囨浮鍔ㄧ敾 */
+/* 娣″叆娣″嚭 + 婊戝姩鏁堟灉 */
 .fade-slide-enter-active {
   transition: all 0.3s ease-out;
 }
@@ -885,7 +819,7 @@ body {
   transform: translateX(-20px);
 }
 
-/* 淡入淡出效果 */
+/* 娣″叆娣″嚭鏁堟灉 */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -896,7 +830,7 @@ body {
   opacity: 0;
 }
 
-/* 响应式设计 */
+/* 鍝嶅簲寮忚璁?*/
 @media (max-width: 768px) {
   .content-body {
     padding: 20px;
@@ -910,7 +844,7 @@ body {
     font-size: 14px;
   }
   
-  /* 移动端使用更快的动画 */
+  /* 绉诲姩绔娇鐢ㄦ洿蹇殑鍔ㄧ敾 */
   .fade-slide-enter-active,
   .fade-slide-leave-active {
     transition: all 0.2s ease;

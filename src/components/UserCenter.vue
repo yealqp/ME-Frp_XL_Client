@@ -335,7 +335,6 @@ const cdkCaptchaToken = ref("");
 
 // 创建 CDK 验证码实例
 const cdkCaptchaInstance = createCaptcha({
-  onProgress: (progress) => console.log(`CDK 验证进度: ${progress}%`),
   onError: (error) => {
     console.error("CDK 验证错误:", error);
     message.error(`人机验证失败: ${error}`);
@@ -569,7 +568,6 @@ const loadCdkHistory = async () => {
         ? result.data.logs
         : [];
       cdkHistoryTotal.value = result.data.total || 0;
-      console.log(`成功加载 ${cdkHistory.value.length} 条CDK兑换记录`);
     } else {
       console.error("获取CDK兑换历史失败:", result.message);
       message.error(result.message || "获取CDK兑换历史失败");
@@ -650,14 +648,7 @@ const initChart = async () => {
     return false;
   }
 
-  console.log("图表容器元素:", chartContainer.value);
-  console.log("容器尺寸:", {
-    width: chartContainer.value.offsetWidth,
-    height: chartContainer.value.offsetHeight,
-  });
-
   if (chartInstance.value) {
-    console.log("销毁旧的图表实例");
     chartInstance.value.dispose();
   }
 
@@ -668,7 +659,6 @@ const initChart = async () => {
       renderer: "svg",
     });
 
-    console.log("图表初始化成功，实例:", chartInstance.value);
     return true;
   } catch (error) {
     console.error("图表初始化失败:", error);
@@ -678,7 +668,6 @@ const initChart = async () => {
 
 // 加载流量统计数据
 const loadTrafficStats = async () => {
-  console.log("开始加载流量统计数据");
   trafficStatsLoading.value = true;
 
   // 清除可能存在的 axisPointer
@@ -699,7 +688,6 @@ const loadTrafficStats = async () => {
     if (result.code === 200 && result.data) {
       // 确保图表已初始化
       if (!chartInstance.value) {
-        console.log("图表未初始化，尝试初始化");
         await nextTick();
         const success = await initChart();
         if (!success) {
@@ -717,8 +705,6 @@ const loadTrafficStats = async () => {
     message.error(errorMessage);
   } finally {
     trafficStatsLoading.value = false;
-    console.log("流量统计加载完成");
-
     // 加载完成后再次清除 axisPointer，防止残留
     if (chartInstance.value) {
       chartInstance.value.dispatchAction({
@@ -933,8 +919,6 @@ const updateChart = (data: TrafficStatsData) => {
     lazyUpdate: false,
   });
 
-  console.log("图表更新完成，使用单位:", unit);
-
   // 保存当前图表数据供 tooltip 使用
   currentChartData.value = {
     dates: data.dates,
@@ -1129,8 +1113,6 @@ const changeDatePeriod = async (period: number) => {
 
 // 监听加载状态变化，确保图表在加载完成后正确显示
 watch(trafficStatsLoading, (newVal, oldVal) => {
-  console.log("trafficStatsLoading 变化:", oldVal, "->", newVal);
-
   // 当加载完成时，清除可能残留的 axisPointer
   if (oldVal === true && newVal === false && chartInstance.value) {
     // 使用 nextTick 和 setTimeout 确保在渲染完成后清除
@@ -1140,7 +1122,6 @@ watch(trafficStatsLoading, (newVal, oldVal) => {
           chartInstance.value.dispatchAction({
             type: "hideTip",
           });
-          console.log("加载完成后清除 axisPointer");
         }
       }, 100);
     });
@@ -1152,7 +1133,6 @@ const resizeHandler = () => {
 };
 
 onMounted(() => {
-  console.log("UserCenter 组件已挂载");
   userStore.loadUserInfo();
   loadCdkHistory();
 

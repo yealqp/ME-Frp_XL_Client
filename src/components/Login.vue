@@ -260,8 +260,6 @@ function toggleLoginMode() {
   if (!isTokenMode.value) {
     ensureCaptcha();
   }
-
-  console.log("切换登录模式:", isTokenMode.value ? "Token模式" : "普通模式");
 }
 
 /**
@@ -314,8 +312,7 @@ async function handleLogin() {
   // 表单验证
   try {
     await formRef.value?.validate();
-  } catch (error) {
-    console.log("表单验证失败:", error);
+  } catch {
     return;
   }
 
@@ -341,8 +338,6 @@ async function handleLogin() {
 }
 
 onMounted(async () => {
-  console.log("登录组件已加载，准备登录");
-
   if (!isTokenMode.value) {
     ensureCaptcha();
   }

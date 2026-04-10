@@ -173,7 +173,6 @@ const fetchAnnouncements = async (forceRefresh: boolean = false) => {
   ) {
     announcements.value = announcementsCache.value.data;
     announcementsLoading.value = false;
-    console.log("使用缓存的系统公告");
     return;
   }
 
@@ -259,7 +258,6 @@ const fetchAnnouncements = async (forceRefresh: boolean = false) => {
     // 如果有缓存数据，使用缓存数据
     if (announcementsCache.value.data.length > 0) {
       announcements.value = announcementsCache.value.data;
-      console.log("API请求失败，使用缓存的系统公告");
     } else {
       // 如果没有缓存，显示错误信息
       announcements.value = [
@@ -412,7 +410,6 @@ const autoSign = async () => {
   try {
     // 创建签到验证码实例
     const signCaptchaInstance = createCaptcha({
-      onProgress: (progress) => console.log(`自动签到验证进度: ${progress}%`),
       onError: (error) => {
         console.error("自动签到验证错误:", error);
         // 错误不弹出 message
