@@ -218,7 +218,6 @@
               <div class="preset-name">{{ preset.name }}</div>
               <span class="preset-count">双主题</span>
             </div>
-            <div class="preset-description">{{ preset.description }}</div>
           </div>
           <n-space size="small" class="preset-actions" wrap>
             <n-button size="tiny" @click.stop="applyPreset(preset.id)">整套应用</n-button>
@@ -398,13 +397,6 @@ function formatPercentTooltip(value: number): string {
   line-height: 1;
   padding: 4px 6px;
   border: 1px solid var(--app-border-color);
-}
-
-.preset-description {
-  color: var(--app-text-color-2);
-  font-size: 12px;
-  line-height: 1.5;
-  min-height: 36px;
 }
 
 .preset-actions {
