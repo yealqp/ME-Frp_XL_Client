@@ -101,7 +101,6 @@ export interface ThemeValidationIssue {
 export interface ThemePreset {
   id: string;
   name: string;
-  description: string;
   preview: string[];
   customization: ThemeCustomization;
 }

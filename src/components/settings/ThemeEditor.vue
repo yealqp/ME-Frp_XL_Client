@@ -25,6 +25,10 @@ import {
 import { Upload, Download, RotateCcw, Save } from "lucide-vue-next";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import {
+  THEME_PREVIEW_SELECT_OPTIONS,
+  THEME_PREVIEW_TABLE_DATA,
+} from "@/config/themeEditorPreview";
 import { useThemeStore } from "@/stores/theme";
 import { THEME_FIELD_GROUPS } from "@/utils/themeConfig";
 import type { ThemeFieldKey, ThemeVariant } from "@/types/theme";
@@ -56,12 +60,8 @@ const showPreviewModal = ref(false);
 const previewSelectValue = ref("tcp");
 const previewSwitchValue = ref(true);
 
-const previewSelectOptions = [
-  { label: "TCP", value: "tcp" },
-  { label: "UDP", value: "udp" },
-  { label: "HTTP", value: "http" },
-];
-
+const previewSelectOptions = THEME_PREVIEW_SELECT_OPTIONS;
+const previewTableData = THEME_PREVIEW_TABLE_DATA;
 const previewTableColumns = [
   {
     title: "字段",
@@ -75,12 +75,6 @@ const previewTableColumns = [
         ? h(NTag, { type: row.type, bordered: false }, { default: () => row.value })
         : row.value,
   },
-];
-
-const previewTableData = [
-  { label: "主题模式", value: "自定义草稿" },
-  { label: "状态提示", value: "可用", type: "success" as const },
-  { label: "节点负载", value: "注意", type: "warning" as const },
 ];
 
 const previewTheme = computed(() => getNaiveTheme(editingTarget.value));

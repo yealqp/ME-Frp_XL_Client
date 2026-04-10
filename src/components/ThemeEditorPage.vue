@@ -26,35 +26,17 @@
             <ThemeSwitcher mode="buttons" :show-label="true" />
           </div>
 
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>侧边栏宽度</h4>
-              <p>调整导航侧栏的宽度，便于适配更宽或更紧凑的布局。</p>
-            </div>
-            <div class="slider-control">
-              <n-slider
-                v-model:value="sidebarWidth"
-                :min="150"
-                :max="300"
-                :step="1"
-                :format-tooltip="formatPixelTooltip"
-                @update:value="handleSidebarWidthChange"
-                style="width: 220px"
-              />
-              <n-input-number
-                v-model:value="sidebarWidth"
-                :min="150"
-                :max="300"
-                :step="1"
-                :show-button="false"
-                @update:value="handleSidebarWidthChange"
-                style="width: 88px"
-                size="small"
-              >
-                <template #suffix>px</template>
-              </n-input-number>
-            </div>
-          </div>
+          <SettingSliderRow
+            :value="sidebarWidth"
+            title="侧边栏宽度"
+            description="调整导航侧栏的宽度，便于适配更宽或更紧凑的布局。"
+            :min="150"
+            :max="300"
+            :step="1"
+            suffix="px"
+            :format-tooltip="formatPixelTooltip"
+            @update:value="handleSidebarWidthChange"
+          />
 
           <div class="setting-item">
             <div class="setting-info">
@@ -94,95 +76,41 @@
             </div>
           </div>
 
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>背景图片透明度</h4>
-              <p>调整背景图片图层透明度，100% 为完全显示。</p>
-            </div>
-            <div class="slider-control">
-              <n-slider
-                v-model:value="settings.backgroundImageOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                :format-tooltip="formatPercentTooltip"
-                @update:value="handleBackgroundImageOpacityChange"
-                style="width: 220px"
-              />
-              <n-input-number
-                v-model:value="settings.backgroundImageOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                :show-button="false"
-                @update:value="handleBackgroundImageOpacityChange"
-                style="width: 88px"
-                size="small"
-              >
-                <template #suffix>%</template>
-              </n-input-number>
-            </div>
-          </div>
+          <SettingSliderRow
+            :value="settings.backgroundImageOpacity ?? 100"
+            title="背景图片透明度"
+            description="调整背景图片图层透明度，100% 为完全显示。"
+            :min="0"
+            :max="100"
+            :step="1"
+            suffix="%"
+            :format-tooltip="formatPercentTooltip"
+            @update:value="handleBackgroundImageOpacityChange"
+          />
 
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>侧栏透明度</h4>
-              <p>调整左侧导航区域透明度，便于背景图透出。</p>
-            </div>
-            <div class="slider-control">
-              <n-slider
-                v-model:value="settings.sidebarOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                :format-tooltip="formatPercentTooltip"
-                @update:value="handleSidebarOpacityChange"
-                style="width: 220px"
-              />
-              <n-input-number
-                v-model:value="settings.sidebarOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                :show-button="false"
-                @update:value="handleSidebarOpacityChange"
-                style="width: 88px"
-                size="small"
-              >
-                <template #suffix>%</template>
-              </n-input-number>
-            </div>
-          </div>
+          <SettingSliderRow
+            :value="settings.sidebarOpacity ?? 100"
+            title="侧栏透明度"
+            description="调整左侧导航区域透明度，便于背景图透出。"
+            :min="0"
+            :max="100"
+            :step="1"
+            suffix="%"
+            :format-tooltip="formatPercentTooltip"
+            @update:value="handleSidebarOpacityChange"
+          />
 
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>内容区透明度</h4>
-              <p>调整右侧主内容与模态浮层的背景透明度。</p>
-            </div>
-            <div class="slider-control">
-              <n-slider
-                v-model:value="settings.contentOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                :format-tooltip="formatPercentTooltip"
-                @update:value="handleContentOpacityChange"
-                style="width: 220px"
-              />
-              <n-input-number
-                v-model:value="settings.contentOpacity"
-                :min="0"
-                :max="100"
-                :step="1"
-                :show-button="false"
-                @update:value="handleContentOpacityChange"
-                style="width: 88px"
-                size="small"
-              >
-                <template #suffix>%</template>
-              </n-input-number>
-            </div>
-          </div>
+          <SettingSliderRow
+            :value="settings.contentOpacity ?? 100"
+            title="内容区透明度"
+            description="调整右侧主内容与模态浮层的背景透明度。"
+            :min="0"
+            :max="100"
+            :step="1"
+            suffix="%"
+            :format-tooltip="formatPercentTooltip"
+            @update:value="handleContentOpacityChange"
+          />
         </n-space>
       </n-card>
     </div>
@@ -237,10 +165,11 @@
 </template>
 
 <script setup lang="ts">
-import { NButton, NCard, NInput, NInputNumber, NSlider, NSpace, NSwitch, useMessage } from "naive-ui";
+import { NButton, NCard, NInput, NSpace, NSwitch, useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
 import { Image as ImageIcon, Palette, SwatchBook } from "lucide-vue-next";
 import ThemeEditor from "@/components/settings/ThemeEditor.vue";
+import SettingSliderRow from "@/components/appearance/SettingSliderRow.vue";
 import { useAppearanceSettings } from "@/composables/useAppearanceSettings";
 import { themePresets } from "@/config/theme";
 import { useThemeStore } from "@/stores/theme";
@@ -264,8 +193,12 @@ const {
   handleSidebarCollapsibleChange,
 } = useAppearanceSettings();
 
+function findPreset(presetId: string) {
+  return themePresets.find((item) => item.id === presetId);
+}
+
 function applyPreset(presetId: string): void {
-  const preset = themePresets.find((item) => item.id === presetId);
+  const preset = findPreset(presetId);
   if (!preset) {
     return;
   }
@@ -275,7 +208,7 @@ function applyPreset(presetId: string): void {
 }
 
 function applyPresetToTarget(presetId: string, target: ThemeVariant): void {
-  const preset = themePresets.find((item) => item.id === presetId);
+  const preset = findPreset(presetId);
   if (!preset) {
     return;
   }
@@ -474,12 +407,6 @@ function formatPercentTooltip(value: number): string {
 
 .background-image-control :deep(.n-input) {
   flex: 1;
-}
-
-.slider-control {
-  display: flex;
-  align-items: center;
-  gap: 16px;
 }
 
 @media (max-width: 768px) {

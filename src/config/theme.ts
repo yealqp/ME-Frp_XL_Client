@@ -106,14 +106,12 @@ export const themePresets: ThemePreset[] = [
   {
     id: 'default-blue',
     name: '默认蓝调',
-    description: '沿用当前默认方案，适合大多数界面。',
     preview: ['#2080f0', '#18a058', '#f8f9fa'],
     customization: {},
   },
   {
     id: 'violet-lab',
     name: '紫雾实验室',
-    description: '偏冷紫色调，适合偏科技感的界面风格。',
     preview: ['#7c5cff', '#2d2450', '#f4f1ff'],
     customization: {
       light: {
@@ -157,7 +155,6 @@ export const themePresets: ThemePreset[] = [
   {
     id: 'sunset-coral',
     name: '落日珊瑚',
-    description: '暖调橙红配色，更偏品牌展示和强调感。',
     preview: ['#ea6b4a', '#4a2219', '#fff2ee'],
     customization: {
       light: {
@@ -201,7 +198,6 @@ export const themePresets: ThemePreset[] = [
   {
     id: 'arctic-frost',
     name: '极地霜蓝',
-    description: '清冷的冰蓝色调，适合强调简洁和秩序。',
     preview: ['#4f8cff', '#173055', '#eef5ff'],
     customization: {
       light: {
@@ -245,7 +241,6 @@ export const themePresets: ThemePreset[] = [
   {
     id: 'graphite-mono',
     name: '石墨单色',
-    description: '克制的中性灰黑主题，适合长时间工作。',
     preview: ['#7f8a99', '#23262c', '#f2f4f7'],
     customization: {
       light: {
@@ -299,7 +294,6 @@ export const themePresets: ThemePreset[] = [
   {
     id: 'rose-noir',
     name: '夜玫瑰',
-    description: '深酒红与粉灰的组合，强调品牌感和层次。',
     preview: ['#c95c7b', '#301520', '#fff1f5'],
     customization: {
       light: {
@@ -343,7 +337,6 @@ export const themePresets: ThemePreset[] = [
   {
     id: 'ceramic-sky',
     name: '瓷青天光',
-    description: '柔和青蓝与瓷白的组合，更偏轻盈和通透。',
     preview: ['#4f9db2', '#203741', '#eef8fb'],
     customization: {
       light: {
