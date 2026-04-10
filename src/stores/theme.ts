@@ -7,6 +7,7 @@ import type {
   ThemeCustomization,
   ThemeFieldKey,
   ThemeMode,
+  ThemePreset,
   ThemePreference,
   ThemeValidationIssue,
   ThemeVariant,
@@ -363,6 +364,23 @@ export const useThemeStore = defineStore("theme", () => {
     replaceDraftCustomization(cloneThemeCustomization(parsed));
   }
 
+  function applyThemePreset(preset: ThemePreset): void {
+    replaceDraftCustomization(cloneThemeCustomization(sanitizeThemeCustomization(preset.customization)));
+  }
+
+  function applyThemePresetToTarget(preset: ThemePreset, target: ThemeVariant): void {
+    const sanitizedPreset = sanitizeThemeCustomization(preset.customization);
+    const nextDraft = cloneThemeCustomization(draftCustomization.value);
+
+    if (sanitizedPreset[target]) {
+      nextDraft[target] = { ...sanitizedPreset[target] };
+    } else {
+      delete nextDraft[target];
+    }
+
+    replaceDraftCustomization(nextDraft);
+  }
+
   watch(
     () => systemThemeListener.systemTheme.value,
     (newSystemTheme) => {
@@ -409,5 +427,7 @@ export const useThemeStore = defineStore("theme", () => {
     saveThemeCustomization,
     exportThemeDraft,
     importThemeDraft,
+    applyThemePreset,
+    applyThemePresetToTarget,
   };
 });

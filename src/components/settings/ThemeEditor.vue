@@ -215,18 +215,32 @@ async function handleImportFromFile(): Promise<void> {
         <p>修改当前草稿即可实时预览，点击保存后才会写入配置。</p>
       </div>
 
-      <n-space>
+      <n-space class="toolbar-actions" wrap>
         <n-button quaternary @click="handleImportFromFile">
           <template #icon>
             <Upload :size="16" />
           </template>
-          导入文件
+          导入 JSON
         </n-button>
         <n-button quaternary @click="handleExport">
           <template #icon>
             <Download :size="16" />
           </template>
           导出 JSON
+        </n-button>
+        <n-button secondary @click="handleResetCurrentTheme">
+          <template #icon>
+            <RotateCcw :size="16" />
+          </template>
+          恢复当前主题默认
+        </n-button>
+        <n-button secondary @click="handleResetAll">恢复全部默认</n-button>
+        <n-button :disabled="!hasDraftChanges" @click="handleDiscard">取消未保存修改</n-button>
+        <n-button type="primary" :disabled="!hasDraftChanges" @click="handleSave">
+          <template #icon>
+            <Save :size="16" />
+          </template>
+          保存主题配置
         </n-button>
       </n-space>
     </div>
@@ -358,32 +372,6 @@ async function handleImportFromFile(): Promise<void> {
           </n-config-provider>
         </n-card>
 
-        <n-card class="action-card" :bordered="false">
-          <template #header>
-            草稿操作
-          </template>
-
-          <n-space vertical>
-            <n-button secondary @click="handleResetCurrentTheme">
-              <template #icon>
-                <RotateCcw :size="16" />
-              </template>
-              恢复当前主题默认
-            </n-button>
-            <n-button secondary @click="handleResetAll">恢复全部默认</n-button>
-            <n-button :disabled="!hasDraftChanges" @click="handleDiscard">取消未保存修改</n-button>
-            <n-button
-              type="primary"
-              :disabled="!hasDraftChanges"
-              @click="handleSave"
-            >
-              <template #icon>
-                <Save :size="16" />
-              </template>
-              保存主题配置
-            </n-button>
-          </n-space>
-        </n-card>
       </div>
     </div>
   </div>
@@ -413,6 +401,10 @@ async function handleImportFromFile(): Promise<void> {
   margin: 6px 0 0;
   color: var(--app-text-color-2);
   font-size: 13px;
+}
+
+.toolbar-actions {
+  justify-content: flex-end;
 }
 
 .validation-alert {
@@ -480,13 +472,11 @@ async function handleImportFromFile(): Promise<void> {
   gap: 16px;
 }
 
-.preview-card,
-.action-card {
+.preview-card {
   background: var(--app-card-color);
 }
 
 .preview-card,
-.action-card,
 .editor-main :deep(.theme-color-group),
 .editor-main :deep(.n-card),
 .editor-side :deep(.n-card) {

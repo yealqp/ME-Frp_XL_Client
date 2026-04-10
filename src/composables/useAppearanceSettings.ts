@@ -3,6 +3,7 @@ import { storeToRefs } from "pinia";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useMessage } from "naive-ui";
 import { useSettingsStore } from "@/stores/settings";
+import { useUIStore } from "@/stores/ui";
 
 const IMAGE_FILE_FILTER = [
   {
@@ -22,7 +23,9 @@ function clampOpacity(value: number | null): number | null {
 export function useAppearanceSettings() {
   const message = useMessage();
   const settingsStore = useSettingsStore();
+  const uiStore = useUIStore();
   const { settings } = storeToRefs(settingsStore);
+  const { sidebarWidth, sidebarCollapsible } = storeToRefs(uiStore);
 
   const backgroundImageName = computed(() => {
     const filePath = settings.value.backgroundImagePath;
@@ -36,6 +39,7 @@ export function useAppearanceSettings() {
   let backgroundOpacityDebounceTimer: number | null = null;
   let sidebarOpacityDebounceTimer: number | null = null;
   let contentOpacityDebounceTimer: number | null = null;
+  let sidebarWidthDebounceTimer: number | null = null;
 
   async function handleBackgroundImageSelect() {
     try {
@@ -134,11 +138,45 @@ export function useAppearanceSettings() {
     );
   }
 
+  function handleSidebarWidthChange(value: number | null) {
+    if (value === null) {
+      return;
+    }
+
+    uiStore.setSidebarWidth(value);
+
+    if (sidebarWidthDebounceTimer !== null) {
+      clearTimeout(sidebarWidthDebounceTimer);
+    }
+
+    sidebarWidthDebounceTimer = window.setTimeout(async () => {
+      try {
+        await uiStore.saveSidebarSettings();
+        message.success(`侧边栏宽度已设置为 ${value}px`);
+      } catch (error) {
+        console.error("保存侧边栏宽度失败:", error);
+        message.error("保存侧边栏宽度失败");
+        await uiStore.loadSidebarSettings();
+      }
+    }, 300);
+  }
+
+  async function handleSidebarCollapsibleChange(value: boolean) {
+    try {
+      await uiStore.updateSidebarCollapsible(value);
+      message.success(value ? "已开启侧边栏收缩功能" : "已关闭侧边栏收缩功能");
+    } catch (error) {
+      console.error("保存侧边栏收缩设置失败:", error);
+      message.error("保存侧边栏收缩设置失败");
+    }
+  }
+
   onUnmounted(() => {
     for (const timer of [
       backgroundOpacityDebounceTimer,
       sidebarOpacityDebounceTimer,
       contentOpacityDebounceTimer,
+      sidebarWidthDebounceTimer,
     ]) {
       if (timer !== null) {
         clearTimeout(timer);
@@ -148,11 +186,15 @@ export function useAppearanceSettings() {
 
   return {
     settings,
+    sidebarWidth,
+    sidebarCollapsible,
     backgroundImageName,
     handleBackgroundImageSelect,
     handleBackgroundImageClear,
     handleBackgroundImageOpacityChange,
     handleSidebarOpacityChange,
     handleContentOpacityChange,
+    handleSidebarWidthChange,
+    handleSidebarCollapsibleChange,
   };
 }

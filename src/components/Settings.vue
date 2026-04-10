@@ -72,7 +72,6 @@
         </n-space>
       </n-card>
 
-      <!-- 外观设置 -->
       <n-card :bordered="true" class="settings-section">
         <template #header>
           <div class="section-header">
@@ -81,79 +80,13 @@
           </div>
         </template>
 
-        <n-space vertical :size="24">
-          <!-- 主题切换 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>主题模式</h4>
-              <p>选择应用的主题模式（浅色、深色或跟随系统）</p>
-            </div>
-            <ThemeSwitcher mode="buttons" :show-label="true" />
-          </div>
-
-          <!-- 侧边栏宽度 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>侧边栏宽度</h4>
-              <p>调整侧边栏的宽度（150-300px）</p>
-            </div>
-            <div class="slider-control">
-              <n-slider
-                v-model:value="sidebarWidth"
-                :min="150"
-                :max="300"
-                :step="1"
-                :tooltip="true"
-                :format-tooltip="formatPixelTooltip"
-                @update:value="handleSidebarWidthChange"
-                style="width: 200px"
-              />
-              <n-input-number
-                v-model:value="sidebarWidth"
-                :min="150"
-                :max="300"
-                :step="1"
-                :show-button=false
-                @update:value="handleSidebarWidthChange"
-                style="width: 80px"
-                size="small"
-              >
-                <template #suffix>
-                  px
-                </template>
-              </n-input-number>
-            </div>
-          </div>
-
-          <!-- 侧边栏收缩功能 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>侧边栏收缩功能</h4>
-              <p>开启后，可以点击按钮收缩侧边栏</p>
-            </div>
-            <n-switch
-              v-model:value="sidebarCollapsible"
-              @update:value="handleSidebarCollapsibleChange"
-            />
-          </div>
-        </n-space>
-      </n-card>
-
-      <n-card :bordered="true" class="settings-section">
-        <template #header>
-          <div class="section-header">
-            <Palette :size="18" />
-            <span>主题编辑器</span>
-          </div>
-        </template>
-
         <div class="setting-item theme-editor-entry">
           <div class="setting-info">
-            <h4>打开完整主题编辑器</h4>
-            <p>单独页面中编辑浅色和深色主题，并使用原生 Naive UI 组件预览草稿效果。</p>
+            <h4>打开外观设置页</h4>
+            <p>集中调整主题模式、布局透明度、背景图片和整套配色方案。</p>
           </div>
           <n-button type="primary" @click="openThemeEditorPage">
-            打开主题编辑器
+            打开外观设置
           </n-button>
         </div>
       </n-card>
@@ -361,7 +294,6 @@ import {
   NTag,
 } from "naive-ui";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
-import ThemeSwitcher from "./common/ThemeSwitcher.vue";
 import {
   Settings as SettingsIcon,
   Rocket,
@@ -376,14 +308,8 @@ function openThemeEditorPage(): void {
   router.push("/theme-editor");
 }
 
-function formatPixelTooltip(value: number): string {
-  return `${value}px`;
-}
-
 const {
   settings,
-  sidebarWidth,
-  sidebarCollapsible,
   tunnels,
   tunnelLoading,
   deletedTunnels,
@@ -395,8 +321,6 @@ const {
   handleHideWebuiEntryChange,
   handleTunnelAutoStartChange,
   handleStartupDelayChange,
-  handleSidebarWidthChange,
-  handleSidebarCollapsibleChange,
   refreshTunnels,
   selectAllTunnels,
   clearAllTunnels,

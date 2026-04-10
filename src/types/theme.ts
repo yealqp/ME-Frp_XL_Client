@@ -98,6 +98,14 @@ export interface ThemeValidationIssue {
   ratio?: number;
 }
 
+export interface ThemePreset {
+  id: string;
+  name: string;
+  description: string;
+  preview: string[];
+  customization: ThemeCustomization;
+}
+
 /**
  * 主题偏好接口
  * 用于持久化用户的主题选择
