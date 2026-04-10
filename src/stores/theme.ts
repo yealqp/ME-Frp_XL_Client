@@ -22,7 +22,6 @@ import {
   buildThemeCustomizationDiff,
   cloneThemeCustomization,
   getDefaultThemeConfig,
-  getThemeFieldValue,
   parseThemeCustomization,
   resolveThemeConfig,
   sanitizeThemeCustomization,
@@ -306,10 +305,6 @@ export const useThemeStore = defineStore("theme", () => {
     }
   }
 
-  async function setEnableTransitions(): Promise<void> {
-    console.warn("setEnableTransitions 已废弃：动画已永久启用");
-  }
-
   function setEditingTarget(theme: ThemeVariant): void {
     editingTarget.value = theme;
   }
@@ -363,17 +358,9 @@ export const useThemeStore = defineStore("theme", () => {
     return serializeThemeCustomization(draftCustomization.value);
   }
 
-  function exportSavedTheme(): string {
-    return serializeThemeCustomization(savedCustomization.value);
-  }
-
   function importThemeDraft(serialized: string): void {
     const parsed = parseThemeCustomization(serialized);
     replaceDraftCustomization(cloneThemeCustomization(parsed));
-  }
-
-  function getDraftFieldValue(theme: ThemeVariant, field: ThemeFieldKey): string {
-    return getThemeFieldValue(theme, field, draftCustomization.value);
   }
 
   watch(
@@ -413,7 +400,6 @@ export const useThemeStore = defineStore("theme", () => {
     setSystemMode,
     toggleTheme,
     updateSystemTheme,
-    setEnableTransitions,
     setEditingTarget,
     updateThemeDraft,
     updateThemeDraftField,
@@ -422,8 +408,6 @@ export const useThemeStore = defineStore("theme", () => {
     discardThemeDraft,
     saveThemeCustomization,
     exportThemeDraft,
-    exportSavedTheme,
     importThemeDraft,
-    getDraftFieldValue,
   };
 });

@@ -13,6 +13,14 @@ import { extractErrorMessage } from '@/utils/errorHandler';
 import { showAdGlobal } from '@/utils/eventBus';
 import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
+function clampOpacity(value: number | undefined, fallback = 100): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback;
+  }
+
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   // ============================================================================
   // State
@@ -28,6 +36,10 @@ export const useSettingsStore = defineStore('settings', () => {
     minimizeToTray: true,
     showAd: true,
     hideWebuiEntry: false,
+    backgroundImagePath: undefined,
+    backgroundImageOpacity: 100,
+    sidebarOpacity: 100,
+    contentOpacity: 100,
   });
 
   const loading = ref(false);
@@ -78,6 +90,10 @@ export const useSettingsStore = defineStore('settings', () => {
         minimizeToTray: config.minimizeToTray ?? true,
         showAd: config.showAd ?? true,
         hideWebuiEntry: config.hideWebuiEntry ?? false,
+        backgroundImagePath: config.backgroundImagePath,
+        backgroundImageOpacity: clampOpacity(config.backgroundImageOpacity),
+        sidebarOpacity: clampOpacity(config.sidebarOpacity),
+        contentOpacity: clampOpacity(config.contentOpacity),
       };
 
       // Sync showAd to eventBus
@@ -109,6 +125,10 @@ export const useSettingsStore = defineStore('settings', () => {
         minimizeToTray: settings.value.minimizeToTray,
         showAd: settings.value.showAd,
         hideWebuiEntry: settings.value.hideWebuiEntry,
+        backgroundImagePath: settings.value.backgroundImagePath || undefined,
+        backgroundImageOpacity: clampOpacity(settings.value.backgroundImageOpacity),
+        sidebarOpacity: clampOpacity(settings.value.sidebarOpacity),
+        contentOpacity: clampOpacity(settings.value.contentOpacity),
       });
       localStorage.setItem('mefrp_theme', settings.value.theme);
     } catch (err) {

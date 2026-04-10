@@ -229,19 +229,6 @@ export function validateThemeCustomization(
   const normalized = sanitizeThemeCustomization(customization);
 
   for (const theme of ["light", "dark"] as const) {
-    const themeValues = normalized[theme] ?? {};
-
-    for (const key of Object.keys(themeValues) as ThemeFieldKey[]) {
-      const value = themeValues[key];
-      if (value && !isHexColor(value)) {
-        issues.push({
-          id: `${theme}-${key}-format`,
-          severity: "error",
-          message: `${theme === "light" ? "浅色" : "深色"}主题的${key}颜色格式无效。`,
-        });
-      }
-    }
-
     const resolved = resolveThemeConfig(theme, normalized).common;
     for (const rule of CONTRAST_RULES) {
       const result = validateContrast(resolved[rule.foreground], resolved[rule.background]);
@@ -282,14 +269,6 @@ export function parseThemeCustomization(json: string): ThemeCustomization {
   }
 
   return sanitized;
-}
-
-export function getThemeFieldValue(
-  theme: ThemeVariant,
-  key: ThemeFieldKey,
-  customization: ThemeCustomization = {},
-): string {
-  return resolveThemeConfig(theme, customization).common[key];
 }
 
 export function getThemeCustomizationTemplate(): string {

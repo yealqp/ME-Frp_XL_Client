@@ -127,6 +127,9 @@ interface PopupNoticeResponse {
   message: string;
 }
 
+let dashboardInitializedOnce = false;
+let dashboardInitPromise: Promise<void> | null = null;
+
 // 系统公告数据
 const announcements = ref<Announcement[]>([]);
 
@@ -178,8 +181,6 @@ const fetchAnnouncements = async (forceRefresh: boolean = false) => {
   try {
     // 调用后端API命令获取系统公告
     const noticeData: any = await invoke("api_get_announcements");
-
-    console.log("获取系统公告成功");
 
     // 处理公告数据
     if (noticeData) {
@@ -329,7 +330,6 @@ const fetchSystemStatus = async () => {
         remark: result.data.remark,
       };
       systemStatusLoaded.value = true;
-      console.log("获取系统状态成功:", systemStatus.value);
     } else {
       console.error("获取系统状态失败:", result.message);
       systemStatusLoaded.value = false;
@@ -369,16 +369,12 @@ const fetchPopupNotice = async () => {
       if (result.code === 200 && result.data) {
         popupNoticeContent.value = result.data;
         showImportantNotice.value = true; // 显示警告框
-      } else {
-        console.log("重要公告:", result.message || "无公告内容");
       }
     } catch (parseError) {
       // 如果解析失败，可能是纯文本响应
-      console.log("重要公告响应格式异常，跳过显示");
     }
   } catch (error) {
     // 静默处理错误，不影响用户体验
-    console.log("获取重要公告:", error);
   } finally {
     popupNoticeLoading.value = false;
   }
@@ -407,13 +403,10 @@ const autoSign = async () => {
 
   // 如果今天已经签到过，跳过
   if (userInfo.value.todaySigned) {
-    message.success("已签到，跳过自动签到");
-    console.log("今天已经签到过了，跳过自动签到");
     hasAutoSigned.value = true;
     return;
   }
   message.success("正在尝试自动签到", {duration: 8000});
-  console.log("开始自动签到...");
   hasAutoSigned.value = true;
 
   try {
@@ -446,15 +439,11 @@ const autoSign = async () => {
           successMessage = result.message;
         }
 
-        console.log(successMessage);
         // 只在成功时显示消息
         message.success(successMessage);
         
         // 刷新用户信息
         await userStore.loadUserInfo();
-      } else {
-        console.log("自动签到失败:", result.message);
-        // 失败不弹出 message
       }
     } catch (error) {
       console.error("自动签到失败:", error);
@@ -471,17 +460,29 @@ const autoSign = async () => {
 
 // 组件挂载时获取用户信息和系统公告
 onMounted(async () => {
-  fetchSystemStatus();
-  await userStore.loadUserInfo();
-  
-  // 用户信息加载完成后，尝试自动签到
-  autoSign();
-  
-  fetchAnnouncements();
-  fetchPopupNotice(); // 获取重要公告
-  
-  // 使用 UI Store 获取并显示系统通知（单实例）
-  uiStore.fetchAndShowNotification(notification);
+  if (dashboardInitializedOnce) {
+    return;
+  }
+
+  if (!dashboardInitPromise) {
+    dashboardInitPromise = (async () => {
+      fetchSystemStatus();
+      await userStore.loadUserInfo();
+
+      // 用户信息加载完成后，尝试自动签到
+      await autoSign();
+
+      fetchAnnouncements();
+      fetchPopupNotice();
+
+      await uiStore.fetchAndShowNotification(notification);
+      dashboardInitializedOnce = true;
+    })().finally(() => {
+      dashboardInitPromise = null;
+    });
+  }
+
+  await dashboardInitPromise;
 });
 </script>
 

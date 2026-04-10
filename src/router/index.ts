@@ -5,6 +5,10 @@ import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 // 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
   {
+    path: "/",
+    redirect: "/dashboard",
+  },
+  {
     path: "/login",
     name: "Login",
     component: () => import("../components/Login.vue"),

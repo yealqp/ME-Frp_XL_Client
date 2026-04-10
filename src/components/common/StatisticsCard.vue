@@ -70,6 +70,9 @@ interface Statistics {
   traffic: number;
 }
 
+let statisticsLoadedOnce = false;
+let statisticsLoadingPromise: Promise<void> | null = null;
+
 const statistics = ref<Statistics>({
   users: 0,
   nodes: 0,
@@ -94,8 +97,14 @@ const formatTrafficInTB = (value: number): string => {
 
 // 获取统计信息
 const fetchStatistics = async () => {
+  if (statisticsLoadingPromise) {
+    await statisticsLoadingPromise;
+    return;
+  }
+
   loading.value = true;
-  try {
+  statisticsLoadingPromise = (async () => {
+    try {
     const responseText = await invoke('api_get_statistics');
     const result = JSON.parse(responseText as string);
 
@@ -106,22 +115,31 @@ const fetchStatistics = async () => {
         proxies: result.data.proxies || 0,
         traffic: result.data.traffic || 0,
       };
-      console.log('获取统计信息成功:', statistics.value);
+      statisticsLoadedOnce = true;
     } else {
       console.error('获取统计信息失败:', result.message);
       message.error(`获取统计信息失败: ${result.message || '未知错误'}`);
     }
-  } catch (error) {
-    console.error('获取统计信息失败:', error);
-    const errorMessage = error && typeof error === 'string' ? error : '请检查网络连接';
-    message.error(`获取统计信息失败: ${errorMessage}`);
-  } finally {
-    loading.value = false;
-  }
+    } catch (error) {
+      console.error('获取统计信息失败:', error);
+      const errorMessage = error && typeof error === 'string' ? error : '请检查网络连接';
+      message.error(`获取统计信息失败: ${errorMessage}`);
+    } finally {
+      loading.value = false;
+      statisticsLoadingPromise = null;
+    }
+  })();
+
+  await statisticsLoadingPromise;
 };
 
 onMounted(() => {
-  fetchStatistics();
+  if (statisticsLoadedOnce) {
+    loading.value = false;
+    return;
+  }
+
+  void fetchStatistics();
 });
 </script>
 

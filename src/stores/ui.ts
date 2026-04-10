@@ -166,7 +166,6 @@ export const useUIStore = defineStore('ui', () => {
 
     // 如果已有通知实例正在显示，不重复请求
     if (systemNotification.value) {
-      console.log("系统通知正在显示中，跳过重复请求");
       return;
     }
 
@@ -188,11 +187,8 @@ export const useUIStore = defineStore('ui', () => {
           onAfterLeave: () => {
             // 通知实例完全结束后，清空引用
             systemNotification.value = null;
-            console.log("系统通知已关闭");
           }
         });
-        
-        console.log("系统通知已显示");
       }
     } catch (error) {
       console.error("获取系统通知失败:", error);
@@ -216,7 +212,6 @@ export const useUIStore = defineStore('ui', () => {
       systemNotification.value = null;
     }
 
-    console.log("系统通知已清理");
   }
 
   return {

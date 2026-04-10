@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, onMounted, computed, watch } from "vue";
+import { h, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { NIcon, NLayoutSider, useDialog } from "naive-ui";
@@ -95,11 +95,6 @@ const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiSto
 
 // Theme Store
 const themeStore = useThemeStore();
-
-// 监听侧栏宽度变化，确保动画生效
-watch(sidebarWidth, (newWidth, oldWidth) => {
-  console.log(`侧栏宽度从 ${oldWidth}px 变化到 ${newWidth}px`);
-});
 
 // 处理收缩
 const handleCollapse = async () => {
@@ -251,18 +246,39 @@ onMounted(async () => {
 
 <style scoped>
 .sidebar {
-  background-color: var(--app-card-color) !important;
+  position: relative;
+  background: transparent !important;
   color: var(--app-text-color);
   display: flex;
   flex-direction: column;
   height: 100vh;
   border-right: 1px solid var(--app-border-color) !important;
+  overflow: hidden;
+}
+
+.sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--app-card-color);
+  opacity: var(--app-sidebar-opacity, 1);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* 侧边栏宽度变化 - 保留收起展开动画 */
 :deep(.n-layout-sider) {
+  background: transparent !important;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   will-change: width;
+}
+
+:deep(.n-layout-sider-scroll-container),
+:deep(.n-layout-sider-content) {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
 }
 
 :deep(.n-layout-sider__border) {
@@ -276,7 +292,7 @@ onMounted(async () => {
 .sidebar-header {
   padding: 20px;
   border-bottom: 1px solid var(--app-border-color);
-  background-color: var(--app-card-color);
+  background-color: transparent;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -287,11 +303,11 @@ onMounted(async () => {
 }
 
 .sidebar-header:hover {
-  background-color: var(--app-bg-color);
+  background-color: transparent;
 }
 
 .sidebar-header:active {
-  background-color: var(--app-bg-color);
+  background-color: transparent;
 }
 
 /* 收缩状态下调整 header padding */
@@ -341,7 +357,7 @@ onMounted(async () => {
 .nav-content {
   flex: 1;
   padding: 10px 0;
-  background-color: var(--app-card-color);
+  background-color: transparent;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -350,7 +366,7 @@ onMounted(async () => {
   margin-top: auto;
   padding: 20px;
   border-top: 1px solid var(--app-border-color);
-  background-color: var(--app-card-color);
+  background-color: transparent;
   flex-shrink: 0;
   overflow: hidden;
   display: flex;

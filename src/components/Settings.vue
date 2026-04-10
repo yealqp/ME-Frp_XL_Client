@@ -104,7 +104,7 @@
                 :max="300"
                 :step="1"
                 :tooltip="true"
-                :format-tooltip="(value) => `${value}px`"
+                :format-tooltip="formatPixelTooltip"
                 @update:value="handleSidebarWidthChange"
                 style="width: 200px"
               />
@@ -359,7 +359,6 @@ import {
   NSpace,
   NCheckbox,
   NTag,
-  NSlider,
 } from "naive-ui";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import ThemeSwitcher from "./common/ThemeSwitcher.vue";
@@ -375,6 +374,10 @@ const router = useRouter();
 
 function openThemeEditorPage(): void {
   router.push("/theme-editor");
+}
+
+function formatPixelTooltip(value: number): string {
+  return `${value}px`;
 }
 
 const {
@@ -592,21 +595,6 @@ const {
 
 .tunnel-port {
   font-family: "Courier New", monospace;
-}
-
-/* 滑块控制样式 */
-.slider-control {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.slider-value {
-  color: var(--app-primary-color);
-  font-size: 14px;
-  font-weight: 500;
-  min-width: 60px;
-  text-align: right;
 }
 
 /* 隧道项内容布局 */

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, useTemplateRef } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { readFile } from "@tauri-apps/plugin-fs";
 import { 
   NDialogProvider, 
   NSpin, 
@@ -20,6 +21,7 @@ import {
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
 import { useCreateTunnelStore } from "./stores/createTunnel";
+import { useSettingsStore } from "./stores/settings";
 import { useThemeStore } from "./stores/theme";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
@@ -37,6 +39,7 @@ const route = useRoute();
 // Initialize stores
 const authStore = useAuthStore();
 const createTunnelStore = useCreateTunnelStore();
+const settingsStore = useSettingsStore();
 const themeStore = useThemeStore();
 
 // Provider refs
@@ -48,6 +51,102 @@ const notificationProvider = useTemplateRef<NotificationProviderInst>("notificat
 // Use storeToRefs for state/getters to maintain reactivity
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
 const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
+const { settings } = storeToRefs(settingsStore);
+const backgroundImageUrl = ref<string | null>(null);
+
+function clampOpacity(value: number | undefined): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return 1;
+  }
+
+  return Math.min(1, Math.max(0, value / 100));
+}
+
+function withOpacity(color: string, opacity: number): string {
+  const normalized = color.trim().replace("#", "");
+
+  if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  }
+
+  if (/^[0-9a-fA-F]{8}$/.test(normalized)) {
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    const a = parseInt(normalized.slice(6, 8), 16) / 255;
+    return `rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, opacity * a))})`;
+  }
+
+  return color;
+}
+
+function getImageMimeType(filePath: string): string {
+  const extension = filePath.split(".").pop()?.toLowerCase();
+
+  switch (extension) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    case "gif":
+      return "image/gif";
+    case "bmp":
+      return "image/bmp";
+    default:
+      return "image/png";
+  }
+}
+
+async function syncBackgroundImage(path?: string): Promise<void> {
+  if (backgroundImageUrl.value) {
+    URL.revokeObjectURL(backgroundImageUrl.value);
+    backgroundImageUrl.value = null;
+  }
+
+  if (!path) {
+    return;
+  }
+
+  try {
+    const fileBytes = await readFile(path);
+    const blob = new Blob([fileBytes], { type: getImageMimeType(path) });
+    backgroundImageUrl.value = URL.createObjectURL(blob);
+  } catch (error) {
+    console.error("加载背景图片失败:", error);
+  }
+}
+
+const appAppearanceStyle = computed(() => {
+  const contentOpacity = clampOpacity(settings.value.contentOpacity);
+  const activeTheme = themeStore.resolvedActiveThemeConfig.common;
+
+  return {
+    "--app-custom-bg-image": backgroundImageUrl.value ? `url("${backgroundImageUrl.value}")` : "none",
+    "--app-custom-bg-opacity": String((settings.value.backgroundImageOpacity ?? 100) / 100),
+    "--app-sidebar-opacity": String((settings.value.sidebarOpacity ?? 100) / 100),
+    "--app-content-opacity": String(contentOpacity),
+    "--app-content-bg-color": withOpacity(activeTheme.bodyColor, contentOpacity),
+    "--app-content-card-color": withOpacity(activeTheme.cardColor, contentOpacity),
+    "--app-content-modal-color": withOpacity(activeTheme.modalColor, contentOpacity),
+    "--app-content-popover-color": withOpacity(activeTheme.popoverColor, contentOpacity),
+    "--app-content-input-color": withOpacity(activeTheme.inputColor, contentOpacity),
+    "--app-content-input-disabled-color": withOpacity(activeTheme.inputColorDisabled, contentOpacity),
+    "--app-content-table-header-color": withOpacity(activeTheme.tableHeaderColor, contentOpacity),
+  };
+});
+
+watchEffect(() => {
+  const root = document.documentElement;
+  for (const [key, value] of Object.entries(appAppearanceStyle.value)) {
+    root.style.setProperty(key, value);
+  }
+});
 
 const appProviders = computed(() => ({
   loadingBar: loadingBar.value,
@@ -327,6 +426,10 @@ onMounted(async () => {
 
   // Initialize theme system BEFORE first render
   await themeStore.initTheme();
+  await settingsStore.loadSettings().catch((error) => {
+    console.error("加载外观设置失败:", error);
+  });
+  await syncBackgroundImage(settings.value.backgroundImagePath);
 
   // Set loading bar instance immediately - this must happen before any navigation
   // Use nextTick to ensure the ref is available
@@ -363,10 +466,25 @@ onMounted(async () => {
   // 开始等待登录
   waitForLogin();
 });
+
+watch(
+  () => settings.value.backgroundImagePath,
+  (path) => {
+    void syncBackgroundImage(path);
+  },
+);
+
+onUnmounted(() => {
+  if (backgroundImageUrl.value) {
+    URL.revokeObjectURL(backgroundImageUrl.value);
+    backgroundImageUrl.value = null;
+  }
+});
 </script>
 
 <template>
-  <div class="app-container">
+  <div class="app-container" :style="appAppearanceStyle">
+    <div class="app-background-layer" />
     <n-config-provider
       :theme="themeStore.naiveTheme"
       :theme-overrides="themeStore.naiveThemeOverrides"
@@ -458,31 +576,150 @@ body {
 }
 
 .app-container {
+  position: relative;
   display: flex;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
 }
 
+.app-background-layer {
+  position: absolute;
+  inset: 0;
+  background-color: var(--app-bg-color);
+  background-image: var(--app-custom-bg-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: var(--app-custom-bg-opacity, 0);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app-container > .n-config-provider {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
 .main-layout {
   width: 100%;
   height: 100vh;
+  background: transparent !important;
 }
 
 .content-layout {
-  background-color: var(--app-bg-color);
+  position: relative;
+  background: transparent !important;
+  overflow: hidden;
+  --app-bg-color: var(--app-content-bg-color);
+  --app-card-color: var(--app-content-card-color);
+}
+
+.content-layout::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--app-content-bg-color, var(--app-bg-color));
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .content-body {
+  position: relative;
+  z-index: 1;
   padding: 30px;
-  background-color: var(--app-bg-color);
+  background: transparent !important;
   min-height: 100%;
   overflow-y: auto;
 }
 
 .route-container {
+  position: relative;
   width: 100%;
   height: 100%;
+  background: transparent;
+}
+
+.main-layout :deep(.n-layout-scroll-container),
+.content-layout :deep(.n-layout-scroll-container),
+.content-body :deep(.n-layout-scroll-container),
+.main-layout :deep(.n-layout),
+.content-layout :deep(.n-layout),
+.content-layout :deep(.n-layout-content) {
+  background: transparent !important;
+}
+
+.content-layout :deep(.n-card),
+.content-layout :deep(.n-alert),
+.content-layout :deep(.n-collapse-item),
+.content-layout :deep(.n-data-table),
+.content-layout :deep(.n-tabs-nav--segment-type),
+.content-layout :deep(.n-input),
+.content-layout :deep(.n-base-selection),
+.content-layout :deep(.n-input-number) {
+  --n-color: var(--app-content-card-color) !important;
+}
+
+.content-layout :deep(.n-card),
+.content-layout :deep(.n-alert),
+.content-layout :deep(.n-collapse-item) {
+  background-color: var(--app-content-card-color) !important;
+}
+
+.content-layout :deep(.n-card > .n-card-header),
+.content-layout :deep(.n-card > .n-card__content),
+.content-layout :deep(.n-card > .n-card__footer),
+.content-layout :deep(.n-card > .n-card__action) {
+  background-color: transparent !important;
+}
+
+.content-layout :deep(.n-input),
+.content-layout :deep(.n-input-number),
+.content-layout :deep(.n-base-selection) {
+  --n-color: var(--app-content-input-color) !important;
+  --n-color-disabled: var(--app-content-input-disabled-color) !important;
+}
+
+.content-layout :deep(.n-input .n-input-wrapper),
+.content-layout :deep(.n-input-number .n-input-wrapper),
+.content-layout :deep(.n-base-selection .n-base-selection-label) {
+  background-color: var(--app-content-input-color) !important;
+}
+
+.content-layout :deep(.n-input.n-input--disabled .n-input-wrapper),
+.content-layout :deep(.n-input-number.n-input-number--disabled .n-input-wrapper),
+.content-layout :deep(.n-base-selection.n-base-selection--disabled .n-base-selection-label) {
+  background-color: var(--app-content-input-disabled-color) !important;
+}
+
+.content-layout :deep(.n-data-table-th) {
+  background-color: var(--app-content-table-header-color) !important;
+}
+
+.n-modal,
+.n-dialog,
+.n-drawer,
+.n-drawer-content,
+.n-popover,
+.n-dropdown-menu,
+.n-select-menu {
+  --n-color: var(--app-content-modal-color) !important;
+  background-color: var(--app-content-modal-color) !important;
+}
+
+.n-popover,
+.n-dropdown-menu,
+.n-select-menu {
+  --n-color: var(--app-content-popover-color) !important;
+  background-color: var(--app-content-popover-color) !important;
+}
+
+.n-modal .n-card,
+.n-dialog .n-card,
+.n-drawer .n-card {
+  --n-color: var(--app-content-modal-color) !important;
 }
 
 .route-loading {

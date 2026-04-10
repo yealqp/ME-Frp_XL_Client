@@ -15,7 +15,6 @@ export function useSettingsPanel() {
   const { settings } = storeToRefs(settingsStore);
   const { sidebarWidth, sidebarCollapsible } = storeToRefs(uiStore);
   const { tunnels, loading: tunnelLoading, error: tunnelError } = storeToRefs(tunnelStore);
-
   let sidebarWidthDebounceTimer: number | null = null;
 
   const deletedTunnels = computed(() => {

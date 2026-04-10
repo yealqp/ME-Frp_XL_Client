@@ -10,9 +10,7 @@ import {
   NDivider,
   NForm,
   NFormItem,
-  NInput,
   NInputNumber,
-  NModal,
   NPopover,
   NSelect,
   NSpace,
@@ -28,10 +26,17 @@ import { Upload, Download, RotateCcw, Save } from "lucide-vue-next";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { useThemeStore } from "@/stores/theme";
-import { THEME_FIELD_GROUPS, getThemeCustomizationTemplate } from "@/utils/themeConfig";
+import { THEME_FIELD_GROUPS } from "@/utils/themeConfig";
 import type { ThemeFieldKey, ThemeVariant } from "@/types/theme";
 import { buildNaiveThemeOverrides, getNaiveTheme } from "@/utils/themeApplier";
 import ThemeColorGroup from "./ThemeColorGroup.vue";
+
+const JSON_FILE_FILTER = [
+  {
+    name: "JSON",
+    extensions: ["json"],
+  },
+];
 
 const themeStore = useThemeStore();
 const message = useMessage();
@@ -46,10 +51,7 @@ const {
   hasBlockingValidationIssues,
 } = storeToRefs(themeStore);
 
-const showImportModal = ref(false);
 const showPreviewModal = ref(false);
-const importText = ref("");
-const importTemplate = getThemeCustomizationTemplate();
 
 const previewSelectValue = ref("tcp");
 const previewSwitchValue = ref(true);
@@ -166,12 +168,7 @@ async function handleExport(): Promise<void> {
   try {
     const filePath = await save({
       defaultPath: "theme-customization.json",
-      filters: [
-        {
-          name: "JSON",
-          extensions: ["json"],
-        },
-      ],
+      filters: JSON_FILE_FILTER,
     });
 
     if (!filePath) {
@@ -185,17 +182,17 @@ async function handleExport(): Promise<void> {
   }
 }
 
+function applyImportedTheme(content: string, successMessage: string): void {
+  themeStore.importThemeDraft(content);
+  message.success(successMessage);
+}
+
 async function handleImportFromFile(): Promise<void> {
   try {
     const filePath = await open({
       multiple: false,
       directory: false,
-      filters: [
-        {
-          name: "JSON",
-          extensions: ["json"],
-        },
-      ],
+      filters: JSON_FILE_FILTER,
     });
 
     if (!filePath || Array.isArray(filePath)) {
@@ -203,27 +200,7 @@ async function handleImportFromFile(): Promise<void> {
     }
 
     const content = await readTextFile(filePath);
-    themeStore.importThemeDraft(content);
-    message.success("主题配置已从文件导入到草稿预览");
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : "导入主题配置失败");
-  }
-}
-
-function openImportModal(): void {
-  importText.value = importTemplate;
-  showImportModal.value = true;
-}
-
-function fillImportTemplate(): void {
-  importText.value = importTemplate;
-}
-
-function handleImport(): void {
-  try {
-    themeStore.importThemeDraft(importText.value);
-    showImportModal.value = false;
-    message.success("主题配置已导入到草稿预览");
+    applyImportedTheme(content, "主题配置已从文件导入到草稿预览");
   } catch (error) {
     message.error(error instanceof Error ? error.message : "导入主题配置失败");
   }
@@ -244,12 +221,6 @@ function handleImport(): void {
             <Upload :size="16" />
           </template>
           导入文件
-        </n-button>
-        <n-button quaternary @click="openImportModal">
-          <template #icon>
-            <Upload :size="16" />
-          </template>
-          粘贴 JSON
         </n-button>
         <n-button quaternary @click="handleExport">
           <template #icon>
@@ -415,28 +386,6 @@ function handleImport(): void {
         </n-card>
       </div>
     </div>
-
-    <n-modal v-model:show="showImportModal" preset="card" title="导入主题 JSON" class="import-modal">
-      <n-space vertical>
-        <p class="import-hint">粘贴 `themeCustomization` JSON，导入后只更新当前草稿，点击保存后才会持久化。</p>
-        <n-alert type="info" :bordered="false">
-          可用格式：顶层使用 `light` / `dark`，内部填写主题字段和十六进制颜色，例如 `#2080F0`。
-        </n-alert>
-        <n-input
-          v-model:value="importText"
-          type="textarea"
-          :rows="14"
-          :placeholder="importTemplate"
-        />
-        <n-space justify="space-between">
-          <n-button quaternary @click="fillImportTemplate">填充示例模板</n-button>
-        </n-space>
-        <n-space justify="end">
-          <n-button @click="showImportModal = false">取消</n-button>
-          <n-button type="primary" @click="handleImport">导入到草稿</n-button>
-        </n-space>
-      </n-space>
-    </n-modal>
   </div>
 </template>
 
@@ -557,16 +506,6 @@ function handleImport(): void {
 
 .preview-shell {
   padding: 4px;
-}
-
-.import-modal {
-  width: min(760px, calc(100vw - 32px));
-}
-
-.import-hint {
-  margin: 0;
-  color: var(--app-text-color-2);
-  font-size: 13px;
 }
 
 @media (max-width: 1200px) {

@@ -49,6 +49,20 @@ pub struct UnifiedConfig {
     pub sidebar_collapsible: Option<bool>,
     #[serde(rename = "sidebarCollapsed", skip_serializing_if = "Option::is_none")]
     pub sidebar_collapsed: Option<bool>,
+    #[serde(
+        rename = "backgroundImagePath",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub background_image_path: Option<String>,
+    #[serde(
+        rename = "backgroundImageOpacity",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub background_image_opacity: Option<u8>,
+    #[serde(rename = "sidebarOpacity", skip_serializing_if = "Option::is_none")]
+    pub sidebar_opacity: Option<u8>,
+    #[serde(rename = "contentOpacity", skip_serializing_if = "Option::is_none")]
+    pub content_opacity: Option<u8>,
 
     // WebUI 设置
     #[serde(rename = "webuiAddr", skip_serializing_if = "Option::is_none")]
@@ -88,6 +102,10 @@ impl Default for UnifiedConfig {
             sidebar_width: Some(200),
             sidebar_collapsible: Some(true),
             sidebar_collapsed: Some(false),
+            background_image_path: None,
+            background_image_opacity: Some(100),
+            sidebar_opacity: Some(100),
+            content_opacity: Some(100),
 
             // WebUI 设置默认值
             webui_addr: Some("localhost".to_string()),
