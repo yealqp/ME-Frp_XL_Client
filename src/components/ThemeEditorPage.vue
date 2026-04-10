@@ -63,7 +63,7 @@
           <div class="setting-item setting-item-column">
             <div class="setting-info">
               <h4>背景图片</h4>
-              <p>选择桌面图片作为应用背景，可随时清除恢复纯色背景。</p>
+              <p>选择桌面图片作为应用背景，可随时清除恢复纯色背景，仅支持用户文件夹中的图片。</p>
             </div>
             <div class="background-image-control">
               <n-input :value="backgroundImageName" readonly placeholder="未选择图片" />
@@ -124,39 +124,13 @@
       </template>
 
       <div class="preset-grid">
-        <button
+        <PresetThemeCard
           v-for="preset in themePresets"
           :key="preset.id"
-          type="button"
-          class="preset-card"
-        >
-          <div class="preset-hero" :style="{ '--preset-primary': preset.preview[0], '--preset-surface': preset.preview[1], '--preset-accent': preset.preview[2] }">
-            <div class="preset-swatch-stack">
-              <span
-                v-for="color in preset.preview"
-                :key="color"
-                class="preset-swatch"
-                :style="{ background: color }"
-              />
-            </div>
-            <div class="preset-hero-line" />
-          </div>
-          <div class="preset-meta">
-            <div class="preset-name-row">
-              <div class="preset-name">{{ preset.name }}</div>
-              <span class="preset-count">双主题</span>
-            </div>
-          </div>
-          <n-space size="small" class="preset-actions" wrap>
-            <n-button size="tiny" @click.stop="applyPreset(preset.id)">整套应用</n-button>
-            <n-button size="tiny" quaternary @click.stop="applyPresetToTarget(preset.id, 'light')">
-              浅色
-            </n-button>
-            <n-button size="tiny" quaternary @click.stop="applyPresetToTarget(preset.id, 'dark')">
-              深色
-            </n-button>
-          </n-space>
-        </button>
+          :preset="preset"
+          @apply="applyPreset"
+          @apply-target="applyPresetToTarget"
+        />
       </div>
     </n-card>
 
@@ -168,6 +142,7 @@
 import { NButton, NCard, NInput, NSpace, NSwitch, useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
 import { Image as ImageIcon, Palette, SwatchBook } from "lucide-vue-next";
+import PresetThemeCard from "@/components/appearance/PresetThemeCard.vue";
 import ThemeEditor from "@/components/settings/ThemeEditor.vue";
 import SettingSliderRow from "@/components/appearance/SettingSliderRow.vue";
 import { useAppearanceSettings } from "@/composables/useAppearanceSettings";
@@ -252,91 +227,6 @@ function formatPercentTooltip(value: number): string {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-}
-
-.preset-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--app-border-color);
-  background: var(--app-card-color);
-  color: var(--app-text-color);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-
-.preset-card:hover {
-  border-color: var(--app-primary-color);
-  transform: translateY(-1px);
-}
-
-.preset-hero {
-  position: relative;
-  width: 100%;
-  min-height: 76px;
-  padding: 14px;
-  border: 1px solid var(--app-border-color);
-  background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--preset-primary) 28%, transparent), transparent 48%),
-    linear-gradient(135deg, var(--preset-surface), color-mix(in srgb, var(--preset-surface) 78%, #000000 22%));
-}
-
-.preset-swatch-stack {
-  display: flex;
-  gap: 6px;
-}
-
-.preset-swatch {
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--app-border-color);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffffff 18%, transparent);
-}
-
-.preset-hero-line {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
-  height: 8px;
-  background: linear-gradient(90deg, var(--preset-primary), var(--preset-accent));
-}
-
-.preset-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-}
-
-.preset-name-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.preset-name {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.preset-count {
-  color: var(--app-text-color-3);
-  font-size: 11px;
-  line-height: 1;
-  padding: 4px 6px;
-  border: 1px solid var(--app-border-color);
-}
-
-.preset-actions {
-  width: 100%;
-  justify-content: flex-start;
-  padding-top: 4px;
-  border-top: 1px solid var(--app-border-color);
 }
 
 .section-header {

@@ -161,7 +161,7 @@ function handleResetAll(): void {
 async function handleExport(): Promise<void> {
   try {
     const filePath = await save({
-      defaultPath: "theme-customization.json",
+      defaultPath: "XLClient_Custom_Themes.json",
       filters: JSON_FILE_FILTER,
     });
 

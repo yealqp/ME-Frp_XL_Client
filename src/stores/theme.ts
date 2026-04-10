@@ -105,10 +105,8 @@ export const useThemeStore = defineStore("theme", () => {
 
   const systemThemeListener = useSystemTheme();
 
-  const currentTheme = computed(() => activeTheme.value);
   const isDarkMode = computed(() => activeTheme.value === "dark");
   const isLightMode = computed(() => activeTheme.value === "light");
-  const isSystemMode = computed(() => mode.value === "system");
   const naiveTheme = computed(() => getNaiveTheme(activeTheme.value));
   const resolvedLightThemeConfig = computed(() =>
     resolveThemeConfig("light", draftCustomization.value),
@@ -398,10 +396,8 @@ export const useThemeStore = defineStore("theme", () => {
     savedCustomization,
     draftCustomization,
     validationIssues,
-    currentTheme,
     isDarkMode,
     isLightMode,
-    isSystemMode,
     naiveTheme,
     naiveThemeOverrides,
     resolvedLightThemeConfig,
