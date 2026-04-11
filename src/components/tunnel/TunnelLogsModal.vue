@@ -35,11 +35,6 @@
       </div>
       <div class="log-content">
         <div class="log-lines" ref="logLinesRef">
-          <!-- 启动提示 - 永久显示在日志内容顶部 -->
-          <div>
-            <span>正在尝试启动隧道...</span>
-          </div>
-          <!-- 日志内容 -->
           <div
             v-for="(log, index) in logs"
             :key="index"
@@ -56,6 +51,7 @@
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import { Copy } from 'lucide-vue-next'
+import { formatLogHtml, getSanitizedLogsText } from '@/utils/logSanitizer'
 
 interface TunnelLogsModalProps {
   show: boolean
@@ -91,10 +87,7 @@ const handleCopyLogs = async () => {
       return
     }
     
-    // 清理日志中的 ANSI 转义序列和特殊字符
-    const cleanLogs = props.logs.map(log => 
-      log.replace(/\x1b\[[0-9;]*m/g, '').replace(/▣/g, '')
-    ).join('\n')
+    const cleanLogs = getSanitizedLogsText(props.logs)
     
     await navigator.clipboard.writeText(cleanLogs)
     message.success('日志已复制到剪贴板')
@@ -125,7 +118,7 @@ const scrollToBottom = () => {
   }
 }
 
-const AUTO_REFRESH_INTERVAL = 300;
+const AUTO_REFRESH_INTERVAL = 1000;
 
 const startAutoRefresh = () => {
   stopAutoRefresh()
@@ -133,6 +126,10 @@ const startAutoRefresh = () => {
   if (props.tunnelId !== null && props.show) {
     autoRefreshTimer.value = window.setInterval(() => {
       if (props.tunnelId !== null && props.show) {
+        if (props.loading) {
+          return
+        }
+
         const wasAtBottom = isScrolledToBottom()
 
         emit('refresh', props.tunnelId)
@@ -161,59 +158,7 @@ const handleAfterLeave = () => {
 }
 
 const colorizeLog = (log: string): string => {
-  let cleanLog = log.replace(/\x1b\[[0-9;]*m/g, '').replace(/▣/g, '')
-
-  cleanLog = cleanLog.replace(
-    /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)/g,
-    '<span style="color: var(--app-log-timestamp-color);">$1</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /\[I\]/g,
-    '<span style="color: var(--app-log-info-color);">[I]</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /\[W\]/g,
-    '<span style="color: var(--app-log-warning-color);">[W]</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /\[E\]/g,
-    '<span style="color: var(--app-log-error-color);">[E]</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /(\[[^\]]+\.go:\d+\])/g,
-    '<span style="color: var(--app-log-path-color);">$1</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /\b(https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(?::\d+)?(?:\/[^\s\]]*)?)\b/g,
-    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+)\b/g,
-    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>'
-  )
-
-  cleanLog = cleanLog.replace(
-    /\b([a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+:\d+)\b(?!\.go)/g,
-    (match) => {
-      if (/\.go:\d+$/.test(match)) {
-        return match
-      }
-      return `<span style="color: var(--app-log-highlight-color); font-weight: 600;">${match}</span>`
-    }
-  )
-
-  cleanLog = cleanLog.replace(
-    /\b([0-9a-f]{32})\b/gi,
-    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>'
-  )
-
-  return cleanLog
+  return formatLogHtml(log, 'line')
 }
 
 // 监听 show 变化，启动或停止自动刷新
@@ -233,7 +178,7 @@ watch(() => props.logs, () => {
       scrollToBottom()
     })
   }
-}, { deep: true })
+})
 
 // 组件卸载时清理定时器
 onUnmounted(() => {

@@ -33,7 +33,11 @@ export function useTunnelDialogs({
       loadingLogs.value = true;
       currentTunnelId.value = tunnelId;
       const logs = await invoke<string[]>("api_get_tunnel_logs", { proxyId: tunnelId });
-      currentLogs.value = logs;
+      const nextSnapshot = logs.join("\n");
+      const currentSnapshot = currentLogs.value.join("\n");
+      if (nextSnapshot !== currentSnapshot) {
+        currentLogs.value = logs;
+      }
       showLogs.value = true;
     } catch (error) {
       message.error(`获取日志失败: ${extractErrorMessage(error, "获取日志失败")}`);

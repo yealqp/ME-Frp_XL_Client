@@ -81,6 +81,17 @@ const previewTheme = computed(() => getNaiveTheme(editingTarget.value));
 const previewThemeOverrides = computed(() =>
   buildNaiveThemeOverrides(currentEditingThemeConfig.value),
 );
+const previewCardStyle = computed(() => {
+  const common = currentEditingThemeConfig.value.common;
+
+  return {
+    '--preview-shell-bg': common.bodyColor,
+    '--preview-shell-surface': common.cardColor,
+    '--preview-shell-border': common.borderColor,
+    '--preview-shell-text': common.textColorBase,
+    '--preview-shell-muted': common.textColor2,
+  };
+});
 
 const issueSummary = computed(() => {
   if (validationIssues.value.length === 0) {
@@ -273,7 +284,7 @@ async function handleImportFromFile(): Promise<void> {
       </div>
 
       <div class="editor-side">
-        <n-card class="preview-card" :bordered="false">
+        <n-card class="preview-card" :bordered="false" :style="previewCardStyle">
           <template #header>
             实时预览
           </template>
@@ -490,6 +501,29 @@ async function handleImportFromFile(): Promise<void> {
 
 .preview-shell {
   padding: 4px;
+  background: var(--preview-shell-bg);
+  border: 1px solid var(--preview-shell-border);
+  color: var(--preview-shell-text);
+}
+
+.preview-shell :deep(.n-card) {
+  background: var(--preview-shell-surface);
+  border: 1px solid var(--preview-shell-border);
+}
+
+.preview-shell :deep(.n-card-header),
+.preview-shell :deep(.n-card__content),
+.preview-shell :deep(.n-form-item-label__text),
+.preview-shell :deep(.n-alert-body__title),
+.preview-shell :deep(.n-alert-body__content),
+.preview-shell :deep(.n-data-table-th),
+.preview-shell :deep(.n-data-table-td) {
+  color: var(--preview-shell-text);
+}
+
+.preview-shell :deep(.n-text.n-text--depth-3),
+.preview-shell :deep(.n-text.n-text--depth-2) {
+  color: var(--preview-shell-muted);
 }
 
 @media (max-width: 1200px) {

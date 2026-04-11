@@ -15,6 +15,7 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref<UserDetailInfo | null>(null);
   const loading = ref(false);
   const error = ref('');
+  let userInfoRequest: Promise<void> | null = null;
 
   // Getters
   
@@ -60,27 +61,40 @@ export const useUserStore = defineStore('user', () => {
    * Load user information from Tauri API
    * Manages loading and error states
    */
-  async function loadUserInfo() {
+  async function loadUserInfo(force = false) {
+    if (!force && userInfo.value) {
+      return;
+    }
+
+    if (userInfoRequest) {
+      return userInfoRequest;
+    }
+
     loading.value = true;
     error.value = '';
-    
-    try {
-      const result = await invoke<UserDetailInfo>('api_get_user_info');
-      userInfo.value = result;
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : String(err);
-      console.error('Failed to load user info:', err);
-      throw err;
-    } finally {
-      loading.value = false;
-    }
+
+    userInfoRequest = (async () => {
+      try {
+        const result = await invoke<UserDetailInfo>('api_get_user_info');
+        userInfo.value = result;
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : String(err);
+        console.error('Failed to load user info:', err);
+        throw err;
+      } finally {
+        loading.value = false;
+        userInfoRequest = null;
+      }
+    })();
+
+    return userInfoRequest;
   }
 
   /**
    * Refresh user information (called after sign-in or CDK redemption)
    */
   async function refreshUserInfo() {
-    return loadUserInfo();
+    return loadUserInfo(true);
   }
 
   /**
@@ -97,6 +111,7 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null;
     loading.value = false;
     error.value = '';
+    userInfoRequest = null;
   }
 
   return {

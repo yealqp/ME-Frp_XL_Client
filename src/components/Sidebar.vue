@@ -64,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, onMounted, computed } from "vue";
+import { h, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { NIcon, NLayoutSider, useDialog } from "naive-ui";
@@ -112,15 +112,6 @@ const handleExpand = async () => {
 const settingsStore = useSettingsStore();
 const { settings } = storeToRefs(settingsStore);
 const showAd = computed(() => settings.value.showAd);
-
-// 加载广告显示设置
-const loadAdSettings = async () => {
-  try {
-    await settingsStore.loadSettings();
-  } catch (error) {
-    console.error("加载广告设置失败:", error);
-  }
-};
 
 const emit = defineEmits<{
   logout: [];
@@ -234,14 +225,6 @@ function handleMenuSelect(key: string) {
   }
 }
 
-// 隐藏 Menu 的 tooltip（收缩时会自动显示）
-onMounted(async () => {
-  // 加载广告设置
-  loadAdSettings();
-  
-  // 加载 UI 设置
-  await uiStore.loadSidebarSettings();
-});
 </script>
 
 <style scoped>

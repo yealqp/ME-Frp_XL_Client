@@ -54,7 +54,7 @@ export const useTunnelStore = defineStore('tunnel', () => {
   });
 
   const onlineTunnelsCount = computed(() => {
-    return runningTunnels.value.size;
+    return tunnels.value.filter((tunnel) => tunnel.isOnline).length;
   });
 
   const totalTunnelsCount = computed(() => {
@@ -67,12 +67,6 @@ export const useTunnelStore = defineStore('tunnel', () => {
     }
 
     return Array.isArray(payload) ? payload : payload.nodes ?? [];
-  }
-
-  function syncTunnelOnlineState() {
-    tunnels.value.forEach((tunnel) => {
-      tunnel.isOnline = runningTunnels.value.has(tunnel.proxyId);
-    });
   }
 
   async function executeTunnelCommand<T>(
@@ -160,8 +154,6 @@ export const useTunnelStore = defineStore('tunnel', () => {
 
       nodeNameMap.value = nameMap;
       nodeHostnameMap.value = hostnameMap;
-
-      syncTunnelOnlineState();
     } catch (err) {
       error.value = extractErrorMessage(err, '加载隧道列表失败');
       console.error('Failed to load tunnels:', err);
@@ -174,8 +166,6 @@ export const useTunnelStore = defineStore('tunnel', () => {
     try {
       const running = await invoke<number[]>('api_get_running_tunnels');
       runningTunnels.value = new Set(running);
-
-      syncTunnelOnlineState();
     } catch (err) {
       error.value = extractErrorMessage(err, '获取隧道运行状态失败');
       console.error('Failed to load running tunnels:', err);
@@ -195,8 +185,6 @@ export const useTunnelStore = defineStore('tunnel', () => {
       
       // Update running tunnels set
       runningTunnels.value.add(proxyId);
-
-      syncTunnelOnlineState();
     });
   }
 
@@ -208,8 +196,6 @@ export const useTunnelStore = defineStore('tunnel', () => {
       
       // Update running tunnels set
       runningTunnels.value.delete(proxyId);
-
-      syncTunnelOnlineState();
     });
   }
 
@@ -256,7 +242,6 @@ export const useTunnelStore = defineStore('tunnel', () => {
       }, '强制下线失败');
 
       runningTunnels.value.delete(proxyId);
-      syncTunnelOnlineState();
 
       if (options.reEnableAfterKick) {
         await executeTunnelCommand<null>('api_toggle_tunnel', {

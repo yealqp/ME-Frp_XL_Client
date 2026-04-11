@@ -116,19 +116,6 @@ async fn remove_managed_background_image(relative_path: String) -> Result<(), St
     Ok(())
 }
 
-#[tauri::command]
-async fn read_managed_background_image(relative_path: String) -> Result<Vec<u8>, String> {
-    if !relative_path.starts_with("temp/") {
-        return Err("非法的背景图片路径".to_string());
-    }
-
-    let target_dir = managed_background_dir()?;
-    let file_name = relative_path.trim_start_matches("temp/");
-    let target_path = target_dir.join(file_name);
-
-    fs::read(&target_path).map_err(|e| format!("读取背景图片失败: {e}"))
-}
-
 fn managed_background_mime(target_path: &Path) -> &'static str {
     match target_path
         .extension()
@@ -1257,7 +1244,6 @@ pub fn run() {
             fetch_privacy_policy,
             copy_background_image_to_temp,
             remove_managed_background_image,
-            read_managed_background_image,
             read_managed_background_image_data_url,
             api_send_feedback,
             start_webui,

@@ -491,6 +491,15 @@ onMounted(async () => {
 /* 重要公告警告框样式 */
 .important-notice-alert {
   border-radius: 0;
+  background: color-mix(in srgb, var(--app-card-color) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-warning-color) 38%, var(--app-border-color));
+}
+
+.important-notice-alert :deep(.n-alert-body),
+.important-notice-alert :deep(.n-alert-body__content),
+.important-notice-alert :deep(.n-alert-body__title),
+.important-notice-alert :deep(.n-alert-header) {
+  background: transparent !important;
 }
 
 .important-notice-alert .alert-title {

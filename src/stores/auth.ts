@@ -42,32 +42,38 @@ export const useAuthStore = defineStore('auth', () => {
    * @param retryCount - Current retry attempt (internal use)
    * @throws Error if all retries fail
    */
-  async function checkAuthStatus(retryCount = 0): Promise<void> {
+  function applyUnifiedConfig(config?: UnifiedConfig | null): void {
+    if (config?.userToken) {
+      isLoggedIn.value = true;
+      userToken.value = config.userToken;
+      username.value = config.username || '';
+      group.value = config.group || '';
+      frpToken.value = config.frpToken || '';
+    } else {
+      isLoggedIn.value = false;
+      userToken.value = '';
+      username.value = '';
+      group.value = '';
+      frpToken.value = '';
+    }
+  }
+
+  async function checkAuthStatus(retryCount = 0, presetConfig?: UnifiedConfig | null): Promise<void> {
     const MAX_RETRIES = 3;
     const RETRY_DELAY = 500;
 
     isCheckingAuth.value = true;
 
     try {
-      const config = await loadUnifiedConfig();
-      
-      if (config?.userToken) {
-        isLoggedIn.value = true;
-        userToken.value = config.userToken;
-        username.value = config.username || '';
-        group.value = config.group || '';
-        frpToken.value = config.frpToken || '';
-      } else {
-        isLoggedIn.value = false;
-      }
-      
+      const config = presetConfig ?? await loadUnifiedConfig();
+      applyUnifiedConfig(config);
       isCheckingAuth.value = false;
     } catch (error) {
       console.error(`检查登录状态失败 (尝试 ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
       
       if (retryCount < MAX_RETRIES) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return checkAuthStatus(retryCount + 1);
+        return checkAuthStatus(retryCount + 1, presetConfig);
       }
       
       isCheckingAuth.value = false;
@@ -179,6 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     // Actions
     checkAuthStatus,
+    applyUnifiedConfig,
     login,
     logout,
   };

@@ -307,6 +307,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { extractProxyList, invokeTauriResponse, invokeTauriText } from "@/utils/tauriResponse";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { formatLogHtml, getSanitizedLogsText } from "@/utils/logSanitizer";
 import type { Tunnel as TunnelRecord } from "@/types/tunnel";
 
 const message = useMessage();
@@ -336,6 +337,7 @@ const logsError = ref("");
 const autoRefreshLogs = ref(true); // 默认开启自动刷新
 const logsTextRef = ref<HTMLElement | null>(null);
 let logsRefreshInterval: number | null = null;
+let lastLogsSnapshot = "";
 
 interface TunnelListPayload {
   proxies?: Tunnel[];
@@ -521,6 +523,12 @@ const fetchLogs = async () => {
 
   try {
     const logsArray = await invoke<string[]>("get_webui_logs");
+    const nextSnapshot = logsArray.join("\n");
+    if (nextSnapshot === lastLogsSnapshot) {
+      return;
+    }
+
+    lastLogsSnapshot = nextSnapshot;
     logs.value = logsArray;
     
     // 自动滚动到底部
@@ -545,11 +553,7 @@ const copyLogs = async () => {
   }
 
   try {
-    // 净化日志：移除 ANSI 转义序列和特殊字符
-    const cleanedLogs = logs.value.map(log => 
-      log.replace(/\x1b\[[0-9;]*m/g, "").replace(/▣/g, "")
-    );
-    const logsText = cleanedLogs.join("\n");
+    const logsText = getSanitizedLogsText(logs.value);
     await navigator.clipboard.writeText(logsText);
     message.success("日志已复制到剪贴板（已净化）");
   } catch (error) {
@@ -564,12 +568,12 @@ const startLogsRefresh = () => {
   if (autoRefreshLogs.value && webuiStore.isRunning) {
     // 立即获取一次
     fetchLogs();
-    // 每0.5秒刷新一次
+    // 每1秒刷新一次
     logsRefreshInterval = window.setInterval(() => {
       if (webuiStore.isRunning) {
         fetchLogs();
       }
-    }, 500);
+    }, 1000);
   }
 };
 
@@ -602,6 +606,7 @@ watch(
     } else {
       // WebUI 停止后清空日志并停止刷新
       logs.value = [];
+      lastLogsSnapshot = "";
       stopLogsRefresh();
     }
   }
@@ -609,70 +614,7 @@ watch(
 
 // 为日志添加颜色（与隧道管理相同的渲染逻辑）
 const colorizeLog = (log: string): string => {
-  // 清理 ANSI 转义序列
-  let cleanLog = log.replace(/\x1b\[[0-9;]*m/g, "").replace(/▣/g, "");
-
-  // 时间戳 - 灰色
-  cleanLog = cleanLog.replace(
-    /(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?)/g,
-    '<span style="color: var(--app-log-timestamp-color);">$1</span>',
-  );
-
-  // 日志级别 [I] - 蓝色
-  cleanLog = cleanLog.replace(
-    /\[I\]/g,
-    '<span style="color: var(--app-log-info-color);">[I]</span>',
-  );
-
-  // 日志级别 [W] - 黄色
-  cleanLog = cleanLog.replace(
-    /\[W\]/g,
-    '<span style="color: var(--app-log-warning-color);">[W]</span>',
-  );
-
-  // 日志级别 [E] - 红色
-  cleanLog = cleanLog.replace(
-    /\[E\]/g,
-    '<span style="color: var(--app-log-error-color);">[E]</span>',
-  );
-
-  // 文件路径 [xxx.go:123] - 绿色（先处理，避免被后续规则匹配）
-  cleanLog = cleanLog.replace(
-    /(\[[^\]]+\.go:\d+\])/g,
-    '<span style="color: var(--app-log-path-color);">$1</span>',
-  );
-
-  // HTTP/HTTPS URL - 红色加粗（在处理 IP 和域名之前）
-  cleanLog = cleanLog.replace(
-    /\b(https?:\/\/[a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+(?::\d+)?(?:\/[^\s\]]*)?)\b/g,
-    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>',
-  );
-
-  // IP地址:端口 - 红色加粗
-  cleanLog = cleanLog.replace(
-    /\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+)\b/g,
-    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>',
-  );
-
-  // 域名:端口 - 红色加粗（排除 .go: 文件路径）
-  cleanLog = cleanLog.replace(
-    /\b([a-zA-Z0-9][-a-zA-Z0-9]*(?:\.[a-zA-Z0-9][-a-zA-Z0-9]*)+:\d+)\b(?!\.go)/g,
-    (match) => {
-      // 额外检查：如果匹配项以 .go: 结尾，则不高亮
-      if (/\.go:\d+$/.test(match)) {
-        return match;
-      }
-      return `<span style="color: var(--app-log-highlight-color); font-weight: 600;">${match}</span>`;
-    },
-  );
-
-  // 访问密钥（32位十六进制字符串）- 红色加粗
-  cleanLog = cleanLog.replace(
-    /\b([0-9a-f]{32})\b/gi,
-    '<span style="color: var(--app-log-highlight-color); font-weight: 600;">$1</span>',
-  );
-
-  return cleanLog;
+  return formatLogHtml(log, "line");
 };
 
 // 监听 WebUI 运行状态变化
@@ -686,6 +628,8 @@ watch(
       // WebUI 停止后清空数据
       tunnels.value = [];
       sessionCookie.value = "";
+      logs.value = [];
+      lastLogsSnapshot = "";
       stopTunnelsRefresh();
     }
   }

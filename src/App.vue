@@ -1,5 +1,5 @@
-﻿<script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect } from "vue";
+<script setup lang="ts">
+import { computed, onMounted, ref, useTemplateRef, watch, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -28,6 +28,7 @@ import Sidebar from "./components/Sidebar.vue";
 import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
 import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
 import type { UpdateCheckResult } from "@/types/update";
+import type { UnifiedConfig } from "@/types/config";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 
 interface TunnelSummary {
@@ -56,6 +57,8 @@ const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 const { settings } = storeToRefs(settingsStore);
 const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRefs(uiStore);
 const backgroundImageUrl = ref<string | null>(null);
+const shellReady = ref(false);
+const hasStoredSession = ref(false);
 
 function clampOpacity(value: number | undefined): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
@@ -84,26 +87,6 @@ function withOpacity(color: string, opacity: number): string {
   }
 
   return color;
-}
-
-function getImageMimeType(filePath: string): string {
-  const extension = filePath.split(".").pop()?.toLowerCase();
-
-  switch (extension) {
-    case "jpg":
-    case "jpeg":
-      return "image/jpeg";
-    case "png":
-      return "image/png";
-    case "webp":
-      return "image/webp";
-    case "gif":
-      return "image/gif";
-    case "bmp":
-      return "image/bmp";
-    default:
-      return "image/png";
-  }
 }
 
 async function syncBackgroundImage(path?: string): Promise<void> {
@@ -172,6 +155,20 @@ const appProviders = computed(() => ({
 const sidebarToggleStyle = computed(() => ({
   left: `${currentSidebarWidth.value - 14}px`,
 }));
+
+const showAppShell = computed(() => {
+  if (!shellReady.value) {
+    return false;
+  }
+
+  if (isLoggedIn.value) {
+    return true;
+  }
+
+  return hasStoredSession.value && isCheckingAuth.value;
+});
+
+const showLoginScreen = computed(() => shellReady.value && !showAppShell.value);
 
 async function toggleSidebar(): Promise<void> {
   await uiStore.setSidebarCollapsed(!sidebarCollapsed.value);
@@ -388,10 +385,25 @@ const autoCheckForUpdates = async () => {
 };
 
 onMounted(async () => {
-  await themeStore.initTheme();
-  await settingsStore.loadSettings().catch((error) => {
-    console.error("加载外观设置失败:", error);
+  const persistedConfigPromise: Promise<UnifiedConfig | null> = loadUnifiedConfig().catch((error) => {
+    console.error("加载本地配置失败:", error);
+    return null;
   });
+
+  await Promise.all([
+    themeStore.initTheme(),
+    settingsStore.loadSettings().catch((error) => {
+      console.error("加载外观设置失败:", error);
+    }),
+    uiStore.loadSidebarSettings(),
+    persistedConfigPromise,
+  ]);
+
+  const persistedConfig = await persistedConfigPromise;
+  hasStoredSession.value = Boolean(persistedConfig?.userToken);
+  authStore.applyUnifiedConfig(persistedConfig);
+  shellReady.value = true;
+
   await syncBackgroundImage(settings.value.backgroundImagePath);
 
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -407,7 +419,9 @@ onMounted(async () => {
     }
   });
 
-  checkAuthStatus();
+  void authStore.checkAuthStatus(0, persistedConfig).finally(() => {
+    hasStoredSession.value = authStore.isLoggedIn;
+  });
 
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
@@ -426,13 +440,11 @@ onMounted(async () => {
 watch(
   () => settings.value.backgroundImagePath,
   (path) => {
-    void syncBackgroundImage(path);
+    if (shellReady.value) {
+      void syncBackgroundImage(path);
+    }
   },
 );
-
-onUnmounted(() => {
-  backgroundImageUrl.value = null;
-});
 </script>
 
 <template>
@@ -447,17 +459,17 @@ onUnmounted(() => {
           <n-dialog-provider ref="dialogProvider">
             <n-notification-provider ref="notificationProvider">
             <!-- 鍔犺浇鐘舵€?-->
-            <div v-if="isCheckingAuth" class="loading-container"></div>
+            <div v-if="!shellReady" class="loading-container"></div>
 
             <!-- 鐧诲綍/娉ㄥ唽椤甸潰 -->
-            <div v-else-if="!isLoggedIn" class="login-fullscreen">
+            <div v-else-if="showLoginScreen" class="login-fullscreen">
               <router-view v-slot="{ Component }">
                 <component :is="Component" @login-success="handleLoginSuccess" />
               </router-view>
             </div>
 
             <!-- 涓诲簲鐢ㄧ晫闈?- 浣跨敤 NLayout -->
-            <n-layout v-else has-sider position="absolute" class="main-layout">
+            <n-layout v-else-if="showAppShell" has-sider position="absolute" class="main-layout">
               <button
                 v-if="sidebarCollapsible"
                 type="button"
@@ -712,6 +724,15 @@ body {
 .n-select-menu {
   --n-color: var(--app-content-popover-color) !important;
   background-color: var(--app-content-popover-color) !important;
+}
+
+.n-tooltip,
+.n-popover,
+.n-dropdown-menu,
+.n-select-menu,
+.n-popover-body,
+.n-tooltip__content {
+  color: var(--app-text-color) !important;
 }
 
 .n-modal .n-card,
