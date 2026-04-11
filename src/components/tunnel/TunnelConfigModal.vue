@@ -15,7 +15,7 @@
             <n-button
               type="primary"
               size="small"
-              @click="$emit(                                               'start-edit')"` 
+              @click="$emit('start-edit')"
               :disabled="!configContents[activeType]"
             >
               <template #icon>
@@ -26,7 +26,7 @@
             <n-button
               type="success"
               size="small"
-              @click="$emit('save-to-local', tunnelId, activeType, configContents[activeType])"
+              @click="emitSaveToLocal()"
               :disabled="!configContents[activeType]"
             >
               <template #icon>
@@ -40,7 +40,8 @@
             <n-button 
               type="success" 
               size="small" 
-              @click="$emit('save-edit', tunnelId, activeType, editableContents[activeType])"
+              @click="emitSaveEdit()"
+              :disabled="!editableContents[activeType]"
             >
               <template #icon>
                 <Check :size="14" />
@@ -60,7 +61,7 @@
       <div class="config-content">
         <n-tabs
           :value="activeType"
-          @update:value="$emit('change-type', $event)"
+          @update:value="handleTypeChange"
           type="line"
           placement="left"
           tab-style="min-width: 80px;"
@@ -108,25 +109,30 @@
 <script setup lang="ts">
 import { NModal, NButton, NSpace, NTabs, NTabPane, NInput, NCode, NEmpty } from 'naive-ui'
 import { Edit, Save, Check, X } from 'lucide-vue-next'
+import {
+  getTunnelConfigLanguage,
+  TUNNEL_CONFIG_FORMATS,
+  type TunnelConfigFormat,
+} from '@/utils/tunnelConfigFiles'
 
 // Props 接口
 interface TunnelConfigModalProps {
   show: boolean                              // 显示状态（v-model）
   tunnelId: number | null                    // 当前隧道 ID
-  configContents: Record<string, string>     // 配置内容对象
-  editableContents: Record<string, string>   // 可编辑配置内容
+  configContents: Partial<Record<TunnelConfigFormat, string>>     // 配置内容对象
+  editableContents: Partial<Record<TunnelConfigFormat, string>>   // 可编辑配置内容
   isEditing: boolean                         // 编辑状态
-  activeType: string                         // 活动配置类型
+  activeType: TunnelConfigFormat             // 活动配置类型
 }
 
 // Emits 接口
 interface TunnelConfigModalEmits {
   (e: 'update:show', value: boolean): void
   (e: 'start-edit'): void
-  (e: 'save-to-local', tunnelId: number, format: string, content: string): void
-  (e: 'save-edit', tunnelId: number, format: string, content: string): void
+  (e: 'save-to-local', tunnelId: number, format: TunnelConfigFormat, content: string): void
+  (e: 'save-edit', tunnelId: number, format: TunnelConfigFormat, content: string): void
   (e: 'cancel-edit'): void
-  (e: 'change-type', newType: string): void
+  (e: 'change-type', newType: TunnelConfigFormat): void
 }
 
 // 定义 props
@@ -136,17 +142,49 @@ const props = defineProps<TunnelConfigModalProps>()
 const emit = defineEmits<TunnelConfigModalEmits>()
 
 // 配置类型列表
-const configTypes = ['toml', 'json', 'yml', 'ini']
+const configTypes = TUNNEL_CONFIG_FORMATS
 
 // 获取配置格式对应的语法高亮语言
-function getLanguageForFormat(format: string): string {
-  const languageMap: Record<string, string> = {
-    toml: 'toml',
-    json: 'json',
-    yml: 'yaml',
-    ini: 'ini',
+function getLanguageForFormat(format: TunnelConfigFormat): string {
+  return getTunnelConfigLanguage(format)
+}
+
+function emitSaveToLocal() {
+  if (!props.tunnelId) {
+    return
   }
-  return languageMap[format] || 'text'
+
+  const content = props.configContents[props.activeType]
+  if (!content) {
+    return
+  }
+
+  emit('save-to-local', props.tunnelId, props.activeType, content)
+}
+
+function emitSaveEdit() {
+  if (!props.tunnelId) {
+    return
+  }
+
+  const content = props.editableContents[props.activeType]
+  if (!content) {
+    return
+  }
+
+  emit('save-edit', props.tunnelId, props.activeType, content)
+}
+
+function handleTypeChange(value: string | number) {
+  if (typeof value !== 'string') {
+    return
+  }
+
+  if (!configTypes.includes(value as TunnelConfigFormat)) {
+    return
+  }
+
+  emit('change-type', value as TunnelConfigFormat)
 }
 </script>
 

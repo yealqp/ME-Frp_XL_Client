@@ -5,6 +5,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useMessage } from "naive-ui";
 import { useSettingsStore } from "@/stores/settings";
 import { useUIStore } from "@/stores/ui";
+import { useSidebarSettingsHandlers } from "@/composables/useSidebarSettingsHandlers";
+import { clampAppearanceOpacity, clampAppearanceRange } from "@/utils/appearanceSettings";
 
 const IMAGE_FILE_FILTER = [
   {
@@ -12,18 +14,6 @@ const IMAGE_FILE_FILTER = [
     extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif"],
   },
 ];
-
-function clampRange(value: number | null, min: number, max: number): number | null {
-  if (value === null) {
-    return null;
-  }
-
-  return Math.min(max, Math.max(min, Math.round(value)));
-}
-
-function clampOpacity(value: number | null): number | null {
-  return clampRange(value, 0, 100);
-}
 
 function isManagedBackgroundPath(filePath?: string): filePath is string {
   return typeof filePath === "string" && filePath.startsWith("temp/");
@@ -34,7 +24,15 @@ export function useAppearanceSettings() {
   const settingsStore = useSettingsStore();
   const uiStore = useUIStore();
   const { settings } = storeToRefs(settingsStore);
-  const { sidebarWidth, sidebarCollapsible } = storeToRefs(uiStore);
+  const {
+    sidebarWidth,
+    sidebarCollapsible,
+    handleSidebarWidthChange,
+    handleSidebarCollapsibleChange,
+  } = useSidebarSettingsHandlers(uiStore, {
+    success: (content) => message.success(content),
+    error: (content) => message.error(content),
+  });
 
   const backgroundImageName = computed(() => {
     const filePath = settings.value.backgroundImagePath;
@@ -51,8 +49,6 @@ export function useAppearanceSettings() {
   let contentOpacityDebounceTimer: number | null = null;
   let fontWeightDebounceTimer: number | null = null;
   let shadowIntensityDebounceTimer: number | null = null;
-  let sidebarWidthDebounceTimer: number | null = null;
-
   async function removeManagedBackgroundFile(filePath?: string): Promise<void> {
     if (!isManagedBackgroundPath(filePath)) {
       return;
@@ -134,7 +130,7 @@ export function useAppearanceSettings() {
   }
 
   function handleBackgroundImageOpacityChange(value: number | null) {
-    const nextValue = clampOpacity(value);
+    const nextValue = clampAppearanceOpacity(value, null);
     if (nextValue === null) {
       return;
     }
@@ -149,7 +145,7 @@ export function useAppearanceSettings() {
   }
 
   function handleBackgroundBlurChange(value: number | null) {
-    const nextValue = clampRange(value, 0, 30);
+    const nextValue = clampAppearanceRange(value, 0, 30, null);
     if (nextValue === null) {
       return;
     }
@@ -164,7 +160,7 @@ export function useAppearanceSettings() {
   }
 
   function handleSidebarOpacityChange(value: number | null) {
-    const nextValue = clampOpacity(value);
+    const nextValue = clampAppearanceOpacity(value, null);
     if (nextValue === null) {
       return;
     }
@@ -179,7 +175,7 @@ export function useAppearanceSettings() {
   }
 
   function handleContentOpacityChange(value: number | null) {
-    const nextValue = clampOpacity(value);
+    const nextValue = clampAppearanceOpacity(value, null);
     if (nextValue === null) {
       return;
     }
@@ -194,7 +190,7 @@ export function useAppearanceSettings() {
   }
 
   function handleFontWeightChange(value: number | null) {
-    const nextValue = clampRange(value, 300, 700);
+    const nextValue = clampAppearanceRange(value, 300, 700, null);
     if (nextValue === null) {
       return;
     }
@@ -209,7 +205,7 @@ export function useAppearanceSettings() {
   }
 
   function handleShadowIntensityChange(value: number | null) {
-    const nextValue = clampRange(value, 0, 200);
+    const nextValue = clampAppearanceRange(value, 0, 200, null);
     if (nextValue === null) {
       return;
     }
@@ -223,39 +219,6 @@ export function useAppearanceSettings() {
     );
   }
 
-  function handleSidebarWidthChange(value: number | null) {
-    if (value === null) {
-      return;
-    }
-
-    uiStore.setSidebarWidth(value);
-
-    if (sidebarWidthDebounceTimer !== null) {
-      clearTimeout(sidebarWidthDebounceTimer);
-    }
-
-    sidebarWidthDebounceTimer = window.setTimeout(async () => {
-      try {
-        await uiStore.saveSidebarSettings();
-        message.success(`侧边栏宽度已设置为 ${value}px`);
-      } catch (error) {
-        console.error("保存侧边栏宽度失败:", error);
-        message.error("保存侧边栏宽度失败");
-        await uiStore.loadSidebarSettings();
-      }
-    }, 300);
-  }
-
-  async function handleSidebarCollapsibleChange(value: boolean) {
-    try {
-      await uiStore.updateSidebarCollapsible(value);
-      message.success(value ? "已开启侧边栏收缩功能" : "已关闭侧边栏收缩功能");
-    } catch (error) {
-      console.error("保存侧边栏收缩设置失败:", error);
-      message.error("保存侧边栏收缩设置失败");
-    }
-  }
-
   onUnmounted(() => {
     for (const timer of [
       backgroundOpacityDebounceTimer,
@@ -264,7 +227,6 @@ export function useAppearanceSettings() {
       contentOpacityDebounceTimer,
       fontWeightDebounceTimer,
       shadowIntensityDebounceTimer,
-      sidebarWidthDebounceTimer,
     ]) {
       if (timer !== null) {
         clearTimeout(timer);

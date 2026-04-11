@@ -9,25 +9,10 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
 import type { AppSettings } from '@/types/config';
+import { clampAppearanceOpacity, clampAppearanceRange } from '@/utils/appearanceSettings';
 import { extractErrorMessage } from '@/utils/errorHandler';
 import { showAdGlobal } from '@/utils/eventBus';
 import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
-
-function clampOpacity(value: number | undefined, fallback = 100): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return fallback;
-  }
-
-  return Math.min(100, Math.max(0, Math.round(value)));
-}
-
-function clampRange(value: number | undefined, min: number, max: number, fallback: number): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return fallback;
-  }
-
-  return Math.min(max, Math.max(min, Math.round(value)));
-}
 
 export const useSettingsStore = defineStore('settings', () => {
   // ============================================================================
@@ -102,12 +87,12 @@ export const useSettingsStore = defineStore('settings', () => {
         showAd: config.showAd ?? true,
         hideWebuiEntry: config.hideWebuiEntry ?? false,
         backgroundImagePath: config.backgroundImagePath,
-        backgroundImageOpacity: clampOpacity(config.backgroundImageOpacity),
-        backgroundBlur: clampRange(config.backgroundBlur, 0, 30, 0),
-        sidebarOpacity: clampOpacity(config.sidebarOpacity),
-        contentOpacity: clampOpacity(config.contentOpacity),
-        fontWeight: clampRange(config.fontWeight, 300, 700, 400),
-        shadowIntensity: clampRange(config.shadowIntensity, 0, 200, 100),
+        backgroundImageOpacity: clampAppearanceOpacity(config.backgroundImageOpacity, 100) ?? 100,
+        backgroundBlur: clampAppearanceRange(config.backgroundBlur, 0, 30, 0) ?? 0,
+        sidebarOpacity: clampAppearanceOpacity(config.sidebarOpacity, 100) ?? 100,
+        contentOpacity: clampAppearanceOpacity(config.contentOpacity, 100) ?? 100,
+        fontWeight: clampAppearanceRange(config.fontWeight, 300, 700, 400) ?? 400,
+        shadowIntensity: clampAppearanceRange(config.shadowIntensity, 0, 200, 100) ?? 100,
       };
 
       // Sync showAd to eventBus
@@ -140,12 +125,12 @@ export const useSettingsStore = defineStore('settings', () => {
         showAd: settings.value.showAd,
         hideWebuiEntry: settings.value.hideWebuiEntry,
         backgroundImagePath: settings.value.backgroundImagePath || undefined,
-        backgroundImageOpacity: clampOpacity(settings.value.backgroundImageOpacity),
-        backgroundBlur: clampRange(settings.value.backgroundBlur, 0, 30, 0),
-        sidebarOpacity: clampOpacity(settings.value.sidebarOpacity),
-        contentOpacity: clampOpacity(settings.value.contentOpacity),
-        fontWeight: clampRange(settings.value.fontWeight, 300, 700, 400),
-        shadowIntensity: clampRange(settings.value.shadowIntensity, 0, 200, 100),
+        backgroundImageOpacity: clampAppearanceOpacity(settings.value.backgroundImageOpacity, 100) ?? 100,
+        backgroundBlur: clampAppearanceRange(settings.value.backgroundBlur, 0, 30, 0) ?? 0,
+        sidebarOpacity: clampAppearanceOpacity(settings.value.sidebarOpacity, 100) ?? 100,
+        contentOpacity: clampAppearanceOpacity(settings.value.contentOpacity, 100) ?? 100,
+        fontWeight: clampAppearanceRange(settings.value.fontWeight, 300, 700, 400) ?? 400,
+        shadowIntensity: clampAppearanceRange(settings.value.shadowIntensity, 0, 200, 100) ?? 100,
       });
       localStorage.setItem('mefrp_theme', settings.value.theme);
     } catch (err) {

@@ -1,18 +1,27 @@
 import { onUnmounted, ref, shallowRef } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
 import { invokeTauriResponse } from "@/utils/tauriResponse";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import {
+  checkTunnelConfigFiles,
+  deleteTunnelConfigFile,
+  getTunnelConfigFileName,
+  getTunnelConfigLanguage,
+  TUNNEL_CONFIG_FORMATS,
+  type TunnelConfigFormat,
+  saveTunnelConfigFile,
+  validateTunnelConfigContent,
+} from "@/utils/tunnelConfigFiles";
 
 export function useTunnelConfigFiles() {
   const message = useMessage();
 
   const showConfigModal = ref(false);
   const currentConfigTunnelId = ref<number | null>(null);
-  const configTypes = ["toml", "json", "yml", "ini"];
-  const activeConfigType = ref("toml");
-  const configContents = ref<Record<string, string>>({});
-  const editableConfigContents = ref<Record<string, string>>({});
+  const configTypes = TUNNEL_CONFIG_FORMATS;
+  const activeConfigType = ref<TunnelConfigFormat>(TUNNEL_CONFIG_FORMATS[0]);
+  const configContents = ref<Partial<Record<TunnelConfigFormat, string>>>({});
+  const editableConfigContents = ref<Partial<Record<TunnelConfigFormat, string>>>({});
   const loadingConfig = ref(false);
   const usingConfigFile = shallowRef<number[]>([]);
   const isEditingConfig = ref(false);
@@ -26,7 +35,7 @@ export function useTunnelConfigFiles() {
 
     configFileStatusTimer = window.setTimeout(async () => {
       try {
-        const tunnelsWithConfig = await invoke<number[]>("check_tunnel_config_files");
+        const tunnelsWithConfig = await checkTunnelConfigFiles();
         usingConfigFile.value = tunnelsWithConfig;
       } catch (err) {
         console.error("加载配置文件状态失败:", err);
@@ -34,7 +43,7 @@ export function useTunnelConfigFiles() {
     }, 100);
   }
 
-  async function getTunnelConfig(tunnelId: number, format: string) {
+  async function getTunnelConfig(tunnelId: number, format: TunnelConfigFormat) {
     try {
       loadingConfig.value = true;
       const result = await invokeTauriResponse<{ config?: string }>("api_get_tunnel_config", {
@@ -56,17 +65,10 @@ export function useTunnelConfigFiles() {
     }
   }
 
-  async function saveConfigFile(
-    tunnelId: number,
-    format: string,
-    content: string,
-  ) {
+  async function saveConfigFile(tunnelId: number, format: TunnelConfigFormat, content: string) {
     try {
-      const fileName = `${tunnelId}.${format}`;
-      await invoke("save_config_file", {
-        fileName,
-        content,
-      });
+      const fileName = getTunnelConfigFileName(tunnelId, format);
+      await saveTunnelConfigFile(fileName, content);
       message.success(`配置文件已保存: ${fileName}，下次启动将使用配置文件模式`);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -111,35 +113,6 @@ export function useTunnelConfigFiles() {
     editableConfigContents.value = { ...configContents.value };
   }
 
-  function validateConfigContent(content: string, format: string): boolean {
-    if (!content || content.trim() === "") {
-      return false;
-    }
-
-    try {
-      switch (format) {
-        case "json":
-          JSON.parse(content);
-          break;
-        case "toml":
-        case "ini":
-          if (!content.includes("=") && !content.includes("[")) {
-            return false;
-          }
-          break;
-        case "yml":
-        case "yaml":
-          if (!content.includes(":") && !content.includes("-")) {
-            return false;
-          }
-          break;
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   async function saveEditedConfig() {
     if (!currentConfigTunnelId.value) {
       return;
@@ -155,7 +128,7 @@ export function useTunnelConfigFiles() {
         return;
       }
 
-      if (!validateConfigContent(content, format)) {
+      if (!validateTunnelConfigContent(content, format)) {
         message.error(`配置内容格式无效，请检查 ${format.toUpperCase()} 格式是否正确`);
         return;
       }
@@ -170,7 +143,7 @@ export function useTunnelConfigFiles() {
     }
   }
 
-  async function handleConfigTypeChange(newType: string) {
+  async function handleConfigTypeChange(newType: TunnelConfigFormat) {
     if (!currentConfigTunnelId.value) {
       return;
     }
@@ -181,8 +154,8 @@ export function useTunnelConfigFiles() {
     }
 
     try {
-      const oldFileName = `${currentConfigTunnelId.value}.${oldType}`;
-      await invoke("delete_config_file", { fileName: oldFileName }).catch(() => {});
+      const oldFileName = getTunnelConfigFileName(currentConfigTunnelId.value, oldType);
+      await deleteTunnelConfigFile(oldFileName).catch(() => {});
 
       activeConfigType.value = newType;
       message.success(`已切换到 ${newType.toUpperCase()} 格式`);
@@ -200,8 +173,8 @@ export function useTunnelConfigFiles() {
     try {
       await Promise.all(
         configTypes.map((format) => {
-          const fileName = `${tunnelId}.${format}`;
-          return invoke("delete_config_file", { fileName }).catch(() => {});
+          const fileName = getTunnelConfigFileName(tunnelId, format);
+          return deleteTunnelConfigFile(fileName).catch(() => {});
         }),
       );
 
@@ -215,14 +188,8 @@ export function useTunnelConfigFiles() {
     }
   }
 
-  function getLanguageForFormat(format: string): string {
-    const languageMap: Record<string, string> = {
-      toml: "toml",
-      json: "json",
-      yml: "yaml",
-      ini: "ini",
-    };
-    return languageMap[format] || "text";
+  function getLanguageForFormat(format: TunnelConfigFormat): string {
+    return getTunnelConfigLanguage(format);
   }
 
   onUnmounted(() => {

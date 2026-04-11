@@ -1,10 +1,11 @@
-import { computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import { useMessage } from "naive-ui";
 import type { Tunnel } from "@/types/tunnel";
 import { useSettingsStore } from "@/stores/settings";
 import { useUIStore } from "@/stores/ui";
 import { useTunnelStore } from "@/stores/tunnel";
+import { useSidebarSettingsHandlers } from "@/composables/useSidebarSettingsHandlers";
 
 export function useSettingsPanel() {
   const message = useMessage();
@@ -13,9 +14,16 @@ export function useSettingsPanel() {
   const tunnelStore = useTunnelStore();
 
   const { settings } = storeToRefs(settingsStore);
-  const { sidebarWidth, sidebarCollapsible } = storeToRefs(uiStore);
   const { tunnels, loading: tunnelLoading, error: tunnelError } = storeToRefs(tunnelStore);
-  let sidebarWidthDebounceTimer: number | null = null;
+  const {
+    sidebarWidth,
+    sidebarCollapsible,
+    handleSidebarWidthChange,
+    handleSidebarCollapsibleChange,
+  } = useSidebarSettingsHandlers(uiStore, {
+    success: (content) => message.success(content),
+    error: (content) => message.error(content),
+  });
 
   const deletedTunnels = computed(() => {
     const existingTunnelIds = tunnels.value.map((tunnel) => tunnel.proxyId);
@@ -139,39 +147,6 @@ export function useSettingsPanel() {
     }
   }
 
-  function handleSidebarWidthChange(value: number | null) {
-    if (value === null) {
-      return;
-    }
-
-    uiStore.setSidebarWidth(value);
-
-    if (sidebarWidthDebounceTimer !== null) {
-      clearTimeout(sidebarWidthDebounceTimer);
-    }
-
-    sidebarWidthDebounceTimer = window.setTimeout(async () => {
-      try {
-        await uiStore.saveSidebarSettings();
-        message.success(`侧边栏宽度已设置为 ${value}px`);
-      } catch (error) {
-        message.error("保存侧边栏宽度失败");
-        console.error("保存侧边栏宽度失败:", error);
-        await uiStore.loadSidebarSettings();
-      }
-    }, 300);
-  }
-
-  async function handleSidebarCollapsibleChange(value: boolean) {
-    try {
-      await uiStore.updateSidebarCollapsible(value);
-      message.success(value ? "已开启侧边栏收缩功能" : "已关闭侧边栏收缩功能");
-    } catch (error) {
-      message.error("保存侧边栏收缩设置失败");
-      console.error("保存侧边栏收缩设置失败:", error);
-    }
-  }
-
   async function selectAllTunnels() {
     const enabledTunnels = tunnels.value.filter((tunnel) => !tunnel.isDisabled);
     const allEnabledIds = enabledTunnels.map((tunnel) => tunnel.proxyId);
@@ -220,13 +195,6 @@ export function useSettingsPanel() {
 
     await uiStore.loadSidebarSettings();
     await loadTunnels();
-  });
-
-  onUnmounted(() => {
-    if (sidebarWidthDebounceTimer !== null) {
-      clearTimeout(sidebarWidthDebounceTimer);
-      sidebarWidthDebounceTimer = null;
-    }
   });
 
   return {
