@@ -24,6 +24,8 @@
 //! 本文件定义了所有可从前端调用的 Tauri 命令，这些命令作为前端和后端模块之间的桥梁。
 
 use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -46,6 +48,69 @@ use models::auth::UserDetailInfo;
 use models::config::UnifiedConfig;
 use models::tunnel::{CreateTunnelRequest, FreePortRequest, UpdateTunnelRequest};
 use tunnel::ProcessManager;
+
+fn managed_background_dir() -> Result<PathBuf, String> {
+    let exe_path = std::env::current_exe().map_err(|e| format!("获取可执行文件路径失败: {e}"))?;
+    let exe_dir = exe_path
+        .parent()
+        .ok_or_else(|| "获取可执行文件目录失败".to_string())?;
+    Ok(exe_dir.join("temp"))
+}
+
+fn managed_background_relative_path(file_name: &str) -> String {
+    format!("temp/{file_name}")
+}
+
+#[tauri::command]
+async fn copy_background_image_to_temp(source_path: String) -> Result<String, String> {
+    let source = Path::new(&source_path);
+    if !source.exists() {
+        return Err("源图片不存在".to_string());
+    }
+
+    let file_name = source
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| "无法解析图片文件名".to_string())?;
+
+    let target_dir = managed_background_dir()?;
+    fs::create_dir_all(&target_dir).map_err(|e| format!("创建背景目录失败: {e}"))?;
+
+    let target_path = target_dir.join(file_name);
+    fs::copy(source, &target_path).map_err(|e| format!("复制背景图片失败: {e}"))?;
+
+    Ok(managed_background_relative_path(file_name))
+}
+
+#[tauri::command]
+async fn remove_managed_background_image(relative_path: String) -> Result<(), String> {
+    if !relative_path.starts_with("temp/") {
+        return Ok(());
+    }
+
+    let target_dir = managed_background_dir()?;
+    let file_name = relative_path.trim_start_matches("temp/");
+    let target_path = target_dir.join(file_name);
+
+    if target_path.exists() {
+        fs::remove_file(&target_path).map_err(|e| format!("删除背景图片失败: {e}"))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn read_managed_background_image(relative_path: String) -> Result<Vec<u8>, String> {
+    if !relative_path.starts_with("temp/") {
+        return Err("非法的背景图片路径".to_string());
+    }
+
+    let target_dir = managed_background_dir()?;
+    let file_name = relative_path.trim_start_matches("temp/");
+    let target_path = target_dir.join(file_name);
+
+    fs::read(&target_path).map_err(|e| format!("读取背景图片失败: {e}"))
+}
 
 #[tauri::command]
 async fn clear_config(_app_handle: tauri::AppHandle) -> Result<String, String> {
@@ -1141,6 +1206,9 @@ pub fn run() {
             get_update_history,
             download_and_install_update,
             fetch_privacy_policy,
+            copy_background_image_to_temp,
+            remove_managed_background_image,
+            read_managed_background_image,
             api_send_feedback,
             start_webui,
             stop_webui,

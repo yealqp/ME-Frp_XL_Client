@@ -1,5 +1,6 @@
 import { computed, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
+import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useMessage } from "naive-ui";
 import { useSettingsStore } from "@/stores/settings";
@@ -18,6 +19,10 @@ function clampOpacity(value: number | null): number | null {
   }
 
   return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+function isManagedBackgroundPath(filePath?: string): filePath is string {
+  return typeof filePath === "string" && filePath.startsWith("temp/");
 }
 
 export function useAppearanceSettings() {
@@ -41,6 +46,20 @@ export function useAppearanceSettings() {
   let contentOpacityDebounceTimer: number | null = null;
   let sidebarWidthDebounceTimer: number | null = null;
 
+  async function removeManagedBackgroundFile(filePath?: string): Promise<void> {
+    if (!isManagedBackgroundPath(filePath)) {
+      return;
+    }
+
+    try {
+      await invoke("remove_managed_background_image", {
+        relativePath: filePath,
+      });
+    } catch (error) {
+      console.error("清理旧背景图片失败:", error);
+    }
+  }
+
   async function handleBackgroundImageSelect() {
     try {
       const filePath = await open({
@@ -53,17 +72,25 @@ export function useAppearanceSettings() {
         return;
       }
 
-      await settingsStore.updateSetting("backgroundImagePath", filePath);
+      const previousPath = settings.value.backgroundImagePath;
+      const managedPath = await invoke<string>("copy_background_image_to_temp", {
+        sourcePath: filePath,
+      });
+
+      await settingsStore.updateSetting("backgroundImagePath", managedPath);
+      await removeManagedBackgroundFile(previousPath);
       message.success("背景图片已更新");
     } catch (error) {
       console.error("选择背景图片失败:", error);
-      message.error("选择背景图片失败");
+      message.error(`选择背景图片失败: ${error}`);
     }
   }
 
   async function handleBackgroundImageClear() {
     try {
+      const previousPath = settings.value.backgroundImagePath;
       await settingsStore.updateSetting("backgroundImagePath", undefined);
+      await removeManagedBackgroundFile(previousPath);
       message.success("背景图片已移除");
     } catch (error) {
       console.error("移除背景图片失败:", error);

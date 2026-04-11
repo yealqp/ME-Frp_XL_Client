@@ -77,6 +77,10 @@ const emit = defineEmits<{
   gap: 16px;
 }
 
+.slider-control :deep(.n-slider) {
+  touch-action: none;
+}
+
 @media (max-width: 768px) {
   .setting-item {
     flex-direction: column;

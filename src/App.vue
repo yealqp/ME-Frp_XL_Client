@@ -3,7 +3,6 @@ import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffe
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { readFile } from "@tauri-apps/plugin-fs";
 import { 
   NDialogProvider, 
   NSpin, 
@@ -114,11 +113,16 @@ async function syncBackgroundImage(path?: string): Promise<void> {
   }
 
   try {
-    const fileBytes = await readFile(path);
-    const blob = new Blob([fileBytes], { type: getImageMimeType(path) });
+    const isManagedPath = !/^[a-zA-Z]:[\\/]/.test(path) && !path.startsWith("/") && !path.startsWith("\\");
+    const fileBytes = isManagedPath
+      ? await invoke<number[]>("read_managed_background_image", {
+          relativePath: path,
+        })
+      : [];
+    const blob = new Blob([Uint8Array.from(fileBytes)], { type: getImageMimeType(path) });
     backgroundImageUrl.value = URL.createObjectURL(blob);
   } catch (error) {
-    console.error("鍔犺浇鑳屾櫙鍥剧墖澶辫触:", error);
+    console.error("加载背景图片失败:", error);
   }
 }
 
