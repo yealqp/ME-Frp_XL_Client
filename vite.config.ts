@@ -1,69 +1,23 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "path";
-import { brotliCompressSync, constants } from "zlib";
-import { mkdirSync, writeFileSync } from "fs";
+function getNaiveUiFallbackChunk(id: string): string {
+  const match = id.match(/node_modules\/naive-ui\/(?:es|lib)\/([^/]+)/);
+  const segment = match?.[1];
 
-function brotliOutputPlugin() {
-  return {
-    name: "brotli-output",
-    apply: "build" as const,
-    generateBundle(_options: unknown, bundle: Record<string, { type: string; fileName: string; source?: string | Uint8Array; code?: string }>) {
-      for (const [fileName, output] of Object.entries(bundle)) {
-        const isCompressibleAsset = output.type === "asset" && output.source;
-        const isCompressibleChunk = output.type === "chunk" && output.code;
+  if (!segment) {
+    return "naive-ui-other";
+  }
 
-        if (!isCompressibleAsset && !isCompressibleChunk) {
-          continue;
-        }
-
-        const rawContent = isCompressibleAsset ? output.source : output.code;
-        const buffer = typeof rawContent === "string" ? Buffer.from(rawContent) : Buffer.from(rawContent);
-
-        if (buffer.length < 10 * 1024) {
-          continue;
-        }
-
-        const compressed = brotliCompressSync(buffer, {
-          params: {
-            [constants.BROTLI_PARAM_QUALITY]: 11,
-          },
-        });
-
-        this.emitFile({
-          type: "asset",
-          fileName: `${fileName}.br`,
-          source: compressed,
-        });
-      }
-    },
-    writeBundle(options: { dir?: string }, bundle: Record<string, { type: string; fileName: string; source?: string | Uint8Array }>) {
-      const outDir = options.dir;
-      if (!outDir) {
-        return;
-      }
-
-      for (const output of Object.values(bundle)) {
-        if (output.type !== "asset" || !output.fileName.endsWith(".br") || !output.source) {
-          continue;
-        }
-
-        const targetPath = path.join(outDir, output.fileName);
-        mkdirSync(path.dirname(targetPath), { recursive: true });
-        writeFileSync(targetPath, output.source);
-      }
-    },
-  };
+  const normalized = segment.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
+  return `naive-ui-${normalized}`;
 }
 
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    brotliOutputPlugin(),
-  ],
+  plugins: [vue()],
 
   // Path resolution
   resolve: {
@@ -145,8 +99,8 @@ export default defineConfig({
                 id.includes('/tag/') || id.includes('/text/')) {
               return 'naive-ui-layout';
             }
-            // 其他 Naive UI 组件
-            return 'naive-ui-other';
+
+            return getNaiveUiFallbackChunk(id);
           }
           
           // 将 ECharts 分离到单独的块

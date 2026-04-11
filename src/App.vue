@@ -580,59 +580,59 @@ body {
   background: transparent;
 }
 
-.main-layout :deep(.n-layout-scroll-container),
-.content-layout :deep(.n-layout-scroll-container),
-.content-body :deep(.n-layout-scroll-container),
-.main-layout :deep(.n-layout),
-.content-layout :deep(.n-layout),
-.content-layout :deep(.n-layout-content) {
+.main-layout .n-layout-scroll-container,
+.content-layout .n-layout-scroll-container,
+.content-body .n-layout-scroll-container,
+.main-layout .n-layout,
+.content-layout .n-layout,
+.content-layout .n-layout-content {
   background: transparent !important;
 }
 
-.content-layout :deep(.n-card),
-.content-layout :deep(.n-alert),
-.content-layout :deep(.n-collapse-item),
-.content-layout :deep(.n-data-table),
-.content-layout :deep(.n-tabs-nav--segment-type),
-.content-layout :deep(.n-input),
-.content-layout :deep(.n-base-selection),
-.content-layout :deep(.n-input-number) {
+.content-layout .n-card,
+.content-layout .n-alert,
+.content-layout .n-collapse-item,
+.content-layout .n-data-table,
+.content-layout .n-tabs-nav--segment-type,
+.content-layout .n-input,
+.content-layout .n-base-selection,
+.content-layout .n-input-number {
   --n-color: var(--app-content-card-color) !important;
 }
 
-.content-layout :deep(.n-card),
-.content-layout :deep(.n-alert),
-.content-layout :deep(.n-collapse-item) {
+.content-layout .n-card,
+.content-layout .n-alert,
+.content-layout .n-collapse-item {
   background-color: var(--app-content-card-color) !important;
 }
 
-.content-layout :deep(.n-card > .n-card-header),
-.content-layout :deep(.n-card > .n-card__content),
-.content-layout :deep(.n-card > .n-card__footer),
-.content-layout :deep(.n-card > .n-card__action) {
+.content-layout .n-card > .n-card-header,
+.content-layout .n-card > .n-card__content,
+.content-layout .n-card > .n-card__footer,
+.content-layout .n-card > .n-card__action {
   background-color: transparent !important;
 }
 
-.content-layout :deep(.n-input),
-.content-layout :deep(.n-input-number),
-.content-layout :deep(.n-base-selection) {
+.content-layout .n-input,
+.content-layout .n-input-number,
+.content-layout .n-base-selection {
   --n-color: var(--app-content-input-color) !important;
   --n-color-disabled: var(--app-content-input-disabled-color) !important;
 }
 
-.content-layout :deep(.n-input .n-input-wrapper),
-.content-layout :deep(.n-input-number .n-input-wrapper),
-.content-layout :deep(.n-base-selection .n-base-selection-label) {
+.content-layout .n-input .n-input-wrapper,
+.content-layout .n-input-number .n-input-wrapper,
+.content-layout .n-base-selection .n-base-selection-label {
   background-color: var(--app-content-input-color) !important;
 }
 
-.content-layout :deep(.n-input.n-input--disabled .n-input-wrapper),
-.content-layout :deep(.n-input-number.n-input-number--disabled .n-input-wrapper),
-.content-layout :deep(.n-base-selection.n-base-selection--disabled .n-base-selection-label) {
+.content-layout .n-input.n-input--disabled .n-input-wrapper,
+.content-layout .n-input-number.n-input-number--disabled .n-input-wrapper,
+.content-layout .n-base-selection.n-base-selection--disabled .n-base-selection-label {
   background-color: var(--app-content-input-disabled-color) !important;
 }
 
-.content-layout :deep(.n-data-table-th) {
+.content-layout .n-data-table-th {
   background-color: var(--app-content-table-header-color) !important;
 }
 

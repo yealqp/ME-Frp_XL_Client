@@ -55,7 +55,83 @@
           @mouseenter="handleChartMouseEnter"
           @mousemove="handleChartMouseMove"
           @mouseleave="handleChartMouseLeave"
-        ></div>
+        >
+          <svg
+            v-if="chartModel"
+            class="traffic-chart"
+            :viewBox="`0 0 ${chartModel.chartWidth} ${chartModel.chartHeight}`"
+          >
+            <defs>
+              <linearGradient id="trafficInGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--app-primary-color)" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="var(--app-primary-color)" stop-opacity="0.05" />
+              </linearGradient>
+              <linearGradient id="trafficOutGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--app-success-color)" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="var(--app-success-color)" stop-opacity="0.05" />
+              </linearGradient>
+              <linearGradient id="totalTrafficGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--app-warning-color)" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="var(--app-warning-color)" stop-opacity="0.05" />
+              </linearGradient>
+            </defs>
+
+            <g class="chart-grid">
+              <line
+                v-for="tick in chartModel.yTicks"
+                :key="tick.y"
+                :x1="CHART_PADDING.left"
+                :x2="chartModel.chartWidth - CHART_PADDING.right"
+                :y1="tick.y"
+                :y2="tick.y"
+                class="chart-grid-line"
+              />
+              <text
+                v-for="tick in chartModel.yTicks"
+                :key="`${tick.y}-label`"
+                :x="CHART_PADDING.left - 12"
+                :y="tick.y + 4"
+                class="chart-axis-text chart-axis-text-y"
+              >
+                {{ tick.value }}
+              </text>
+              <text
+                v-for="label in chartModel.xLabels"
+                :key="label.x"
+                :x="label.x"
+                :y="chartModel.chartHeight - 12"
+                class="chart-axis-text chart-axis-text-x"
+              >
+                {{ label.label }}
+              </text>
+            </g>
+
+            <g class="chart-areas">
+              <path :d="chartModel.areaPaths.trafficIn" fill="url(#trafficInGradient)" />
+              <path :d="chartModel.areaPaths.trafficOut" fill="url(#trafficOutGradient)" />
+              <path :d="chartModel.areaPaths.totalTraffic" fill="url(#totalTrafficGradient)" />
+            </g>
+
+            <g class="chart-lines">
+              <path :d="chartModel.linePaths.trafficIn" class="chart-line chart-line-primary" />
+              <path :d="chartModel.linePaths.trafficOut" class="chart-line chart-line-success" />
+              <path :d="chartModel.linePaths.totalTraffic" class="chart-line chart-line-warning" />
+            </g>
+
+            <g v-if="activePoint" class="chart-active-marker">
+              <line
+                :x1="activePoint.x"
+                :x2="activePoint.x"
+                :y1="CHART_PADDING.top"
+                :y2="chartModel.chartHeight - CHART_PADDING.bottom"
+                class="chart-active-line"
+              />
+              <circle :cx="activePoint.x" :cy="activePoint.trafficInY" r="4" class="chart-dot chart-dot-primary" />
+              <circle :cx="activePoint.x" :cy="activePoint.trafficOutY" r="4" class="chart-dot chart-dot-success" />
+              <circle :cx="activePoint.x" :cy="activePoint.totalTrafficY" r="4" class="chart-dot chart-dot-warning" />
+            </g>
+          </svg>
+        </div>
 
         <!-- 加载时的遮罩层，阻止鼠标事件 -->
         <div
@@ -278,7 +354,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import {
   useMessage,
@@ -294,7 +370,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { storeToRefs } from "pinia";
 import { useUserStore } from "../stores/user";
 import { useAuthStore } from "../stores/auth";
-import type { ECharts } from "echarts/core";
 import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
 import { invokeTauriResponse } from "@/utils/tauriResponse";
@@ -308,8 +383,6 @@ import type {
   TrafficStatsData,
 } from "@/types/user";
 import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
-
-type EChartsModule = typeof import("echarts/core");
 
 const router = useRouter();
 const message = useMessage();
@@ -348,11 +421,19 @@ const cdkHistoryTotal = ref(0);
 
 // 流量统计相关
 const chartContainer = ref<HTMLElement | null>(null);
-const chartInstance = ref<ECharts | null>(null);
 const trafficStatsLoading = ref(false);
 const datePeriod = ref(7);
-let echartsModule: EChartsModule | null = null;
-let echartsRegistered = false;
+const rawTrafficStats = ref<TrafficStatsData | null>(null);
+const activeChartIndex = ref<number | null>(null);
+const chartBounds = ref({ width: 1000, height: 460 });
+let chartResizeObserver: ResizeObserver | null = null;
+
+const CHART_PADDING = {
+  top: 36,
+  right: 20,
+  bottom: 40,
+  left: 64,
+};
 
 // 自定义 tooltip 相关
 const showCustomTooltip = ref(false);
@@ -374,6 +455,123 @@ const currentChartData = ref<{
   totalTraffic: number[];
   unit: string;
 } | null>(null);
+
+const chartModel = computed(() => {
+  if (!rawTrafficStats.value || rawTrafficStats.value.dates.length === 0) {
+    return null;
+  }
+
+  const data = rawTrafficStats.value;
+  const chartWidth = chartBounds.value.width;
+  const chartHeight = chartBounds.value.height;
+  const trafficInKB = data.trafficIn.map((value) => Number((value / 1024).toFixed(2)));
+  const trafficOutKB = data.trafficOut.map((value) => Number((value / 1024).toFixed(2)));
+  const totalTrafficKB = data.totalTraffic.map((value) => Number((value / 1024).toFixed(2)));
+  const maxValue = Math.max(...totalTrafficKB, 0);
+  const useMB = maxValue > 1024;
+
+  const trafficData = useMB
+    ? {
+        trafficIn: data.trafficIn.map((value) => Number((value / 1024 / 1024).toFixed(2))),
+        trafficOut: data.trafficOut.map((value) => Number((value / 1024 / 1024).toFixed(2))),
+        totalTraffic: data.totalTraffic.map((value) => Number((value / 1024 / 1024).toFixed(2))),
+      }
+    : {
+        trafficIn: trafficInKB,
+        trafficOut: trafficOutKB,
+        totalTraffic: totalTrafficKB,
+      };
+
+  const unit = useMB ? "MB" : "KB";
+  const plotWidth = chartWidth - CHART_PADDING.left - CHART_PADDING.right;
+  const plotHeight = chartHeight - CHART_PADDING.top - CHART_PADDING.bottom;
+  const yMax = Math.max(...trafficData.totalTraffic, ...trafficData.trafficIn, ...trafficData.trafficOut, 1);
+  const xStep = data.dates.length > 1 ? plotWidth / (data.dates.length - 1) : 0;
+
+  const toPointY = (value: number) => CHART_PADDING.top + plotHeight - (value / yMax) * plotHeight;
+  const toPointX = (index: number) => CHART_PADDING.left + index * xStep;
+
+  const buildPath = (values: number[]) =>
+    values
+      .map((value, index) => `${index === 0 ? "M" : "L"} ${toPointX(index)} ${toPointY(value)}`)
+      .join(" ");
+
+  const buildAreaPath = (values: number[]) => {
+    const linePath = buildPath(values);
+    const lastX = toPointX(values.length - 1);
+    const firstX = toPointX(0);
+    const baselineY = CHART_PADDING.top + plotHeight;
+    return `${linePath} L ${lastX} ${baselineY} L ${firstX} ${baselineY} Z`;
+  };
+
+  const xLabels = data.dates.map((date, index) => {
+    const dateObj = new Date(date);
+    return {
+      x: toPointX(index),
+      label: `${dateObj.getMonth() + 1}-${dateObj.getDate()}`,
+    };
+  });
+
+  const yTicks = Array.from({ length: 5 }, (_, index) => {
+    const ratio = index / 4;
+    const value = Number((yMax * (1 - ratio)).toFixed(2));
+    const y = CHART_PADDING.top + plotHeight * ratio;
+    return { value, y };
+  });
+
+  return {
+    dates: data.dates,
+    chartWidth,
+    chartHeight,
+    unit,
+    trafficData,
+    plotWidth,
+    plotHeight,
+    yMax,
+    xLabels,
+    yTicks,
+    linePaths: {
+      trafficIn: buildPath(trafficData.trafficIn),
+      trafficOut: buildPath(trafficData.trafficOut),
+      totalTraffic: buildPath(trafficData.totalTraffic),
+    },
+    areaPaths: {
+      trafficIn: buildAreaPath(trafficData.trafficIn),
+      trafficOut: buildAreaPath(trafficData.trafficOut),
+      totalTraffic: buildAreaPath(trafficData.totalTraffic),
+    },
+    getPoint(index: number) {
+      return {
+        x: toPointX(index),
+        trafficInY: toPointY(trafficData.trafficIn[index]),
+        trafficOutY: toPointY(trafficData.trafficOut[index]),
+        totalTrafficY: toPointY(trafficData.totalTraffic[index]),
+      };
+    },
+  };
+});
+
+function syncChartBounds(): void {
+  if (!chartContainer.value) {
+    return;
+  }
+
+  const { width, height } = chartContainer.value.getBoundingClientRect();
+  if (width > 0 && height > 0) {
+    chartBounds.value = {
+      width,
+      height,
+    };
+  }
+}
+
+const activePoint = computed(() => {
+  if (!chartModel.value || activeChartIndex.value === null) {
+    return null;
+  }
+
+  return chartModel.value.getPoint(activeChartIndex.value);
+});
 
 // 跳转到操作日志页面
 const goToOperationLog = () => {
@@ -623,62 +821,11 @@ const formatTimestamp = (timestamp: number): string => {
   return formatTimestampUtil(timestamp, { format: 'datetime' });
 };
 
-// 初始化图表
-const ensureECharts = async (): Promise<EChartsModule> => {
-  if (echartsModule) {
-    return echartsModule;
-  }
-
-  const { echarts } = await import("@/utils/echartsLoader");
-
-  if (!echartsRegistered) {
-    echartsRegistered = true;
-  }
-
-  echartsModule = echarts;
-  return echarts;
-};
-
-const initChart = async () => {
-  if (!chartContainer.value) {
-    console.error(
-      "图表容器未找到，chartContainer.value 为:",
-      chartContainer.value,
-    );
-    return false;
-  }
-
-  if (chartInstance.value) {
-    chartInstance.value.dispose();
-  }
-
-  try {
-    const echarts = await ensureECharts();
-    // 使用 SVG 渲染器，在某些环境下 tooltip 支持更好
-    chartInstance.value = echarts.init(chartContainer.value, "dark", {
-      renderer: "svg",
-    });
-
-    return true;
-  } catch (error) {
-    console.error("图表初始化失败:", error);
-    return false;
-  }
-};
-
 // 加载流量统计数据
 const loadTrafficStats = async () => {
   trafficStatsLoading.value = true;
-
-  // 清除可能存在的 axisPointer
-  if (chartInstance.value) {
-    chartInstance.value.dispatchAction({
-      type: "hideTip",
-    });
-  }
-
-  // 隐藏自定义 tooltip
   showCustomTooltip.value = false;
+  activeChartIndex.value = null;
 
   try {
     const result = await invokeTauriResponse<TrafficStatsData>("api_get_traffic_stats", {
@@ -686,15 +833,6 @@ const loadTrafficStats = async () => {
     });
 
     if (result.code === 200 && result.data) {
-      // 确保图表已初始化
-      if (!chartInstance.value) {
-        await nextTick();
-        const success = await initChart();
-        if (!success) {
-          console.error("图表初始化失败，无法更新数据");
-          return;
-        }
-      }
       updateChart(result.data);
     } else {
       console.error("获取流量统计失败:", result.message);
@@ -705,332 +843,67 @@ const loadTrafficStats = async () => {
     message.error(errorMessage);
   } finally {
     trafficStatsLoading.value = false;
-    // 加载完成后再次清除 axisPointer，防止残留
-    if (chartInstance.value) {
-      chartInstance.value.dispatchAction({
-        type: "hideTip",
-      });
-    }
   }
 };
 
-// 更新图表
 const updateChart = (data: TrafficStatsData) => {
-  if (!chartInstance.value || !echartsModule) {
-    console.error("图表实例未初始化");
+  rawTrafficStats.value = data;
+  const model = chartModel.value;
+  if (!model) {
     return;
   }
 
-  const echarts = echartsModule;
-
-  // 获取 CSS 变量值的辅助函数
-  const getCSSVar = (varName: string): string => {
-    return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  };
-
-  const toRgba = (hex: string, alpha: number): string => {
-    const normalized = hex.replace("#", "");
-    if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
-      return `rgba(52, 159, 244, ${alpha})`;
-    }
-
-    const r = parseInt(normalized.slice(0, 2), 16);
-    const g = parseInt(normalized.slice(2, 4), 16);
-    const b = parseInt(normalized.slice(4, 6), 16);
-
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
-  const textColor = getCSSVar('--app-text-color') || 'rgba(255, 255, 255, 0.82)';
-  const borderColor = getCSSVar('--app-border-color') || 'rgba(62, 62, 66, 1)';
-  const textColorMuted = getCSSVar('--app-text-color-3') || 'rgba(160, 160, 160, 1)';
-  const dividerColor = getCSSVar('--app-divider-color') || 'rgba(42, 42, 46, 1)';
-  const primaryColor = getCSSVar('--app-primary-color') || '#349ff4';
-  const successColor = getCSSVar('--app-success-color') || '#18a058';
-  const warningColor = getCSSVar('--app-warning-color') || '#f0a020';
-
-  // 将字节转换为 KB
-  const trafficInKB = data.trafficIn.map((v) => Number((v / 1024).toFixed(2)));
-  const trafficOutKB = data.trafficOut.map((v) =>
-    Number((v / 1024).toFixed(2)),
-  );
-  const totalTrafficKB = data.totalTraffic.map((v) =>
-    Number((v / 1024).toFixed(2)),
-  );
-
-  // 判断是否需要使用 MB 单位（如果最大值超过 1024 KB）
-  const maxValue = Math.max(...totalTrafficKB);
-  const useMB = maxValue > 1024;
-
-  let trafficData, unit;
-  if (useMB) {
-    // 使用 MB
-    trafficData = {
-      trafficIn: data.trafficIn.map((v) =>
-        Number((v / 1024 / 1024).toFixed(2)),
-      ),
-      trafficOut: data.trafficOut.map((v) =>
-        Number((v / 1024 / 1024).toFixed(2)),
-      ),
-      totalTraffic: data.totalTraffic.map((v) =>
-        Number((v / 1024 / 1024).toFixed(2)),
-      ),
-    };
-    unit = "MB";
-  } else {
-    // 使用 KB
-    trafficData = {
-      trafficIn: trafficInKB,
-      trafficOut: trafficOutKB,
-      totalTraffic: totalTrafficKB,
-    };
-    unit = "KB";
-  }
-
-  const option = {
-    backgroundColor: "transparent",
-    tooltip: {
-      show: false, // 禁用内置 tooltip，使用自定义的
-    },
-    // 启用 axisPointer 显示垂线
-    axisPointer: {
-      link: [{ xAxisIndex: "all" }],
-      label: {
-        show: false,
-      },
-      triggerOn: "none", // 禁用自动触发，改为手动控制
-    },
-    legend: {
-      data: ["下载流量", "上传流量", "总流量"],
-      textStyle: {
-        color: textColor,
-      },
-      top: 10,
-    },
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      top: "15%",
-      containLabel: true,
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: data.dates,
-      axisLine: {
-        lineStyle: {
-          color: borderColor,
-        },
-      },
-      axisLabel: {
-        color: textColorMuted,
-        formatter: (value: string) => {
-          // 格式化日期，只显示月-日
-          const date = new Date(value);
-          return `${date.getMonth() + 1}-${date.getDate()}`;
-        },
-      },
-      axisPointer: {
-        show: true,
-        type: "line",
-        lineStyle: {
-          color: primaryColor,
-          width: 2,
-          type: "solid",
-        },
-        label: {
-          show: false,
-        },
-        triggerOn: "none", // 禁用自动触发
-      },
-    },
-    yAxis: {
-      type: "value",
-      name: `流量 (${unit})`,
-      nameTextStyle: {
-        color: textColorMuted,
-      },
-      axisLine: {
-        lineStyle: {
-          color: borderColor,
-        },
-      },
-      axisLabel: {
-        color: textColorMuted,
-      },
-      splitLine: {
-        lineStyle: {
-          color: dividerColor,
-        },
-      },
-    },
-    series: [
-      {
-        name: "下载流量",
-        type: "line",
-        smooth: true,
-        data: trafficData.trafficIn,
-        itemStyle: {
-          color: primaryColor,
-        },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: toRgba(primaryColor, 0.3) },
-            { offset: 1, color: toRgba(primaryColor, 0.05) },
-          ]),
-        },
-      },
-      {
-        name: "上传流量",
-        type: "line",
-        smooth: true,
-        data: trafficData.trafficOut,
-        itemStyle: {
-          color: successColor,
-        },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: toRgba(successColor, 0.3) },
-            { offset: 1, color: toRgba(successColor, 0.05) },
-          ]),
-        },
-      },
-      {
-        name: "总流量",
-        type: "line",
-        smooth: true,
-        data: trafficData.totalTraffic,
-        itemStyle: {
-          color: warningColor,
-        },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: toRgba(warningColor, 0.3) },
-            { offset: 1, color: toRgba(warningColor, 0.05) },
-          ]),
-        },
-      },
-    ],
-  };
-
-  chartInstance.value.setOption(option, {
-    notMerge: true,
-    lazyUpdate: false,
-  });
-
-  // 保存当前图表数据供 tooltip 使用
   currentChartData.value = {
     dates: data.dates,
-    trafficIn: trafficData.trafficIn,
-    trafficOut: trafficData.trafficOut,
-    totalTraffic: trafficData.totalTraffic,
-    unit: unit,
+    trafficIn: model.trafficData.trafficIn,
+    trafficOut: model.trafficData.trafficOut,
+    totalTraffic: model.trafficData.totalTraffic,
+    unit: model.unit,
   };
-
-  // 立即清除可能存在的 axisPointer
-  chartInstance.value.dispatchAction({
-    type: "hideTip",
-  });
 };
 
 // 处理图表鼠标进入事件
-const handleChartMouseEnter = () => {
-  // 如果正在加载，清除任何残留的 axisPointer
-  if (trafficStatsLoading.value && chartInstance.value) {
-    chartInstance.value.dispatchAction({
-      type: "hideTip",
-    });
-    showCustomTooltip.value = false;
-  }
-};
+const handleChartMouseEnter = () => undefined;
 
 // 处理图表鼠标移动事件
 const handleChartMouseMove = (event: MouseEvent) => {
   // 如果图表正在加载，不显示悬停提示
-  if (trafficStatsLoading.value) {
+  if (trafficStatsLoading.value || !chartModel.value) {
     showCustomTooltip.value = false;
-    // 清除 axisPointer
-    if (chartInstance.value) {
-      chartInstance.value.dispatchAction({
-        type: "hideTip",
-      });
-    }
     return;
   }
 
-  if (
-    !chartInstance.value ||
-    !currentChartData.value ||
-    !chartContainer.value
-  ) {
+  if (!currentChartData.value || !chartContainer.value) {
     return;
   }
 
-  // 获取图表的网格区域（实际绘图区域）
-  const option = chartInstance.value.getOption() as any;
-  const grid = option.grid?.[0] || {};
-
-  // 获取容器的位置和尺寸
   const rect = chartContainer.value.getBoundingClientRect();
   const mouseX = event.clientX - rect.left;
   const mouseY = event.clientY - rect.top;
+  const gridLeft = CHART_PADDING.left;
+  const gridRight = CHART_PADDING.right;
+  const gridTop = CHART_PADDING.top;
+  const gridBottom = CHART_PADDING.bottom;
+  const gridWidth = rect.width - gridLeft - gridRight;
 
-  // 计算网格区域的实际像素位置
-  const containerWidth = rect.width;
-  const containerHeight = rect.height;
-
-  // grid 的 left/right/top/bottom 可能是百分比或像素值
-  const parseValue = (value: any, total: number) => {
-    if (typeof value === "string" && value.includes("%")) {
-      return (parseFloat(value) / 100) * total;
-    }
-    return parseFloat(value) || 0;
-  };
-
-  const gridLeft = parseValue(grid.left || "3%", containerWidth);
-  const gridRight = parseValue(grid.right || "4%", containerWidth);
-  const gridTop = parseValue(grid.top || "15%", containerHeight);
-  const gridBottom = parseValue(grid.bottom || "3%", containerHeight);
-
-  const gridWidth = containerWidth - gridLeft - gridRight;
-  // const gridHeight = containerHeight - gridTop - gridBottom;
-
-  // 检查鼠标是否在网格区域内
   if (
     mouseX < gridLeft ||
-    mouseX > containerWidth - gridRight ||
+    mouseX > rect.width - gridRight ||
     mouseY < gridTop ||
-    mouseY > containerHeight - gridBottom
+    mouseY > rect.height - gridBottom
   ) {
     showCustomTooltip.value = false;
-    // 清除 axisPointer
-    if (chartInstance.value) {
-      chartInstance.value.dispatchAction({
-        type: "updateAxisPointer",
-        currTrigger: "leave",
-      });
-    }
+    activeChartIndex.value = null;
     return;
   }
 
-  // 计算鼠标在网格中的相对位置（0-1）
   const relativeX = (mouseX - gridLeft) / gridWidth;
-
-  // 根据相对位置计算最近的数据点索引
   const dataLength = currentChartData.value.dates.length;
   const dataIndex = Math.round(relativeX * (dataLength - 1));
 
-  // 确保索引在有效范围内
   if (dataIndex < 0 || dataIndex >= dataLength) {
     showCustomTooltip.value = false;
-    // 清除 axisPointer
-    if (chartInstance.value) {
-      chartInstance.value.dispatchAction({
-        type: "updateAxisPointer",
-        currTrigger: "leave",
-      });
-    }
+    activeChartIndex.value = null;
     return;
   }
 
@@ -1068,7 +941,7 @@ const handleChartMouseMove = (event: MouseEvent) => {
     tooltipY = offset;
   }
 
-  // 更新 tooltip 数据
+  activeChartIndex.value = dataIndex;
   customTooltipData.value = {
     date: `${year}-${month}-${day}`,
     trafficIn: currentChartData.value.trafficIn[dataIndex] || 0,
@@ -1079,30 +952,12 @@ const handleChartMouseMove = (event: MouseEvent) => {
     y: tooltipY,
   };
 
-  // 手动触发 axisPointer 显示
-  if (chartInstance.value) {
-    chartInstance.value.dispatchAction({
-      type: "updateAxisPointer",
-      currTrigger: "mousemove",
-      x: mouseX,
-      y: mouseY,
-    });
-  }
-
   showCustomTooltip.value = true;
 };
 
-// 处理鼠标离开图表
 const handleChartMouseLeave = () => {
   showCustomTooltip.value = false;
-
-  // 清除 ECharts 的 axisPointer - 使用 updateAxisPointer 并传入空坐标
-  if (chartInstance.value) {
-    chartInstance.value.dispatchAction({
-      type: "updateAxisPointer",
-      currTrigger: "leave",
-    });
-  }
+  activeChartIndex.value = null;
 };
 
 // 切换日期周期
@@ -1111,59 +966,27 @@ const changeDatePeriod = async (period: number) => {
   await loadTrafficStats();
 };
 
-// 监听加载状态变化，确保图表在加载完成后正确显示
-watch(trafficStatsLoading, (newVal, oldVal) => {
-  // 当加载完成时，清除可能残留的 axisPointer
-  if (oldVal === true && newVal === false && chartInstance.value) {
-    // 使用 nextTick 和 setTimeout 确保在渲染完成后清除
-    nextTick(() => {
-      setTimeout(() => {
-        if (chartInstance.value) {
-          chartInstance.value.dispatchAction({
-            type: "hideTip",
-          });
-        }
-      }, 100);
-    });
-  }
-});
-
-const resizeHandler = () => {
-  chartInstance.value?.resize();
-};
-
 onMounted(() => {
   userStore.loadUserInfo();
   loadCdkHistory();
+  void loadTrafficStats();
 
-  // 初始化图表 - 确保 DOM 完全渲染后再初始化
-  nextTick(() => {
+  void nextTick(() => {
+    syncChartBounds();
 
-    setTimeout(async () => {
-      if (chartContainer.value) {
-        const success = await initChart();
-        if (success) {
-          await loadTrafficStats();
-        }
-      } else {
-      }
-    }, 200);
+    if (chartContainer.value) {
+      chartResizeObserver = new ResizeObserver(() => {
+        syncChartBounds();
+      });
+      chartResizeObserver.observe(chartContainer.value);
+    }
   });
-
-  // 监听窗口大小变化
-  window.addEventListener("resize", resizeHandler);
 });
 
 onBeforeUnmount(() => {
-  // 清理图表实例
-  if (chartInstance.value) {
-    chartInstance.value.dispose();
-    chartInstance.value = null;
-  }
+  chartResizeObserver?.disconnect();
+  chartResizeObserver = null;
 
-  // 移除事件监听
-  window.removeEventListener("resize", resizeHandler);
-  
   // 清理验证码实例
   cdkCaptchaInstance.destroy();
 });
@@ -1188,8 +1011,8 @@ onBeforeUnmount(() => {
 .chart-wrapper {
   position: relative;
   width: 100%;
-  height: 400px;
-  min-height: 400px;
+  height: 460px;
+  min-height: 460px;
   z-index: 1;
 }
 
@@ -1199,6 +1022,75 @@ onBeforeUnmount(() => {
   transition: opacity 0.3s ease;
   position: relative;
   z-index: 1;
+}
+
+.traffic-chart {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chart-grid-line {
+  stroke: var(--app-divider-color);
+  stroke-width: 1;
+}
+
+.chart-axis-text {
+  fill: var(--app-text-color-3);
+  font-size: 13px;
+  font-weight: 500;
+  text-rendering: geometricPrecision;
+}
+
+.chart-axis-text-x {
+  text-anchor: middle;
+}
+
+.chart-axis-text-y {
+  text-anchor: end;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line-primary {
+  stroke: var(--app-primary-color);
+}
+
+.chart-line-success {
+  stroke: var(--app-success-color);
+}
+
+.chart-line-warning {
+  stroke: var(--app-warning-color);
+}
+
+.chart-active-line {
+  stroke: var(--app-primary-color);
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  opacity: 0.8;
+}
+
+.chart-dot {
+  stroke-width: 2;
+  fill: var(--app-card-color);
+}
+
+.chart-dot-primary {
+  stroke: var(--app-primary-color);
+}
+
+.chart-dot-success {
+  stroke: var(--app-success-color);
+}
+
+.chart-dot-warning {
+  stroke: var(--app-warning-color);
 }
 
 .chart-loading-mask {
@@ -1479,13 +1371,13 @@ onBeforeUnmount(() => {
   }
 
   .chart-container {
-    height: 300px;
-    min-height: 300px;
+    height: 340px;
+    min-height: 340px;
   }
 
   .chart-wrapper {
-    height: 300px;
-    min-height: 300px;
+    height: 340px;
+    min-height: 340px;
   }
 }
 </style>
