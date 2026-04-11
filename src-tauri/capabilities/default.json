@@ -16,6 +16,17 @@
     "fs:allow-home-write-recursive",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        {
+          "path": "$RESOURCE/temp"
+        },
+        {
+          "path": "$RESOURCE/temp/**/*"
+        }
+      ]
+    },
     "opener:default",
     "fs:default"
   ]

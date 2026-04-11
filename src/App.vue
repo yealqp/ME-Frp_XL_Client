@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef, watch, watchEffect } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
 import { 
   NDialogProvider, 
   NSpin, 
@@ -57,6 +58,7 @@ const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 const { settings } = storeToRefs(settingsStore);
 const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRefs(uiStore);
 const backgroundImageUrl = ref<string | null>(null);
+const backgroundImageLoadToken = ref(0);
 const shellReady = ref(false);
 const hasStoredSession = ref(false);
 
@@ -89,8 +91,44 @@ function withOpacity(color: string, opacity: number): string {
   return color;
 }
 
-async function syncBackgroundImage(path?: string): Promise<void> {
+function revokeBackgroundImageUrl(): void {
+  if (backgroundImageUrl.value?.startsWith("blob:")) {
+    URL.revokeObjectURL(backgroundImageUrl.value);
+  }
+
   backgroundImageUrl.value = null;
+}
+
+function backgroundImageMime(filePath: string): string {
+  const extension = filePath.split(".").pop()?.toLowerCase();
+
+  switch (extension) {
+    case "jpg":
+    case "jpeg":
+    case "jfif":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    case "avif":
+      return "image/avif";
+    case "gif":
+      return "image/gif";
+    case "bmp":
+      return "image/bmp";
+    case "svg":
+      return "image/svg+xml";
+    case "ico":
+      return "image/x-icon";
+    default:
+      return "application/octet-stream";
+  }
+}
+
+async function syncBackgroundImage(path?: string): Promise<void> {
+  const loadToken = ++backgroundImageLoadToken.value;
+  revokeBackgroundImageUrl();
 
   if (!path) {
     return;
@@ -98,12 +136,24 @@ async function syncBackgroundImage(path?: string): Promise<void> {
 
   try {
     const isManagedPath = !/^[a-zA-Z]:[\\/]/.test(path) && !path.startsWith("/") && !path.startsWith("\\");
-    const dataUrl = isManagedPath
-      ? await invoke<string>("read_managed_background_image_data_url", {
-          relativePath: path,
-        })
-      : null;
-    backgroundImageUrl.value = dataUrl;
+    if (!isManagedPath) {
+      return;
+    }
+
+    const bytes = await readFile(path, {
+      baseDir: BaseDirectory.Resource,
+    });
+    const blob = new Blob([bytes], {
+      type: backgroundImageMime(path),
+    });
+
+    const objectUrl = URL.createObjectURL(blob);
+    if (loadToken !== backgroundImageLoadToken.value) {
+      URL.revokeObjectURL(objectUrl);
+      return;
+    }
+
+    backgroundImageUrl.value = objectUrl;
   } catch (error) {
     console.error("加载背景图片失败:", error);
   }
@@ -445,6 +495,20 @@ watch(
     }
   },
 );
+
+watch(
+  () => shellReady.value,
+  (ready) => {
+    if (!ready) {
+      revokeBackgroundImageUrl();
+    }
+  },
+);
+
+onUnmounted(() => {
+  backgroundImageLoadToken.value += 1;
+  revokeBackgroundImageUrl();
+});
 </script>
 
 <template>

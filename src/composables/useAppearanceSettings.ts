@@ -8,10 +8,12 @@ import { useUIStore } from "@/stores/ui";
 import { useSidebarSettingsHandlers } from "@/composables/useSidebarSettingsHandlers";
 import { clampAppearanceOpacity, clampAppearanceRange } from "@/utils/appearanceSettings";
 
+export const BACKGROUND_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "jfif", "webp", "avif", "bmp", "gif", "svg", "ico"];
+
 const IMAGE_FILE_FILTER = [
   {
     name: "Image",
-    extensions: ["png", "jpg", "jpeg", "webp", "bmp", "gif"],
+    extensions: BACKGROUND_IMAGE_EXTENSIONS,
   },
 ];
 

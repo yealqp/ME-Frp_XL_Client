@@ -63,6 +63,24 @@ fn managed_background_relative_path(file_name: &str) -> String {
     format!("temp/{file_name}")
 }
 
+fn managed_background_absolute_path(relative_path: &str) -> Result<PathBuf, String> {
+    if !relative_path.starts_with("temp/") {
+        return Err("非法的背景图片路径".to_string());
+    }
+
+    let file_name = relative_path.trim_start_matches("temp/");
+    if file_name.is_empty()
+        || file_name.contains('/')
+        || file_name.contains('\\')
+        || file_name.contains("..")
+    {
+        return Err("非法的背景图片路径".to_string());
+    }
+
+    let target_dir = managed_background_dir()?;
+    Ok(target_dir.join(file_name))
+}
+
 fn unique_background_file_name(source: &Path) -> Result<String, String> {
     let stem = source
         .file_stem()
@@ -105,15 +123,24 @@ async fn remove_managed_background_image(relative_path: String) -> Result<(), St
         return Ok(());
     }
 
-    let target_dir = managed_background_dir()?;
-    let file_name = relative_path.trim_start_matches("temp/");
-    let target_path = target_dir.join(file_name);
+    let target_path = managed_background_absolute_path(&relative_path)?;
 
     if target_path.exists() {
         fs::remove_file(&target_path).map_err(|e| format!("删除背景图片失败: {e}"))?;
     }
 
     Ok(())
+}
+
+#[tauri::command]
+async fn resolve_managed_background_image_path(relative_path: String) -> Result<String, String> {
+    let target_path = managed_background_absolute_path(&relative_path)?;
+
+    if !target_path.exists() {
+        return Err("背景图片不存在".to_string());
+    }
+
+    Ok(target_path.to_string_lossy().into_owned())
 }
 
 fn managed_background_mime(target_path: &Path) -> &'static str {
@@ -124,23 +151,47 @@ fn managed_background_mime(target_path: &Path) -> &'static str {
         .as_deref()
     {
         Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("jfif") => "image/jpeg",
         Some("png") => "image/png",
         Some("webp") => "image/webp",
+        Some("avif") => "image/avif",
         Some("gif") => "image/gif",
         Some("bmp") => "image/bmp",
+        Some("svg") => "image/svg+xml",
+        Some("ico") => "image/x-icon",
         _ => "image/png",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{managed_background_absolute_path, managed_background_mime};
+    use std::path::Path;
+
+    #[test]
+    fn managed_background_mime_supports_extended_image_types() {
+        assert_eq!(managed_background_mime(Path::new("wallpaper.avif")), "image/avif");
+        assert_eq!(managed_background_mime(Path::new("wallpaper.svg")), "image/svg+xml");
+        assert_eq!(managed_background_mime(Path::new("wallpaper.ico")), "image/x-icon");
+        assert_eq!(managed_background_mime(Path::new("wallpaper.jfif")), "image/jpeg");
+    }
+
+    #[test]
+    fn managed_background_absolute_path_restricts_to_temp_directory() {
+        let path = managed_background_absolute_path("temp/wallpaper.jpeg")
+            .expect("managed temp path should resolve");
+
+        assert!(path.ends_with(Path::new("temp").join("wallpaper.jpeg")));
+        assert!(managed_background_absolute_path("wallpaper.jpeg").is_err());
+        assert!(managed_background_absolute_path("temp/../wallpaper.jpeg").is_err());
+        assert!(managed_background_absolute_path("temp/foo/bar.jpeg").is_err());
+        assert!(managed_background_absolute_path("temp\\wallpaper.jpeg").is_err());
     }
 }
 
 #[tauri::command]
 async fn read_managed_background_image_data_url(relative_path: String) -> Result<String, String> {
-    if !relative_path.starts_with("temp/") {
-        return Err("非法的背景图片路径".to_string());
-    }
-
-    let target_dir = managed_background_dir()?;
-    let file_name = relative_path.trim_start_matches("temp/");
-    let target_path = target_dir.join(file_name);
+    let target_path = managed_background_absolute_path(&relative_path)?;
     let bytes = fs::read(&target_path).map_err(|e| format!("读取背景图片失败: {e}"))?;
     let mime = managed_background_mime(&target_path);
     let encoded = STANDARD.encode(bytes);
@@ -1244,6 +1295,7 @@ pub fn run() {
             fetch_privacy_policy,
             copy_background_image_to_temp,
             remove_managed_background_image,
+            resolve_managed_background_image_path,
             read_managed_background_image_data_url,
             api_send_feedback,
             start_webui,
