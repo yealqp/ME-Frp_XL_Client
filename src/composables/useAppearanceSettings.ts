@@ -1,4 +1,4 @@
-import { computed, onUnmounted } from "vue";
+﻿import { computed, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -13,12 +13,16 @@ const IMAGE_FILE_FILTER = [
   },
 ];
 
-function clampOpacity(value: number | null): number | null {
+function clampRange(value: number | null, min: number, max: number): number | null {
   if (value === null) {
     return null;
   }
 
-  return Math.min(100, Math.max(0, Math.round(value)));
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function clampOpacity(value: number | null): number | null {
+  return clampRange(value, 0, 100);
 }
 
 function isManagedBackgroundPath(filePath?: string): filePath is string {
@@ -42,8 +46,11 @@ export function useAppearanceSettings() {
   });
 
   let backgroundOpacityDebounceTimer: number | null = null;
+  let backgroundBlurDebounceTimer: number | null = null;
   let sidebarOpacityDebounceTimer: number | null = null;
   let contentOpacityDebounceTimer: number | null = null;
+  let fontWeightDebounceTimer: number | null = null;
+  let shadowIntensityDebounceTimer: number | null = null;
   let sidebarWidthDebounceTimer: number | null = null;
 
   async function removeManagedBackgroundFile(filePath?: string): Promise<void> {
@@ -98,10 +105,16 @@ export function useAppearanceSettings() {
     }
   }
 
-  function scheduleOpacitySave(
+  function scheduleNumericSave(
     timer: number | null,
     nextValue: number,
-    key: "backgroundImageOpacity" | "sidebarOpacity" | "contentOpacity",
+    key:
+      | "backgroundImageOpacity"
+      | "backgroundBlur"
+      | "sidebarOpacity"
+      | "contentOpacity"
+      | "fontWeight"
+      | "shadowIntensity",
     successMessage: string,
   ): number {
     if (timer !== null) {
@@ -114,7 +127,7 @@ export function useAppearanceSettings() {
         message.success(successMessage);
       } catch (error) {
         console.error(`保存 ${key} 失败:`, error);
-        message.error("保存透明度设置失败");
+        message.error("保存外观设置失败");
         await settingsStore.loadSettings();
       }
     }, 200);
@@ -127,11 +140,26 @@ export function useAppearanceSettings() {
     }
 
     settings.value.backgroundImageOpacity = nextValue;
-    backgroundOpacityDebounceTimer = scheduleOpacitySave(
+    backgroundOpacityDebounceTimer = scheduleNumericSave(
       backgroundOpacityDebounceTimer,
       nextValue,
       "backgroundImageOpacity",
       `背景图片透明度已设置为 ${nextValue}%`,
+    );
+  }
+
+  function handleBackgroundBlurChange(value: number | null) {
+    const nextValue = clampRange(value, 0, 30);
+    if (nextValue === null) {
+      return;
+    }
+
+    settings.value.backgroundBlur = nextValue;
+    backgroundBlurDebounceTimer = scheduleNumericSave(
+      backgroundBlurDebounceTimer,
+      nextValue,
+      "backgroundBlur",
+      `背景图片模糊已设置为 ${nextValue}px`,
     );
   }
 
@@ -142,7 +170,7 @@ export function useAppearanceSettings() {
     }
 
     settings.value.sidebarOpacity = nextValue;
-    sidebarOpacityDebounceTimer = scheduleOpacitySave(
+    sidebarOpacityDebounceTimer = scheduleNumericSave(
       sidebarOpacityDebounceTimer,
       nextValue,
       "sidebarOpacity",
@@ -157,11 +185,41 @@ export function useAppearanceSettings() {
     }
 
     settings.value.contentOpacity = nextValue;
-    contentOpacityDebounceTimer = scheduleOpacitySave(
+    contentOpacityDebounceTimer = scheduleNumericSave(
       contentOpacityDebounceTimer,
       nextValue,
       "contentOpacity",
       `内容区透明度已设置为 ${nextValue}%`,
+    );
+  }
+
+  function handleFontWeightChange(value: number | null) {
+    const nextValue = clampRange(value, 300, 700);
+    if (nextValue === null) {
+      return;
+    }
+
+    settings.value.fontWeight = nextValue;
+    fontWeightDebounceTimer = scheduleNumericSave(
+      fontWeightDebounceTimer,
+      nextValue,
+      "fontWeight",
+      `字体粗细已设置为 ${nextValue}`,
+    );
+  }
+
+  function handleShadowIntensityChange(value: number | null) {
+    const nextValue = clampRange(value, 0, 200);
+    if (nextValue === null) {
+      return;
+    }
+
+    settings.value.shadowIntensity = nextValue;
+    shadowIntensityDebounceTimer = scheduleNumericSave(
+      shadowIntensityDebounceTimer,
+      nextValue,
+      "shadowIntensity",
+      `阴影强度已设置为 ${nextValue}%`,
     );
   }
 
@@ -201,8 +259,11 @@ export function useAppearanceSettings() {
   onUnmounted(() => {
     for (const timer of [
       backgroundOpacityDebounceTimer,
+      backgroundBlurDebounceTimer,
       sidebarOpacityDebounceTimer,
       contentOpacityDebounceTimer,
+      fontWeightDebounceTimer,
+      shadowIntensityDebounceTimer,
       sidebarWidthDebounceTimer,
     ]) {
       if (timer !== null) {
@@ -219,8 +280,11 @@ export function useAppearanceSettings() {
     handleBackgroundImageSelect,
     handleBackgroundImageClear,
     handleBackgroundImageOpacityChange,
+    handleBackgroundBlurChange,
     handleSidebarOpacityChange,
     handleContentOpacityChange,
+    handleFontWeightChange,
+    handleShadowIntensityChange,
     handleSidebarWidthChange,
     handleSidebarCollapsibleChange,
   };

@@ -59,10 +59,16 @@ pub struct UnifiedConfig {
         skip_serializing_if = "Option::is_none"
     )]
     pub background_image_opacity: Option<u8>,
+    #[serde(rename = "backgroundBlur", skip_serializing_if = "Option::is_none")]
+    pub background_blur: Option<u8>,
     #[serde(rename = "sidebarOpacity", skip_serializing_if = "Option::is_none")]
     pub sidebar_opacity: Option<u8>,
     #[serde(rename = "contentOpacity", skip_serializing_if = "Option::is_none")]
     pub content_opacity: Option<u8>,
+    #[serde(rename = "fontWeight", skip_serializing_if = "Option::is_none")]
+    pub font_weight: Option<u16>,
+    #[serde(rename = "shadowIntensity", skip_serializing_if = "Option::is_none")]
+    pub shadow_intensity: Option<u8>,
 
     // WebUI 设置
     #[serde(rename = "webuiAddr", skip_serializing_if = "Option::is_none")]
@@ -104,8 +110,11 @@ impl Default for UnifiedConfig {
             sidebar_collapsed: Some(false),
             background_image_path: None,
             background_image_opacity: Some(100),
+            background_blur: Some(0),
             sidebar_opacity: Some(100),
             content_opacity: Some(100),
+            font_weight: Some(400),
+            shadow_intensity: Some(100),
 
             // WebUI 设置默认值
             webui_addr: Some("localhost".to_string()),

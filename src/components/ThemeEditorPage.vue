@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="theme-editor-page">
     <div class="page-header">
       <div>
@@ -25,6 +25,29 @@
             </div>
             <ThemeSwitcher mode="buttons" :show-label="true" />
           </div>
+
+          <SettingSliderRow
+            :value="settings.fontWeight ?? 400"
+            title="字体粗细"
+            description="调整全局文字的基础字重，让界面更轻盈或更扎实。"
+            :min="300"
+            :max="700"
+            :step="50"
+            :format-tooltip="formatFontWeightTooltip"
+            @update:value="handleFontWeightChange"
+          />
+
+          <SettingSliderRow
+            :value="settings.shadowIntensity ?? 100"
+            title="文字阴影强度"
+            description="控制标题、按钮和强调文字的阴影强度。"
+            :min="0"
+            :max="200"
+            :step="10"
+            suffix="%"
+            :format-tooltip="formatPercentTooltip"
+            @update:value="handleShadowIntensityChange"
+          />
 
           <SettingSliderRow
             :value="sidebarWidth"
@@ -63,7 +86,7 @@
           <div class="setting-item setting-item-column">
             <div class="setting-info">
               <h4>背景图片</h4>
-              <p>选择桌面图片作为应用背景，可随时清除恢复纯色背景，仅支持用户文件夹中的图片。</p>
+              <p>选择图片作为应用背景，可随时清除恢复纯色背景，图片会复制到程序目录的 temp 文件夹。</p>
             </div>
             <div class="background-image-control">
               <n-input :value="backgroundImageName" readonly placeholder="未选择图片" />
@@ -86,6 +109,18 @@
             suffix="%"
             :format-tooltip="formatPercentTooltip"
             @update:value="handleBackgroundImageOpacityChange"
+          />
+
+          <SettingSliderRow
+            :value="settings.backgroundBlur ?? 0"
+            title="背景图片模糊"
+            description="给背景图增加景深模糊，减少干扰。"
+            :min="0"
+            :max="30"
+            :step="1"
+            suffix="px"
+            :format-tooltip="formatPixelTooltip"
+            @update:value="handleBackgroundBlurChange"
           />
 
           <SettingSliderRow
@@ -162,8 +197,11 @@ const {
   handleBackgroundImageSelect,
   handleBackgroundImageClear,
   handleBackgroundImageOpacityChange,
+  handleBackgroundBlurChange,
   handleSidebarOpacityChange,
   handleContentOpacityChange,
+  handleFontWeightChange,
+  handleShadowIntensityChange,
   handleSidebarWidthChange,
   handleSidebarCollapsibleChange,
 } = useAppearanceSettings();
@@ -202,6 +240,10 @@ function formatPixelTooltip(value: number): string {
 
 function formatPercentTooltip(value: number): string {
   return `${value}%`;
+}
+
+function formatFontWeightTooltip(value: number): string {
+  return `${value}`;
 }
 </script>
 
@@ -319,3 +361,4 @@ function formatPercentTooltip(value: number): string {
   }
 }
 </style>
+

@@ -21,6 +21,14 @@ function clampOpacity(value: number | undefined, fallback = 100): number {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
 
+function clampRange(value: number | undefined, min: number, max: number, fallback: number): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   // ============================================================================
   // State
@@ -38,8 +46,11 @@ export const useSettingsStore = defineStore('settings', () => {
     hideWebuiEntry: false,
     backgroundImagePath: undefined,
     backgroundImageOpacity: 100,
+    backgroundBlur: 0,
     sidebarOpacity: 100,
     contentOpacity: 100,
+    fontWeight: 400,
+    shadowIntensity: 100,
   });
 
   const loading = ref(false);
@@ -92,8 +103,11 @@ export const useSettingsStore = defineStore('settings', () => {
         hideWebuiEntry: config.hideWebuiEntry ?? false,
         backgroundImagePath: config.backgroundImagePath,
         backgroundImageOpacity: clampOpacity(config.backgroundImageOpacity),
+        backgroundBlur: clampRange(config.backgroundBlur, 0, 30, 0),
         sidebarOpacity: clampOpacity(config.sidebarOpacity),
         contentOpacity: clampOpacity(config.contentOpacity),
+        fontWeight: clampRange(config.fontWeight, 300, 700, 400),
+        shadowIntensity: clampRange(config.shadowIntensity, 0, 200, 100),
       };
 
       // Sync showAd to eventBus
@@ -127,8 +141,11 @@ export const useSettingsStore = defineStore('settings', () => {
         hideWebuiEntry: settings.value.hideWebuiEntry,
         backgroundImagePath: settings.value.backgroundImagePath || undefined,
         backgroundImageOpacity: clampOpacity(settings.value.backgroundImageOpacity),
+        backgroundBlur: clampRange(settings.value.backgroundBlur, 0, 30, 0),
         sidebarOpacity: clampOpacity(settings.value.sidebarOpacity),
         contentOpacity: clampOpacity(settings.value.contentOpacity),
+        fontWeight: clampRange(settings.value.fontWeight, 300, 700, 400),
+        shadowIntensity: clampRange(settings.value.shadowIntensity, 0, 200, 100),
       });
       localStorage.setItem('mefrp_theme', settings.value.theme);
     } catch (err) {

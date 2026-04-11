@@ -6,7 +6,7 @@
     :collapsed-width="64"
     :width="sidebarWidth"
     :collapsed="sidebarCollapsed"
-    :show-trigger="sidebarCollapsible ? 'arrow-circle' : false"
+    :show-trigger="false"
     :native-scrollbar="false"
     @collapse="handleCollapse"
     @expand="handleExpand"
@@ -253,7 +253,8 @@ onMounted(async () => {
   flex-direction: column;
   height: 100vh;
   border-right: 1px solid var(--app-border-color) !important;
-  overflow: hidden;
+  overflow: visible;
+  z-index: 12;
 }
 
 .sidebar::before {
@@ -262,7 +263,6 @@ onMounted(async () => {
   inset: 0;
   background: var(--app-card-color);
   opacity: var(--app-sidebar-opacity, 1);
-  backdrop-filter: blur(10px);
   pointer-events: none;
   z-index: 0;
 }
@@ -272,6 +272,7 @@ onMounted(async () => {
   background: transparent !important;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   will-change: width;
+  z-index: 12 !important;
 }
 
 :deep(.n-layout-sider-scroll-container),
@@ -287,6 +288,10 @@ onMounted(async () => {
 
 :deep(.n-layout-sider-scroll-container) {
   transition: none;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .sidebar-header {
@@ -356,6 +361,7 @@ onMounted(async () => {
 
 .nav-content {
   flex: 1;
+  min-height: 0;
   padding: 10px 0;
   background-color: transparent;
   overflow-y: auto;

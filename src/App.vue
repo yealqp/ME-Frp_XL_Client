@@ -22,11 +22,13 @@ import { useAuthStore } from "./stores/auth";
 import { useCreateTunnelStore } from "./stores/createTunnel";
 import { useSettingsStore } from "./stores/settings";
 import { useThemeStore } from "./stores/theme";
+import { useUIStore } from "./stores/ui";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
 import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
 import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
 import type { UpdateCheckResult } from "@/types/update";
+import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 
 interface TunnelSummary {
   proxyId: number;
@@ -40,6 +42,7 @@ const authStore = useAuthStore();
 const createTunnelStore = useCreateTunnelStore();
 const settingsStore = useSettingsStore();
 const themeStore = useThemeStore();
+const uiStore = useUIStore();
 
 // Provider refs
 const loadingBar = useTemplateRef<LoadingBarProviderInst>("loadingBar");
@@ -51,6 +54,7 @@ const notificationProvider = useTemplateRef<NotificationProviderInst>("notificat
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
 const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 const { settings } = storeToRefs(settingsStore);
+const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRefs(uiStore);
 const backgroundImageUrl = ref<string | null>(null);
 
 function clampOpacity(value: number | undefined): number {
@@ -103,10 +107,7 @@ function getImageMimeType(filePath: string): string {
 }
 
 async function syncBackgroundImage(path?: string): Promise<void> {
-  if (backgroundImageUrl.value) {
-    URL.revokeObjectURL(backgroundImageUrl.value);
-    backgroundImageUrl.value = null;
-  }
+  backgroundImageUrl.value = null;
 
   if (!path) {
     return;
@@ -114,13 +115,12 @@ async function syncBackgroundImage(path?: string): Promise<void> {
 
   try {
     const isManagedPath = !/^[a-zA-Z]:[\\/]/.test(path) && !path.startsWith("/") && !path.startsWith("\\");
-    const fileBytes = isManagedPath
-      ? await invoke<number[]>("read_managed_background_image", {
+    const dataUrl = isManagedPath
+      ? await invoke<string>("read_managed_background_image_data_url", {
           relativePath: path,
         })
-      : [];
-    const blob = new Blob([Uint8Array.from(fileBytes)], { type: getImageMimeType(path) });
-    backgroundImageUrl.value = URL.createObjectURL(blob);
+      : null;
+    backgroundImageUrl.value = dataUrl;
   } catch (error) {
     console.error("加载背景图片失败:", error);
   }
@@ -128,11 +128,16 @@ async function syncBackgroundImage(path?: string): Promise<void> {
 
 const appAppearanceStyle = computed(() => {
   const contentOpacity = clampOpacity(settings.value.contentOpacity);
+  const textShadowIntensity = clampOpacity(settings.value.shadowIntensity);
+  const backgroundBlur = settings.value.backgroundBlur ?? 0;
+  const fontWeight = settings.value.fontWeight ?? 400;
   const activeTheme = themeStore.resolvedActiveThemeConfig.common;
 
   return {
     "--app-custom-bg-image": backgroundImageUrl.value ? `url("${backgroundImageUrl.value}")` : "none",
     "--app-custom-bg-opacity": String((settings.value.backgroundImageOpacity ?? 100) / 100),
+    "--app-custom-bg-blur": `${backgroundBlur}px`,
+    "--app-custom-bg-filter": backgroundBlur > 0 ? `blur(${backgroundBlur}px)` : "none",
     "--app-sidebar-opacity": String((settings.value.sidebarOpacity ?? 100) / 100),
     "--app-content-opacity": String(contentOpacity),
     "--app-content-bg-color": withOpacity(activeTheme.bodyColor, contentOpacity),
@@ -142,6 +147,11 @@ const appAppearanceStyle = computed(() => {
     "--app-content-input-color": withOpacity(activeTheme.inputColor, contentOpacity),
     "--app-content-input-disabled-color": withOpacity(activeTheme.inputColorDisabled, contentOpacity),
     "--app-content-table-header-color": withOpacity(activeTheme.tableHeaderColor, contentOpacity),
+    "--app-font-weight-base": String(fontWeight),
+    "--app-font-weight-medium": String(Math.min(800, fontWeight + 100)),
+    "--app-font-weight-strong": String(Math.min(900, fontWeight + 200)),
+    "--app-text-shadow-soft": `0 1px 2px rgba(0, 0, 0, ${0.14 * textShadowIntensity})`,
+    "--app-text-shadow-strong": `0 2px 6px rgba(0, 0, 0, ${0.22 * textShadowIntensity})`,
   };
 });
 
@@ -158,6 +168,14 @@ const appProviders = computed(() => ({
   dialog: dialogProvider.value,
   notification: notificationProvider.value,
 }));
+
+const sidebarToggleStyle = computed(() => ({
+  left: `${currentSidebarWidth.value - 14}px`,
+}));
+
+async function toggleSidebar(): Promise<void> {
+  await uiStore.setSidebarCollapsed(!sidebarCollapsed.value);
+}
 
 const message = {
   success(content: Parameters<MessageProviderInst["success"]>[0], options?: Parameters<MessageProviderInst["success"]>[1]) {
@@ -413,10 +431,7 @@ watch(
 );
 
 onUnmounted(() => {
-  if (backgroundImageUrl.value) {
-    URL.revokeObjectURL(backgroundImageUrl.value);
-    backgroundImageUrl.value = null;
-  }
+  backgroundImageUrl.value = null;
 });
 </script>
 
@@ -443,6 +458,17 @@ onUnmounted(() => {
 
             <!-- 涓诲簲鐢ㄧ晫闈?- 浣跨敤 NLayout -->
             <n-layout v-else has-sider position="absolute" class="main-layout">
+              <button
+                v-if="sidebarCollapsible"
+                type="button"
+                class="global-sidebar-toggle"
+                :style="sidebarToggleStyle"
+                :aria-label="sidebarCollapsed ? '展开侧栏' : '收起侧栏'"
+                @click="toggleSidebar"
+              >
+                <component :is="sidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
+              </button>
+
               <!-- 宸︿晶瀵艰埅鏍?-->
               <Sidebar @logout="handleLogout" />
 
@@ -511,6 +537,7 @@ body {
 body {
   color: var(--app-text-color, #333333);
   background-color: var(--app-bg-color, #f5f5f5);
+  font-weight: var(--app-font-weight-base, 400);
 }
 
 .app-container {
@@ -519,6 +546,7 @@ body {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  font-weight: var(--app-font-weight-base, 400);
 }
 
 .app-background-layer {
@@ -530,6 +558,7 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
   opacity: var(--app-custom-bg-opacity, 0);
+  filter: var(--app-custom-bg-filter, none);
   pointer-events: none;
   z-index: 0;
 }
@@ -546,6 +575,38 @@ body {
   background: transparent !important;
 }
 
+.global-sidebar-toggle {
+  position: fixed;
+  top: 84px;
+  z-index: 100000;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--app-border-color);
+  background: var(--app-card-color);
+  color: var(--app-text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition:
+    left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+  will-change: left;
+}
+
+.global-sidebar-toggle:hover {
+  color: var(--app-primary-color);
+  border-color: var(--app-primary-color);
+}
+
+.global-sidebar-toggle:active {
+  transform: translateX(1px);
+}
+
 .content-layout {
   position: relative;
   background: transparent !important;
@@ -559,7 +620,6 @@ body {
   position: absolute;
   inset: 0;
   background: var(--app-content-bg-color, var(--app-bg-color));
-  backdrop-filter: blur(2px);
   pointer-events: none;
   z-index: 0;
 }
@@ -854,4 +914,24 @@ body {
     transition: all 0.2s ease;
   }
 }
+.app-container h1,
+.app-container h2,
+.app-container h3,
+.app-container h4,
+.app-container h5,
+.app-container h6,
+.app-container .section-header,
+.app-container .page-title {
+  font-weight: var(--app-font-weight-strong, 600);
+  text-shadow: var(--app-text-shadow-strong, none);
+}
+
+.app-container strong,
+.app-container .n-card-header {
+  font-weight: var(--app-font-weight-medium, 500);
+  text-shadow: var(--app-text-shadow-soft, none);
+}
 </style>
+
+
+

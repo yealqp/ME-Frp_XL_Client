@@ -28,6 +28,7 @@ export const useUIStore = defineStore('ui', () => {
   const systemNotification = ref<NotificationReactive | null>(null);
   const notificationTimer = ref<number | null>(null); // 定时器引用
   let notificationApiInstance: any = null; // 保存 notification API 实例
+  let notificationRequestInFlight = false;
 
   // Getters
   const currentTheme = computed(() => customTheme.value || theme.value);
@@ -165,11 +166,12 @@ export const useUIStore = defineStore('ui', () => {
     }
 
     // 如果已有通知实例正在显示，不重复请求
-    if (systemNotification.value) {
+    if (systemNotification.value || notificationRequestInFlight) {
       return;
     }
 
     try {
+      notificationRequestInFlight = true;
       // 使用后端 API 获取系统通知
       const response = await invoke("api_get_system_notification") as string;
 
@@ -193,6 +195,8 @@ export const useUIStore = defineStore('ui', () => {
     } catch (error) {
       console.error("获取系统通知失败:", error);
       // 静默失败，不影响用户体验
+    } finally {
+      notificationRequestInFlight = false;
     }
   }
 

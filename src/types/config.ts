@@ -25,8 +25,11 @@ export interface UnifiedConfig {
   sidebarCollapsed?: boolean;
   backgroundImagePath?: string;
   backgroundImageOpacity?: number;
+  backgroundBlur?: number;
   sidebarOpacity?: number;
   contentOpacity?: number;
+  fontWeight?: number;
+  shadowIntensity?: number;
   
   // WebUI 设置
   webuiAddr?: string;
@@ -71,8 +74,11 @@ export interface AppSettings {
   sidebarCollapsed?: boolean;
   backgroundImagePath?: string;
   backgroundImageOpacity?: number;
+  backgroundBlur?: number;
   sidebarOpacity?: number;
   contentOpacity?: number;
+  fontWeight?: number;
+  shadowIntensity?: number;
   webuiAddr?: string;
   webuiPort?: number;
   webuiPass?: string;
