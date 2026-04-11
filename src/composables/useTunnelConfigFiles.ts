@@ -68,6 +68,15 @@ export function useTunnelConfigFiles() {
   async function saveConfigFile(tunnelId: number, format: TunnelConfigFormat, content: string) {
     try {
       const fileName = getTunnelConfigFileName(tunnelId, format);
+
+      await Promise.all(
+        configTypes
+          .filter((configFormat) => configFormat !== format)
+          .map((configFormat) =>
+            deleteTunnelConfigFile(getTunnelConfigFileName(tunnelId, configFormat)).catch(() => {}),
+          ),
+      );
+
       await saveTunnelConfigFile(fileName, content);
       message.success(`配置文件已保存: ${fileName}，下次启动将使用配置文件模式`);
 
@@ -153,16 +162,8 @@ export function useTunnelConfigFiles() {
       return;
     }
 
-    try {
-      const oldFileName = getTunnelConfigFileName(currentConfigTunnelId.value, oldType);
-      await deleteTunnelConfigFile(oldFileName).catch(() => {});
-
-      activeConfigType.value = newType;
-      message.success(`已切换到 ${newType.toUpperCase()} 格式`);
-    } catch (err) {
-      console.error("切换配置文件类型失败:", err);
-      message.error(extractErrorMessage(err, "切换配置文件类型失败"));
-    }
+    activeConfigType.value = newType;
+    message.success(`已切换到 ${newType.toUpperCase()} 格式`);
   }
 
   async function viewConfigFile(tunnelId: number) {

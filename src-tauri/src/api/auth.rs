@@ -10,7 +10,7 @@
 
 use crate::models::api::{ApiResponse, FrpTokenData};
 use crate::models::auth::{LoginData, LoginRequest, UserDetailInfo};
-use crate::utils::create_http_client;
+use crate::api::client::{create_http_client, send_text_request, with_bearer_auth};
 /// 用户登录
 ///
 /// # 参数
@@ -59,9 +59,8 @@ pub async fn login(
 
     // 获取frp_token
     let frp_response = client
-        .get("https://api.mefrp.com/api/auth/user/frpToken")
-        .header("authorization", format!("Bearer {user_token}"))
-        .header("Content-Type", "application/json")
+        .get("https://api.mefrp.com/api/auth/user/frpToken");
+    let frp_response = with_bearer_auth(frp_response, &user_token)
         .send()
         .await
         .map_err(|e| format!("获取frp_token失败: {e}"))?;
@@ -125,27 +124,17 @@ pub async fn get_user_info(token: &str) -> Result<UserDetailInfo, String> {
 pub async fn user_sign(token: &str, captcha_token: String) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .post("https://api.mefrp.com/api/auth/user/sign")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
-            "captchaToken": captcha_token
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("签到请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("签到失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析签到响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.post("https://api.mefrp.com/api/auth/user/sign"), token).json(
+            &serde_json::json!({
+                "captchaToken": captcha_token
+            }),
+        ),
+        "签到请求失败",
+        "签到失败",
+        "解析签到响应失败",
+    )
+    .await
 }
 
 /// 兑换CDK
@@ -164,28 +153,18 @@ pub async fn redeem_cdk(
 ) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .post("https://api.mefrp.com/api/auth/cdk/redeem")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
-            "code": code,
-            "captchaToken": captcha_token
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("CDK兑换请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("CDK兑换失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析CDK兑换响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.post("https://api.mefrp.com/api/auth/cdk/redeem"), token).json(
+            &serde_json::json!({
+                "code": code,
+                "captchaToken": captcha_token
+            }),
+        ),
+        "CDK兑换请求失败",
+        "CDK兑换失败",
+        "解析CDK兑换响应失败",
+    )
+    .await
 }
 
 /// 获取FRP Token
@@ -200,9 +179,8 @@ pub async fn get_frp_token(token: &str) -> Result<String, String> {
 
     // 获取frp_token
     let response = client
-        .get("https://api.mefrp.com/api/auth/user/frpToken")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
+        .get("https://api.mefrp.com/api/auth/user/frpToken");
+    let response = with_bearer_auth(response, token)
         .send()
         .await
         .map_err(|e| format!("获取frp_token失败: {e}"))?;
@@ -234,27 +212,13 @@ pub async fn get_frp_token(token: &str) -> Result<String, String> {
 pub async fn get_cdk_history(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .get("https://api.mefrp.com/api/auth/cdk/usage")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .send()
-        .await
-        .map_err(|e| format!("获取CDK兑换历史请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!(
-            "获取CDK兑换历史失败，状态码: {}",
-            response.status()
-        ));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析CDK兑换历史响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.get("https://api.mefrp.com/api/auth/cdk/usage"), token),
+        "获取CDK兑换历史请求失败",
+        "获取CDK兑换历史失败",
+        "解析CDK兑换历史响应失败",
+    )
+    .await
 }
 
 /// 重置访问密钥
@@ -268,25 +232,14 @@ pub async fn get_cdk_history(token: &str) -> Result<String, String> {
 pub async fn reset_token(token: &str, captcha_token: &str) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .post("https://api.mefrp.com/api/auth/user/tokenReset")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
-            "captchaToken": captcha_token
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("重置访问密钥请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("重置访问密钥失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析重置访问密钥响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.post("https://api.mefrp.com/api/auth/user/tokenReset"), token)
+            .json(&serde_json::json!({
+                "captchaToken": captcha_token
+            })),
+        "重置访问密钥请求失败",
+        "重置访问密钥失败",
+        "解析重置访问密钥响应失败",
+    )
+    .await
 }

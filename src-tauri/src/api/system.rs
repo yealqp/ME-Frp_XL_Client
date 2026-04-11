@@ -9,7 +9,7 @@
 //! - api_request: 通用API请求
 
 use crate::models::api::ApiResponse;
-use crate::utils::create_http_client;
+use crate::api::client::{create_http_client, send_request, send_text_request, with_bearer_auth};
 
 /// 获取系统公告
 ///
@@ -56,24 +56,13 @@ pub async fn get_announcements(token: &str) -> Result<String, String> {
 pub async fn get_system_status(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .get("https://api.mefrp.com/api/auth/system/status")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .send()
-        .await
-        .map_err(|e| format!("获取系统状态请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("获取系统状态失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析系统状态响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.get("https://api.mefrp.com/api/auth/system/status"), token),
+        "获取系统状态请求失败",
+        "获取系统状态失败",
+        "解析系统状态响应失败",
+    )
+    .await
 }
 
 /// 获取弹窗公告
@@ -86,24 +75,13 @@ pub async fn get_system_status(token: &str) -> Result<String, String> {
 pub async fn get_popup_notice(token: &str) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .get("https://api.mefrp.com/api/auth/popupNotice")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .send()
-        .await
-        .map_err(|e| format!("获取弹窗公告请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("获取弹窗公告失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析弹窗公告响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.get("https://api.mefrp.com/api/auth/popupNotice"), token),
+        "获取弹窗公告请求失败",
+        "获取弹窗公告失败",
+        "解析弹窗公告响应失败",
+    )
+    .await
 }
 
 /// 获取流量统计
@@ -117,27 +95,19 @@ pub async fn get_popup_notice(token: &str) -> Result<String, String> {
 pub async fn get_traffic_stats(token: &str, date_period: u32) -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .post("https://api.mefrp.com/api/auth/user/trafficStats")
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
+    send_text_request(
+        with_bearer_auth(
+            client.post("https://api.mefrp.com/api/auth/user/trafficStats"),
+            token,
+        )
         .json(&serde_json::json!({
             "datePeriod": date_period
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("获取流量统计请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("获取流量统计失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析流量统计响应失败: {e}"))?;
-
-    Ok(response_text)
+        })),
+        "获取流量统计请求失败",
+        "获取流量统计失败",
+        "解析流量统计响应失败",
+    )
+    .await
 }
 
 /// 获取操作日志
@@ -180,24 +150,13 @@ pub async fn get_operation_logs(token: &str, params: &str) -> Result<String, Str
     let url = format!("https://api.mefrp.com/api/auth/operationLog/list?{query_string}");
 
     let client = create_http_client();
-    let response = client
-        .get(&url)
-        .header("authorization", format!("Bearer {token}"))
-        .header("Content-Type", "application/json")
-        .send()
-        .await
-        .map_err(|e| format!("获取操作日志请求失败: {e}"))?;
-
-    if !response.status().is_success() {
-        return Err(format!("获取操作日志失败，状态码: {}", response.status()));
-    }
-
-    let response_text = response
-        .text()
-        .await
-        .map_err(|e| format!("解析操作日志响应失败: {e}"))?;
-
-    Ok(response_text)
+    send_text_request(
+        with_bearer_auth(client.get(&url), token),
+        "获取操作日志请求失败",
+        "获取操作日志失败",
+        "解析操作日志响应失败",
+    )
+    .await
 }
 
 /// 通用API请求
@@ -233,10 +192,7 @@ pub async fn api_request(
         request_builder = request_builder.body(data);
     }
 
-    let response = request_builder
-        .send()
-        .await
-        .map_err(|e| format!("API请求失败: {e}"))?;
+    let response = send_request(request_builder, "API请求失败").await?;
 
     if !response.status().is_success() {
         return Err(format!("API请求失败，状态码: {}", response.status()));
