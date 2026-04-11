@@ -235,7 +235,6 @@ function handleMenuSelect(key: string) {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  border-right: 1px solid var(--app-border-color) !important;
   overflow: visible;
   z-index: 12;
 }
@@ -266,7 +265,7 @@ function handleMenuSelect(key: string) {
 }
 
 :deep(.n-layout-sider__border) {
-  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: none !important;
 }
 
 :deep(.n-layout-sider-scroll-container) {
@@ -275,6 +274,10 @@ function handleMenuSelect(key: string) {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+:deep(.n-layout-sider-scroll-container .n-scrollbar-rail--vertical) {
+  display: none !important;
 }
 
 .sidebar-header {

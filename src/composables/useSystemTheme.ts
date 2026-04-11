@@ -53,8 +53,7 @@ async function detectSystemThemeViaTauri(): Promise<Theme | null> {
       return theme;
     }
     return null;
-  } catch (error) {
-    console.error('[useSystemTheme] Tauri 主题检测失败:', error);
+  } catch {
     return null;
   }
 }
@@ -128,12 +127,10 @@ export function useSystemTheme(): UseSystemThemeReturn {
         }
       }).then(unlisten => {
         tauriUnlisten = unlisten;
-      }).catch(error => {
-        console.error('[useSystemTheme] Tauri 主题监听启动失败:', error);
+      }).catch(() => {
         isSupported.value = false;
       });
-    } catch (error) {
-      console.error('[useSystemTheme] Tauri API 不可用:', error);
+    } catch {
       isSupported.value = false;
     }
   }
@@ -147,8 +144,6 @@ export function useSystemTheme(): UseSystemThemeReturn {
     if (tauriUnlisten) {
       try {
         tauriUnlisten();
-      } catch (error) {
-        console.error('[useSystemTheme] 停止 Tauri 主题监听失败:', error);
       } finally {
         tauriUnlisten = null;
       }

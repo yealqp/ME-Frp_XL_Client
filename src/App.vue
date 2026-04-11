@@ -708,6 +708,78 @@ body {
   background-color: var(--app-content-table-header-color) !important;
 }
 
+.content-layout .n-data-table thead,
+.content-layout .n-data-table thead tr,
+.content-layout .n-data-table thead th,
+.content-layout .n-data-table-base-table-header,
+.content-layout .n-data-table-base-table-header tr,
+.content-layout .n-data-table-base-table-header th,
+.content-layout .n-data-table-th__title,
+.content-layout .n-data-table-sorter,
+.content-layout .n-data-table-filter {
+  background-color: var(--app-content-table-header-color) !important;
+  color: var(--app-text-color) !important;
+}
+
+.content-layout .n-data-table,
+.content-layout .n-data-table-wrapper,
+.content-layout .n-data-table-base-table,
+.content-layout .n-data-table-table,
+.content-layout .n-data-table-tr,
+.content-layout .n-data-table-td,
+.content-layout .n-data-table-empty,
+.content-layout .n-data-table-empty__content,
+.content-layout .n-empty,
+.content-layout .n-pagination {
+  background-color: var(--app-content-card-color) !important;
+}
+
+.content-layout .n-data-table-td,
+.content-layout .n-data-table-empty,
+.content-layout .n-empty,
+.content-layout .n-pagination,
+.content-layout .n-data-table .n-button,
+.content-layout .n-data-table .n-tag {
+  color: var(--app-text-color) !important;
+}
+
+.content-layout .n-data-table .n-base-selection,
+.content-layout .n-data-table .n-base-selection-label,
+.content-layout .n-data-table .n-input,
+.content-layout .n-data-table .n-input-wrapper {
+  background-color: var(--app-content-input-color) !important;
+}
+
+.content-layout .n-descriptions,
+.content-layout .n-descriptions-table,
+.content-layout .n-descriptions-table-header,
+.content-layout .n-descriptions-table-content,
+.content-layout .n-descriptions-table-content__label,
+.content-layout .n-descriptions-table-content__content,
+.content-layout .n-descriptions-table-header__title,
+.content-layout .n-descriptions-table-wrapper {
+  background-color: var(--app-content-card-color) !important;
+}
+
+.content-layout .n-descriptions-table-content__label,
+.content-layout .n-descriptions-table-content__content,
+.content-layout .n-descriptions-table-header__title {
+  color: var(--app-text-color) !important;
+}
+
+.content-layout .n-tabs-content,
+.content-layout .n-tab-pane,
+.content-layout .n-tabs-pane-wrapper,
+.content-layout .n-tabs-wrapper {
+  background-color: transparent !important;
+}
+
+.content-layout .n-tabs .n-card,
+.content-layout .n-tab-pane .n-card,
+.content-layout .n-tabs-pane-wrapper .n-card {
+  background-color: var(--app-content-card-color) !important;
+}
+
 .n-modal,
 .n-dialog,
 .n-drawer,
