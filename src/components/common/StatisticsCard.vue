@@ -61,7 +61,6 @@
 import { ref, onMounted } from 'vue';
 import { NCard, NSkeleton, NText, NIcon, useMessage } from 'naive-ui';
 import { Users, Server, Network, HardDrive } from 'lucide-vue-next';
-import { invoke } from '@tauri-apps/api/core';
 
 interface Statistics {
   users: number;
@@ -105,20 +104,20 @@ const fetchStatistics = async () => {
   loading.value = true;
   statisticsLoadingPromise = (async () => {
     try {
-    const responseText = await invoke('api_get_statistics');
-    const result = JSON.parse(responseText as string);
+    const { getStatistics } = await import('@/api/system');
+    const res = await getStatistics();
 
-    if (result.code === 200 && result.data) {
+    if (res.code === 200 && res.data) {
       statistics.value = {
-        users: result.data.users || 0,
-        nodes: result.data.nodes || 0,
-        proxies: result.data.proxies || 0,
-        traffic: result.data.traffic || 0,
+        users: res.data.users || 0,
+        nodes: res.data.nodes || 0,
+        proxies: res.data.proxies || 0,
+        traffic: res.data.traffic || 0,
       };
       statisticsLoadedOnce = true;
     } else {
-      console.error('获取统计信息失败:', result.message);
-      message.error(`获取统计信息失败: ${result.message || '未知错误'}`);
+      console.error('获取统计信息失败:', res.message);
+      message.error(`获取统计信息失败: ${res.message || '未知错误'}`);
     }
     } catch (error) {
       console.error('获取统计信息失败:', error);

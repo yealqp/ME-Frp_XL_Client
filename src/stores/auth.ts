@@ -9,6 +9,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import type { UnifiedConfig } from '@/types/config';
 import { loadUnifiedConfig, saveUnifiedConfig } from '@/utils/unifiedConfig';
+import { login as apiLogin, getFrpToken } from '@/api/auth';
 
 export const useAuthStore = defineStore('auth', () => {
   // ============================================================================
@@ -101,6 +102,55 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Login via direct API call to api.mefrp.com
+   * Replaces the old invoke('api_login') approach.
+   */
+  async function loginWithApi(
+    username: string,
+    password: string,
+    captchaToken?: string,
+  ): Promise<void> {
+    const res = await apiLogin(username, password, captchaToken);
+
+    if (res.code !== 200) {
+      throw new Error(res.message || '登录失败');
+    }
+
+    const loginData = res.data;
+    let frpTokenValue = '';
+
+    // Fetch frp_token
+    try {
+      const frpRes = await getFrpToken(loginData.token);
+      if (frpRes.code === 200 && frpRes.data) {
+        frpTokenValue = frpRes.data.token;
+      }
+    } catch (e) {
+      console.warn('获取 frp_token 失败（可忽略）:', e);
+    }
+
+    // Update store state
+    login({
+      userToken: loginData.token,
+      username: loginData.username,
+      group: loginData.group,
+      frpToken: frpTokenValue,
+    });
+
+    // Persist to config
+    try {
+      const config = await loadUnifiedConfig();
+      config.userToken = loginData.token;
+      config.frpToken = frpTokenValue;
+      config.username = loginData.username;
+      config.group = loginData.group;
+      await saveUnifiedConfig(config);
+    } catch (e) {
+      console.error('保存登录信息到配置文件失败:', e);
+    }
+  }
+
+  /**
    * Handle logout
    * Clears local authentication state, calls User Store and Tunnel Store to clear data,
    * and clears login information from UnifiedConfig
@@ -187,6 +237,7 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuthStatus,
     applyUnifiedConfig,
     login,
+    loginWithApi,
     logout,
   };
 });

@@ -349,12 +349,13 @@ const autoStartTunnels = async () => {
     let validTunnelIds: number[] = [];
 
     try {
-      const result = await invokeTauriResponse<{ proxies?: TunnelSummary[] } | TunnelSummary[]>(
-        "api_get_tunnel_list",
-      );
+      const { getTunnelList } = await import('@/api/tunnel');
+      const { useAuthStore } = await import('@/stores/auth');
+      const authStore = useAuthStore();
+      const tunnelRes = await getTunnelList(authStore.userToken);
 
-      if (result.code === 200) {
-        const tunnelData = extractProxyList(result.data);
+      if (tunnelRes.code === 200) {
+        const tunnelData = extractProxyList(tunnelRes.data);
         const serverTunnelIds = tunnelData.map((tunnel) => tunnel.proxyId);
         const originalCount = unifiedConfig.autoStartTunnels.length;
 
@@ -370,7 +371,7 @@ const autoStartTunnels = async () => {
           });
         }
       } else {
-        console.error("获取隧道列表失败，跳过自启动验证:", result.message);
+        console.error("获取隧道列表失败，跳过自启动验证:", tunnelRes.message);
         validTunnelIds = unifiedConfig.autoStartTunnels;
       }
     } catch (error) {

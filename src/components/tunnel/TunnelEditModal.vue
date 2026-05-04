@@ -225,9 +225,10 @@ import {
   NDivider,
   NText
 } from 'naive-ui'
-import { invokeTauriResponse } from '@/utils/tauriResponse'
 import { extractErrorMessage } from '@/utils/errorHandler'
 import { formatDomainForDisplay, formatDomainForSave } from '@/utils/domainUtils'
+import { getFreePort } from '@/api/node'
+import { useAuthStore } from '@/stores/auth'
 import type { EditFormData, Tunnel } from '@/types/tunnel'
 
 // Props 接口
@@ -247,6 +248,7 @@ interface TunnelEditModalEmits {
 const props = defineProps<TunnelEditModalProps>()
 const emit = defineEmits<TunnelEditModalEmits>()
 const message = useMessage()
+const authStore = useAuthStore()
 const gettingPort = ref(false)
 
 const editForm = ref<EditFormData>({
@@ -299,14 +301,12 @@ const handleGetFreePort = async () => {
 
   gettingPort.value = true
   try {
-    const result = await invokeTauriResponse<number>('api_get_free_port', {
-      data: JSON.stringify({
-        nodeId: props.tunnel.nodeId,
-        protocol: props.tunnel.proxyType,
-      }),
+    const result = await getFreePort(authStore.userToken, {
+      nodeId: props.tunnel.nodeId,
+      protocol: props.tunnel.proxyType,
     })
 
-    if (result.code === 200 && result.data) {
+    if (result.code === 200 && typeof result.data === 'number') {
       editForm.value.remotePort = result.data
       message.success(`获取到空闲端口: ${result.data}`)
     } else {

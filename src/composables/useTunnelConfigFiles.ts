@@ -1,7 +1,8 @@
 import { onUnmounted, ref, shallowRef } from "vue";
 import { useMessage } from "naive-ui";
-import { invokeTauriResponse } from "@/utils/tauriResponse";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { getTunnelConfig as apiGetTunnelConfig } from "@/api/tunnel";
+import { useAuthStore } from "@/stores/auth";
 import {
   checkTunnelConfigFiles,
   deleteTunnelConfigFile,
@@ -15,6 +16,7 @@ import {
 
 export function useTunnelConfigFiles() {
   const message = useMessage();
+  const authStore = useAuthStore();
 
   const showConfigModal = ref(false);
   const currentConfigTunnelId = ref<number | null>(null);
@@ -46,13 +48,10 @@ export function useTunnelConfigFiles() {
   async function getTunnelConfig(tunnelId: number, format: TunnelConfigFormat) {
     try {
       loadingConfig.value = true;
-      const result = await invokeTauriResponse<{ config?: string }>("api_get_tunnel_config", {
-        proxyId: tunnelId,
-        format,
-      });
+      const result = await apiGetTunnelConfig(authStore.userToken, tunnelId, format);
 
-      if (result.code === 200 && result.data && result.data.config) {
-        return result.data.config;
+      if (result.code === 200 && result.data) {
+        return result.data;
       }
 
       throw new Error(result.message || "获取配置文件失败");

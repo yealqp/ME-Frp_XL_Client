@@ -626,8 +626,14 @@ const submitFeedback = async () => {
   feedbackSubmitting.value = true;
 
   try {
+    const { getUserInfo } = await import('@/api/auth');
+    const { useAuthStore } = await import('@/stores/auth');
+    const userRes = await getUserInfo(useAuthStore().userToken);
+    const userId = userRes.data?.userId ?? 0;
+
     await invoke("api_send_feedback", {
       content: feedbackForm.value.content,
+      userId,
     });
 
     message.success("反馈提交成功，感谢您的反馈！");

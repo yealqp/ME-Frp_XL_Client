@@ -46,9 +46,7 @@ pub mod webui;
 
 // 导入模块中的类型
 use models::api::VersionCheckResult;
-use models::auth::UserDetailInfo;
 use models::config::UnifiedConfig;
-use models::tunnel::{CreateTunnelRequest, FreePortRequest, UpdateTunnelRequest};
 use tunnel::ProcessManager;
 
 fn managed_background_dir() -> Result<PathBuf, String> {
@@ -205,112 +203,12 @@ async fn clear_config(_app_handle: tauri::AppHandle) -> Result<String, String> {
     Ok("Config cleared successfully".to_string())
 }
 
-// 登录API命令
-#[tauri::command]
-async fn api_login(
-    _app_handle: tauri::AppHandle,
-    username: String,
-    password: String,
-    captcha_token: Option<String>,
-) -> Result<UnifiedConfig, String> {
-    // 调用api::auth模块的login函数
-    let (user_token, frp_token, login_data) =
-        api::auth::login(username.clone(), password, captcha_token).await?;
-
-    // 加载当前统一配置（保留应用设置）
-    let mut unified_config = config::load_unified_config().await.unwrap_or_default();
-
-    // 更新登录相关信息（使用新的优化结构）
-    unified_config.user_token = user_token.clone();
-    unified_config.frp_token = frp_token.clone();
-    unified_config.username = username.clone();
-    unified_config.group = login_data.group.clone();
-
-    // 保存统一配置
-    config::save_unified_config(&unified_config).await?;
-
-    // 直接返回 UnifiedConfig
-    Ok(unified_config)
-}
-
-// 获取用户信息API命令
-#[tauri::command]
-async fn api_get_user_info(_app_handle: tauri::AppHandle) -> Result<UserDetailInfo, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    // 调用api::auth模块的get_user_info函数
-    api::auth::get_user_info(&config.user_token).await
-}
-
-// 用户签到API命令
-#[tauri::command]
-async fn api_user_sign(
-    _app_handle: tauri::AppHandle,
-    captcha_token: String,
-) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    // 调用api::auth模块的user_sign函数
-    api::auth::user_sign(&config.user_token, captcha_token).await
-}
-
-// CDK兑换API命令
-#[tauri::command]
-async fn api_redeem_cdk(
-    _app_handle: tauri::AppHandle,
-    code: String,
-    captcha_token: String,
-) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    // 调用api::auth模块的redeem_cdk函数
-    api::auth::redeem_cdk(&config.user_token, code, captcha_token).await
-}
-
-// 获取CDK兑换历史API命令
-#[tauri::command]
-async fn api_get_cdk_history(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    // 调用api::auth模块的get_cdk_history函数
-    api::auth::get_cdk_history(&config.user_token).await
-}
-
-// 获取流量统计API命令
+// 获取流量统计API命令（保留在后端以绕过CORS）
 #[tauri::command]
 async fn api_get_traffic_stats(
     _app_handle: tauri::AppHandle,
     date_period: u32,
 ) -> Result<String, String> {
-    // 从统一配置读取token
     let config = config::load_unified_config()
         .await
         .map_err(|_| "未找到配置文件")?;
@@ -322,236 +220,13 @@ async fn api_get_traffic_stats(
     api::system::get_traffic_stats(&config.user_token, date_period).await
 }
 
-/**
- * 获取 FRP Token API 命令
- * 专门用于获取 frpToken，并自动更新到统一配置中
- */
-#[tauri::command]
-async fn api_get_frp_token(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    // 调用api::auth模块的get_frp_token函数
-    let frp_token = api::auth::get_frp_token(&config.user_token).await?;
-
-    // 更新统一配置中的frp_token
-    let mut updated_config = config;
-    updated_config.frp_token = frp_token.clone();
-
-    // 保存更新后的配置
-    config::save_unified_config(&updated_config).await?;
-
-    Ok(frp_token)
-}
-
-// 获取系统公告API命令
-#[tauri::command]
-async fn api_get_announcements(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::system::get_announcements(&config.user_token).await
-}
-
-// 获取系统状态API命令
-#[tauri::command]
-async fn api_get_system_status(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::system::get_system_status(&config.user_token).await
-}
-
-// 获取弹窗公告API命令
-#[tauri::command]
-async fn api_get_popup_notice(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 从统一配置读取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::system::get_popup_notice(&config.user_token).await
-}
-
-// 获取统计信息API命令
-#[tauri::command]
-async fn api_get_statistics(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    api::system::get_statistics().await
-}
-
-// 获取系统通知API命令
+// 获取系统通知API命令（xlc.mefrp.yealqp.cn — 非 api.mefrp.com）
 #[tauri::command]
 async fn api_get_system_notification(_app_handle: tauri::AppHandle) -> Result<String, String> {
     api::system::get_system_notification().await
 }
 
-// 获取节点列表API命令
-#[tauri::command]
-async fn api_get_node_list(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 读取配置获取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::node::get_node_list(&config.user_token).await
-}
-
-// 获取创建隧道所需的所有数据API命令
-#[tauri::command]
-async fn api_get_create_proxy_data(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 读取配置获取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::node::get_create_proxy_data(&config.user_token).await
-}
-
-// 编辑隧道API命令
-#[tauri::command]
-async fn api_update_tunnel(_app_handle: tauri::AppHandle, data: String) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    let request_data: UpdateTunnelRequest =
-        serde_json::from_str(&data).map_err(|e| format!("解析请求数据失败: {e}"))?;
-
-    api::tunnel::update_tunnel(&config.user_token, &request_data).await
-}
-
-// 强制下线隧道API命令
-#[tauri::command]
-async fn api_kick_tunnel(_app_handle: tauri::AppHandle, proxy_id: i32) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::tunnel::kick_tunnel(&config.user_token, proxy_id).await
-}
-
-// 强制下线所有隧道API命令
-#[tauri::command]
-async fn api_kick_all_proxies(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::tunnel::kick_all_proxies(&config.user_token).await
-}
-
-// 重置访问密钥API命令
-#[tauri::command]
-async fn api_reset_token(_app_handle: tauri::AppHandle, captcha_token: String) -> Result<String, String> {
-    let mut config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    let old_token = config.user_token.clone();
-    
-    // 调用重置 token API
-    let response = api::auth::reset_token(&old_token, &captcha_token).await?;
-    
-    // 解析响应获取新的 token
-    let result: serde_json::Value = serde_json::from_str(&response)
-        .map_err(|e| format!("解析响应失败: {}", e))?;
-    
-    if result["code"].as_i64() == Some(200) {
-        if let Some(new_token) = result["data"]["newToken"].as_str() {
-            // 更新配置中的 token
-            config.user_token = new_token.to_string();
-            
-            // 保存配置文件
-            config::save_unified_config(&config)
-                .await
-                .map_err(|e| format!("保存配置失败: {}", e))?;
-            
-            println!("访问密钥已更新并保存到配置文件");
-        }
-    }
-    
-    Ok(response)
-}
-
-// 启用/禁用隧道API命令
-#[tauri::command]
-async fn api_toggle_tunnel(
-    _app_handle: tauri::AppHandle,
-    proxy_id: i32,
-    is_disabled: bool,
-) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::tunnel::toggle_tunnel(&config.user_token, proxy_id, is_disabled).await
-}
-
-// 获取节点简要信息API命令
-#[tauri::command]
-async fn api_get_node_name_list(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::node::get_node_name_list(&config.user_token).await
-}
-
-// 获取隧道日志
+// 获取隧道日志（本地进程）
 #[tauri::command]
 async fn api_get_tunnel_logs(
     proxy_id: i32,
@@ -560,92 +235,12 @@ async fn api_get_tunnel_logs(
     tunnel::get_tunnel_logs(proxy_id, process_manager.inner()).await
 }
 
-// 获取所有运行中的隧道
+// 获取所有运行中的隧道（本地进程查询）
 #[tauri::command]
 async fn api_get_running_tunnels(
     process_manager: tauri::State<'_, ProcessManager>,
 ) -> Result<Vec<i32>, String> {
     tunnel::get_running_tunnels(process_manager.inner()).await
-}
-
-// 获取节点状态API命令
-#[tauri::command]
-async fn api_get_node_status(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    // 读取配置获取token
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::node::get_node_status(&config.user_token).await
-}
-
-// 获取空闲端口API命令
-#[tauri::command]
-async fn api_get_free_port(_app_handle: tauri::AppHandle, data: String) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    let request_data: FreePortRequest =
-        serde_json::from_str(&data).map_err(|e| format!("解析请求数据失败: {e}"))?;
-
-    api::node::get_free_port(&config.user_token, &request_data).await
-}
-
-// 创建隧道API命令
-#[tauri::command]
-async fn api_create_tunnel(_app_handle: tauri::AppHandle, data: String) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    let request_data: CreateTunnelRequest =
-        serde_json::from_str(&data).map_err(|e| format!("解析请求数据失败: {e}"))?;
-
-    api::tunnel::create_tunnel(&config.user_token, &request_data).await
-}
-
-// 获取隧道列表API命令
-#[tauri::command]
-async fn api_get_tunnel_list(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::tunnel::get_tunnel_list(&config.user_token).await
-}
-
-// 获取操作日志API命令
-#[tauri::command]
-async fn api_get_operation_logs(
-    _app_handle: tauri::AppHandle,
-    params: String,
-) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::system::get_operation_logs(&config.user_token, &params).await
 }
 
 // 启动隧道命令（使用mefrpc.exe）
@@ -676,37 +271,7 @@ async fn api_stop_tunnel(
     tunnel::stop_tunnel(proxy_id, process_manager.inner()).await
 }
 
-// 删除隧道API命令
-#[tauri::command]
-async fn api_delete_tunnel(_app_handle: tauri::AppHandle, proxy_id: i32) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::tunnel::delete_tunnel(&config.user_token, proxy_id).await
-}
-
-// 获取隧道配置文件API命令
-#[tauri::command]
-async fn api_get_tunnel_config(
-    _app_handle: tauri::AppHandle,
-    proxy_id: i32,
-    format: String,
-) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::tunnel::get_tunnel_config(&config.user_token, proxy_id, format).await
-}
+// 下线所有隧道命令已删除，改为前端直接调用 API
 
 // 设置开机自启动
 #[tauri::command]
@@ -789,7 +354,7 @@ async fn fetch_privacy_policy() -> Result<String, String> {
     let client = utils::create_http_client();
     
     let response = client
-        .get("https://check.yealqp.cn/privacy.md")
+        .get("https://xlc.mefrp.yealqp.cn/privacy.md")
         .send()
         .await
         .map_err(|e| format!("请求隐私政策失败: {}", e))?;
@@ -875,6 +440,7 @@ async fn check_tunnel_config_files(_app_handle: tauri::AppHandle) -> Result<Vec<
 async fn api_send_feedback(
     _app_handle: tauri::AppHandle,
     content: String,
+    user_id: i32,
 ) -> Result<String, String> {
     let config = config::load_unified_config()
         .await
@@ -884,15 +450,9 @@ async fn api_send_feedback(
         return Err("未找到有效的token".to_string());
     }
 
-    // 获取用户信息以获取 user_id 和 email
-    let user_info = api::auth::get_user_info(&config.user_token)
-        .await
-        .map_err(|e| format!("获取用户信息失败: {}", e))?;
-
     api::feedback::send_feedback(
-        &config.user_token,
         &content,
-        user_info.user_id,
+        user_id,
     )
     .await
 }
@@ -1243,37 +803,13 @@ pub fn run() {
         .manage(minimize_to_tray_state)
         .invoke_handler(tauri::generate_handler![
             clear_config,
-            api_login,
-            api_get_user_info,
-            api_user_sign,
-            api_redeem_cdk,
-            api_get_cdk_history,
             api_get_traffic_stats,
-            api_get_frp_token,
-            api_get_announcements,
-            api_get_system_status,
-            api_get_popup_notice,
-            api_get_statistics,
             api_get_system_notification,
-            api_get_node_list,
-            api_get_create_proxy_data,
-            api_get_node_status,
-            api_get_free_port,
-            api_create_tunnel,
-            api_get_tunnel_list,
-            api_get_operation_logs,
-            api_start_tunnel,
-            api_stop_tunnel,
-            api_delete_tunnel,
-            api_update_tunnel,
-            api_kick_tunnel,
-            api_kick_all_proxies,
-            api_reset_token,
-            api_toggle_tunnel,
-            api_get_node_name_list,
             api_get_tunnel_logs,
             api_get_running_tunnels,
-            api_get_tunnel_config,
+            api_start_tunnel,
+            api_stop_tunnel,
+            // api_kick_all_proxies 已删除
             api_request,
             save_config_file,
             delete_config_file,

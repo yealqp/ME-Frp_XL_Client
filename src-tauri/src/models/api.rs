@@ -1,26 +1,13 @@
 //! API响应相关数据结构
 //!
-//! 本模块定义了与API响应相关的数据结构，包括：
-//! - ApiResponse: 通用API响应结构体
+//! 本模块定义了与API响应和版本管理相关的数据结构：
 //! - RemoteVersion: 远程版本信息
 //! - VersionCheckResult: 版本检查结果
+//! - ChangelogResponse: 更新日志响应
 //! - FrpTokenData: FRP Token数据
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-/// 通用API响应结构体
-///
-/// 用于封装所有API请求的响应数据
-#[derive(Serialize, Deserialize, Debug)]
-pub struct ApiResponse<T> {
-    /// 响应状态码
-    pub code: i32,
-    /// 响应数据（可选）
-    pub data: Option<T>,
-    /// 响应消息
-    pub message: String,
-}
 
 /// 远程版本信息结构体
 ///

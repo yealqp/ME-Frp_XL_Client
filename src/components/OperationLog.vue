@@ -75,7 +75,8 @@ import { useMessage, NTag, NDataTable } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
 import { RefreshCw, Filter, RotateCcw } from "lucide-vue-next";
 import { extractErrorMessage } from "@/utils/errorHandler";
-import { invokeTauriResponse } from "@/utils/tauriResponse";
+import { getOperationLogs } from "@/api/system";
+import { useAuthStore } from "@/stores/auth";
 
 interface OperationLog {
   logId: number;
@@ -95,6 +96,7 @@ interface LogPageData {
 }
 
 const message = useMessage();
+const authStore = useAuthStore();
 const loading = ref(false);
 const logs = ref<OperationLog[]>([]);
 
@@ -268,7 +270,14 @@ const loadLogs = async () => {
   loading.value = true;
   try {
     // 构建查询参数
-    const params: Record<string, any> = {
+    const params: {
+      page: number;
+      pageSize: number;
+      category?: string;
+      status?: string;
+      startTime?: string;
+      endTime?: string;
+    } = {
       page: pagination.page,
       pageSize: pagination.pageSize,
     };
@@ -289,9 +298,7 @@ const loadLogs = async () => {
       params.endTime = formatDateForApi(filters.dateRange[1]);
     }
 
-    const result = await invokeTauriResponse<LogPageData>("api_get_operation_logs", {
-      params: JSON.stringify(params),
-    });
+    const result = await getOperationLogs(authStore.userToken, params);
 
     if (result.code === 200) {
       logs.value = result.data.data;

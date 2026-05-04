@@ -110,15 +110,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { useMessage } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
 import type { UnifiedConfig } from "../types/config";
 import { useCaptchaVerifier } from "@/composables/useCaptchaVerifier";
 import { extractErrorMessage } from "@/utils/errorHandler";
-import { invokeTauriText } from "@/utils/tauriResponse";
 import { mergeUnifiedConfig } from "@/utils/unifiedConfig";
+import { getUserInfo, getFrpToken } from "@/api/auth";
 import AuthShell from "./AuthShell.vue";
 
 const emit = defineEmits(["login-success"]);
@@ -236,15 +235,24 @@ async function buildTokenLoginConfig(userToken: string): Promise<UnifiedConfig> 
     throw new Error("请输入有效的Token");
   }
 
-  await mergeUnifiedConfig({ userToken: normalizedToken });
+  // Fetch user info via direct API
+  const authRes = await getUserInfo(normalizedToken);
+  const userInfo = authRes.data as unknown as TokenLoginUserInfo;
 
-  const userInfo = await invoke<TokenLoginUserInfo>("api_get_user_info");
-  const frpToken = await invokeTauriText("api_get_frp_token");
+  let frpToken = "";
+  try {
+    const frpRes = await getFrpToken(normalizedToken);
+    if (frpRes.code === 200 && frpRes.data) {
+      frpToken = frpRes.data.token;
+    }
+  } catch (e) {
+    console.warn("获取 frp_token 失败:", e);
+  }
 
   return mergeUnifiedConfig({
     userToken: normalizedToken,
-    username: userInfo.username || "",
-    group: userInfo.group || "",
+    username: userInfo?.username || "",
+    group: userInfo?.group || "",
     frpToken,
   });
 }
@@ -294,15 +302,15 @@ async function handleAccountLogin() {
   loginForm.value.captchaToken = captchaToken;
   message.loading("正在登录中，请稍候...", { duration: 0 });
 
-  const config = await invoke<UnifiedConfig>("api_login", {
-    username: loginForm.value.username,
-    password: loginForm.value.password,
+  await authStore.loginWithApi(
+    loginForm.value.username,
+    loginForm.value.password,
     captchaToken,
-  });
+  );
 
   message.destroyAll();
   message.success("登录成功");
-  finishLogin(config);
+  emit("login-success");
 }
 
 // 处理登录

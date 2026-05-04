@@ -57,13 +57,16 @@
 import { ref, onMounted } from "vue";
 import { useMessage } from "naive-ui";
 import { extractErrorMessage } from "@/utils/errorHandler";
-import { invokeTauriResponse } from "@/utils/tauriResponse";
+import { getCreateProxyData, getNodeStatus, getFreePort as apiGetFreePort } from "@/api/node";
+import { createTunnel as apiCreateTunnel, type CreateTunnelRequest } from "@/api/tunnel";
+import { useAuthStore } from "@/stores/auth";
 import NodeFilterBar from "./create-tunnel/NodeFilterBar.vue";
 import NodeSelector from "./create-tunnel/NodeSelector.vue";
 import TunnelConfigForm from "./create-tunnel/TunnelConfigForm.vue";
 import type { Node, NodeStatus, TunnelForm } from "./create-tunnel/types";
 
 const message = useMessage();
+const authStore = useAuthStore();
 
 // 当前步骤
 const currentStep = ref(1);
@@ -75,11 +78,6 @@ const loading = ref(true);
 const error = ref("");
 const selectedNode = ref<Node | null>(null);
 const userGroup = ref<string>("default");
-
-interface CreateProxyDataPayload {
-  nodes?: Node[];
-  currentGroup?: string;
-}
 
 // 筛选条件
 const searchKeyword = ref("");
@@ -114,7 +112,7 @@ const creating = ref(false);
 // 获取创建隧道所需的基础数据（节点列表 + 当前用户组）
 async function fetchCreateProxyData() {
   try {
-    const response = await invokeTauriResponse<CreateProxyDataPayload>("api_get_create_proxy_data");
+    const response = await getCreateProxyData(authStore.userToken);
     
     if (response.code === 200) {
       // 设置节点列表
@@ -135,7 +133,7 @@ async function fetchCreateProxyData() {
 // 获取节点状态
 async function fetchNodeStatus() {
   try {
-    const response = await invokeTauriResponse<NodeStatus[]>("api_get_node_status");
+    const response = await getNodeStatus(authStore.userToken);
     if (response.code === 200) {
       nodeStatus.value = response.data;
     } else {
@@ -270,43 +268,43 @@ function goBack() {
 }
 
 // 获取空闲端口
-async function getFreePort() {
-  if (!tunnelForm.value.type) {
-    message.warning("请先选择隧道类型");
-    return;
-  }
-  
-  // HTTP/HTTPS 不需要远程端口
-  if (tunnelForm.value.type === "http" || tunnelForm.value.type === "https") {
-    message.info("HTTP/HTTPS 隧道不需要远程端口");
-    return;
-  }
-  
-  if (tunnelForm.value.type !== "tcp" && tunnelForm.value.type !== "udp") {
-    message.warning("只有 TCP/UDP 隧道需要远程端口");
-    return;
-  }
-  
-  try {
-    const requestData = {
-      nodeId: selectedNode.value?.nodeId,
-      protocol: tunnelForm.value.type,
-    };
-    const response = await invokeTauriResponse<number>("api_get_free_port", {
-      data: JSON.stringify(requestData),
-    });
-
-    if (response.code === 200) {
-      tunnelForm.value.remotePort = response.data;
-      message.success(`获取到空闲端口: ${response.data}`);
-    } else {
-      message.error(response.message || "获取空闲端口失败");
+  async function getFreePort() {
+    if (!tunnelForm.value.type) {
+      message.warning("请先选择隧道类型");
+      return;
     }
-  } catch (error) {
-    console.error("获取空闲端口失败:", error);
-    message.error(`获取空闲端口失败: ${extractErrorMessage(error, "获取空闲端口失败")}`);
+    
+    // HTTP/HTTPS 不需要远程端口
+    if (tunnelForm.value.type === "http" || tunnelForm.value.type === "https") {
+      message.info("HTTP/HTTPS 隧道不需要远程端口");
+      return;
+    }
+    
+    if (tunnelForm.value.type !== "tcp" && tunnelForm.value.type !== "udp") {
+      message.warning("只有 TCP/UDP 隧道需要远程端口");
+      return;
+    }
+    
+    try {
+      const requestData = {
+        nodeId: selectedNode.value!.nodeId,
+        protocol: tunnelForm.value.type,
+      };
+      const response = await apiGetFreePort(authStore.userToken, requestData);
+
+      if (response.code === 200) {
+        // API 直接返回端口数字, 类型已修正
+        const port = response.data;
+        tunnelForm.value.remotePort = port;
+        message.success(`获取到空闲端口: ${port}`);
+      } else {
+        message.error(response.message || "获取空闲端口失败");
+      }
+    } catch (error) {
+      console.error("获取空闲端口失败:", error);
+      message.error(`获取空闲端口失败: ${extractErrorMessage(error, "获取空闲端口失败")}`);
+    }
   }
-}
 
 // 创建隧道
 async function createTunnel() {
@@ -359,9 +357,7 @@ async function createTunnel() {
       transportProtocol: tunnelForm.value.transportProtocol || "",
     };
     
-    const response = await invokeTauriResponse<null>("api_create_tunnel", {
-      data: JSON.stringify(requestData),
-    });
+    const response = await apiCreateTunnel(authStore.userToken, requestData as CreateTunnelRequest);
     
     if (response.code === 200) {
       message.success("隧道创建成功");

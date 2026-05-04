@@ -7,8 +7,9 @@
 
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
-import { invoke } from '@tauri-apps/api/core';
 import type { UserDetailInfo } from '@/types/user';
+import { getUserInfo as apiGetUserInfo } from '@/api/auth';
+import { useAuthStore } from './auth';
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -75,8 +76,13 @@ export const useUserStore = defineStore('user', () => {
 
     userInfoRequest = (async () => {
       try {
-        const result = await invoke<UserDetailInfo>('api_get_user_info');
-        userInfo.value = result;
+        const authStore = useAuthStore();
+        const res = await apiGetUserInfo(authStore.userToken);
+        if (res.code === 200) {
+          userInfo.value = res.data as unknown as UserDetailInfo;
+        } else {
+          throw new Error(res.message || '获取用户信息失败');
+        }
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err);
         console.error('Failed to load user info:', err);

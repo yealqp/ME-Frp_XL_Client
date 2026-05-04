@@ -9,7 +9,8 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { extractErrorMessage } from '@/utils/errorHandler';
 import type { NodeStatusData } from '@/types/node';
-import { invokeTauriResponse } from '@/utils/tauriResponse';
+import { getNodeStatus as apiGetNodeStatus } from '@/api/node';
+import { useAuthStore } from './auth';
 
 export const useNodeStore = defineStore('node', () => {
   // State
@@ -89,15 +90,16 @@ export const useNodeStore = defineStore('node', () => {
     error.value = null;
 
     try {
-      const parsedResponse = await invokeTauriResponse<NodeStatusData[]>('api_get_node_status');
-      
-      if (parsedResponse.code === 200) {
+      const authStore = useAuthStore();
+      const res = await apiGetNodeStatus(authStore.userToken);
+
+      if (res.code === 200) {
         // Sort by node ID
-        nodes.value = parsedResponse.data.sort((a, b) => a.nodeId - b.nodeId);
+        nodes.value = (res.data as NodeStatusData[]).sort((a, b) => a.nodeId - b.nodeId);
         lastUpdated.value = new Date();
       } else {
-        error.value = parsedResponse.message || '获取节点状态失败';
-        console.error('获取节点状态失败:', parsedResponse.message);
+        error.value = res.message || '获取节点状态失败';
+        console.error('获取节点状态失败:', res.message);
       }
     } catch (err) {
       error.value = extractErrorMessage(err, '获取节点状态失败');

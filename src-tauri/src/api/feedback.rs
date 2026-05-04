@@ -1,87 +1,76 @@
 //! 反馈相关API
 //!
-//! 本模块提供用户反馈功能，包括发送反馈到QQ群
+//! 本模块提供用户反馈功能，将反馈数据发送到远程反馈服务器
 
-use crate::api::client::{create_http_client, send_request, with_json_headers};
+use crate::api::client::{create_http_client, send_request, with_bearer_auth};
 use serde::{Deserialize, Serialize};
 
-const NAPCAT_API_URL: &str = "https://napcat.yealqp.cn/send_group_msg";
-const NAPCAT_GROUP_ID: u64 = 1039784218;
-const NAPCAT_AUTHORIZATION: &str = "Bearer REDACTED_QQ_BOT_API_KEY";
+const FEEDBACK_API_URL: &str = "https://xlc.mefrp.yealqp.cn/feedbacks.php";
+const FEEDBACK_API_TOKEN: &str = "yealqpxlclientfeedbacksecret";
 
-/// NapCat 消息文本结构
+/// 发送到反馈服务器的请求体
 #[derive(Serialize, Deserialize, Debug)]
-struct MessageText {
-    #[serde(rename = "type")]
-    msg_type: String,
-    data: MessageData,
+struct FeedbackRequest {
+    token: &'static str,
+    user_id: i32,
+    content: String,
 }
 
+/// 反馈服务器的成功响应
 #[derive(Serialize, Deserialize, Debug)]
-struct MessageData {
-    text: String,
+struct FeedbackSuccessResponse {
+    ok: bool,
+    file: String,
+    message: String,
 }
 
-/// NapCat 发送群消息请求
+/// 反馈服务器的错误响应
 #[derive(Serialize, Deserialize, Debug)]
-struct SendGroupMessageRequest {
-    group_id: u64,
-    message: Vec<MessageText>,
+struct FeedbackErrorResponse {
+    error: String,
 }
 
-/// NapCat API 响应
-#[derive(Serialize, Deserialize, Debug)]
-struct NapCatResponse {
-    status: String,
-    retcode: i32,
-}
-
-/// 发送反馈到QQ群
+/// 发送反馈到远程反馈服务器
+///
+/// * `content` - 反馈内容
+/// * `user_id` - 用户 ID
 pub async fn send_feedback(
-    _user_token: &str,
     content: &str,
     user_id: i32,
 ) -> Result<String, String> {
-    // 构建反馈消息
-    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-    let feedback_message = format!(
-        "【XL Client用户反馈】\n时间：{}\nME-Frp ID：{}\n内容：{}",
-        timestamp, user_id, content
-    );
-
-    // 构建请求体
-    let request_body = SendGroupMessageRequest {
-        group_id: NAPCAT_GROUP_ID,
-        message: vec![MessageText {
-            msg_type: "text".to_string(),
-            data: MessageData {
-                text: feedback_message,
-            },
-        }],
+    let request_body = FeedbackRequest {
+        token: FEEDBACK_API_TOKEN,
+        user_id,
+        content: content.to_string(),
     };
 
-    // 发送到 NapCat API
     let client = create_http_client();
     let response = send_request(
-        with_json_headers(client.post(NAPCAT_API_URL))
-            .header("Authorization", NAPCAT_AUTHORIZATION)
+        with_bearer_auth(client.post(FEEDBACK_API_URL), FEEDBACK_API_TOKEN)
             .json(&request_body),
-        "发送请求失败",
+        "发送反馈请求失败",
     )
     .await?;
 
-    if !response.status().is_success() {
-        return Err(format!("HTTP错误: {}", response.status()));
-    }
-
-    let result: NapCatResponse = response
-        .json()
+    let status = response.status();
+    let response_text = response
+        .text()
         .await
-        .map_err(|e| format!("解析响应失败: {}", e))?;
+        .map_err(|e| format!("读取响应失败: {}", e))?;
 
-    if result.status == "ok" && result.retcode == 0 {
-        Ok("反馈提交成功".to_string())
+    if status.is_success() {
+        let parsed: FeedbackSuccessResponse = serde_json::from_str(&response_text)
+            .map_err(|e| format!("解析成功响应失败: {}，原始响应: {}", e, response_text))?;
+        if parsed.ok {
+            Ok(format!("反馈提交成功: {}", parsed.message))
+        } else {
+            Err(format!("服务器返回失败: ok=false, file={}", parsed.file))
+        }
     } else {
-        Err("提交失败".to_string())
+        // 尝试从响应体提取结构化错误信息，回退到原始文本
+        let error_msg = serde_json::from_str::<FeedbackErrorResponse>(&response_text)
+            .map(|e| e.error)
+            .unwrap_or_else(|_| format!("HTTP {}: {}", status, response_text));
+        Err(format!("服务器错误: {}", error_msg))
     }
 }

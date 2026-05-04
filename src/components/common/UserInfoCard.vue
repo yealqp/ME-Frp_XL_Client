@@ -132,7 +132,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { NCard, NSkeleton, NText, NTag, NIcon, useMessage } from "naive-ui";
-import { invoke } from "@tauri-apps/api/core";
 import {
   Mail,
   Clock,
@@ -220,19 +219,18 @@ const showSignDialog = async () => {
     message.loading("正在签到...", { duration: 0 });
 
     // 使用 token 进行签到
-    const responseText = await invoke("api_user_sign", {
-      captchaToken: token,
-    });
+    const { userSign } = await import('@/api/auth');
+    const { useAuthStore } = await import('@/stores/auth');
+    const authStore = useAuthStore();
+    const res = await userSign(authStore.userToken, token);
 
-    const result = JSON.parse(responseText as string);
-
-    if (result.code === 200) {
-      const trafficGB = result.data?.extraTraffic || 0;
+    if (res.code === 200) {
+      const trafficGB = (res.data as unknown as { extraTraffic?: number })?.extraTraffic || 0;
       let successMessage = "签到成功！";
       if (trafficGB > 0) {
         successMessage = `签到成功，获得 ${trafficGB} GB 流量！`;
-      } else if (result.message) {
-        successMessage = result.message;
+      } else if (res.message) {
+        successMessage = res.message;
       }
 
       message.destroyAll();
@@ -242,7 +240,7 @@ const showSignDialog = async () => {
       emit("refresh");
     } else {
       message.destroyAll();
-      message.error(result.message || "签到失败");
+      message.error(res.message || "签到失败");
     }
   } catch (error) {
     console.error("签到失败:", error);

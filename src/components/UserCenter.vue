@@ -373,13 +373,11 @@ import { useAuthStore } from "../stores/auth";
 import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
 import { invokeTauriResponse } from "@/utils/tauriResponse";
+import { resetToken, redeemCdk, getCdkHistory } from '@/api/auth';
 import UserInfoCard from "./common/UserInfoCard.vue";
 import { formatTimestamp as formatTimestampUtil } from "@/utils/timeFormatter";
 import type {
-  CdkHistoryData,
   CdkHistoryLog,
-  RedeemCdkData,
-  ResetTokenData,
   TrafficStatsData,
 } from "@/types/user";
 import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
@@ -604,7 +602,7 @@ const showResetTokenDialog = () => {
   });
 };
 
-// 执行下线所有隧道
+// 执行下线所有隧道（改为前端直连 API）
 const handleKickAllProxies = async () => {
   if (kickingAllProxies.value) {
     return false;
@@ -613,7 +611,19 @@ const handleKickAllProxies = async () => {
   kickingAllProxies.value = true;
 
   try {
-    const result = await invokeTauriResponse<null>("api_kick_all_proxies");
+    const response = await fetch("https://api.mefrp.com/api/auth/user/kickAllProxies", {
+      method: "GET", // 根据实际 API 支持的方法，示例中使用 GET
+      headers: {
+        Authorization: `Bearer ${authStore.userToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
 
     if (result.code === 200) {
       message.success(result.message || "强制下线隧道成功");
@@ -648,27 +658,19 @@ const handleResetToken = async () => {
     message.destroyAll();
     message.loading("正在重置访问密钥...", { duration: 0 });
 
-    const result = await invokeTauriResponse<ResetTokenData>("api_reset_token", {
-      captchaToken: captchaToken,
-    });
+    const result = await resetToken(authStore.userToken, captchaToken);
 
     message.destroyAll();
 
-    if (result.code === 200) {
-      const newToken = result.data?.newToken;
+    const newToken = result.data?.newToken;
+    
+    if (newToken) {
+      // 刷新用户信息
+      await userStore.refreshUserInfo();
       
-      if (newToken) {
-        // 后端已经更新了配置文件，前端只需要刷新用户信息
-        // 这会重新从配置文件加载新的 token
-        await userStore.refreshUserInfo();
-        
-        message.success("访问密钥重置成功，所有隧道已下线");
-      } else {
-        message.warning("访问密钥重置成功，但未获取到新密钥");
-      }
+      message.success("访问密钥重置成功，所有隧道已下线");
     } else {
-      message.error(result.message || "重置访问密钥失败");
-      return false;
+      message.warning("访问密钥重置成功，但未获取到新密钥");
     }
   } catch (error) {
     message.destroyAll();
@@ -711,41 +713,35 @@ const performCdkRedeem = async () => {
     message.destroyAll();
     message.loading("正在兑换中...", { duration: 0 });
 
-    const result = await invokeTauriResponse<RedeemCdkData>("api_redeem_cdk", {
-      code: cdkCode.value.trim(),
-      captchaToken: cdkCaptchaToken.value,
-    });
+    const result = await redeemCdk(authStore.userToken, cdkCode.value.trim(), cdkCaptchaToken.value);
     message.destroyAll();
 
-    if (result.code === 200) {
-      const { type, value } = result.data;
-      let rewardText = "";
+    // result.code is always 200 when not throwing
+    const { type, value } = result.data as unknown as { type: string; value: number };
+    let rewardText = "";
 
-      switch (type) {
-        case "proxy":
-          rewardText = `隧道数 ${value} 条`;
-          break;
-        case "traffic":
-          rewardText = `流量 ${value} GB`;
-          break;
-        case "vip":
-          rewardText = `高级会员 ${value} 天`;
-          break;
-        default:
-          rewardText = `${type} ${value}`;
-      }
-
-      message.success(`兑换成功，获得${rewardText}`);
-      showCdkModal.value = false;
-      cdkCode.value = "";
-      cdkCaptchaToken.value = "";
-
-      // 兑换成功后刷新历史记录和用户信息
-      loadCdkHistory();
-      userStore.refreshUserInfo();
-    } else {
-      message.error(result.message || "CDK兑换失败");
+    switch (type) {
+      case "proxy":
+        rewardText = `隧道数 ${value} 条`;
+        break;
+      case "traffic":
+        rewardText = `流量 ${value} GB`;
+        break;
+      case "vip":
+        rewardText = `高级会员 ${value} 天`;
+        break;
+      default:
+        rewardText = `${type} ${value}`;
     }
+
+    message.success(`兑换成功，获得${rewardText}`);
+    showCdkModal.value = false;
+    cdkCode.value = "";
+    cdkCaptchaToken.value = "";
+
+    // 兑换成功后刷新历史记录和用户信息
+    loadCdkHistory();
+    userStore.refreshUserInfo();
   } catch (error) {
     message.destroyAll();
     const errorMessage = handleApiError(error, "CDK兑换失败", "CDK兑换失败");
@@ -759,19 +755,21 @@ const performCdkRedeem = async () => {
 const loadCdkHistory = async () => {
   cdkHistoryLoading.value = true;
   try {
-    const result = await invokeTauriResponse<CdkHistoryData>("api_get_cdk_history");
+    const result = await getCdkHistory(authStore.userToken);
 
-    if (result.code === 200 && result.data) {
-      cdkHistory.value = Array.isArray(result.data.logs)
-        ? result.data.logs
-        : [];
-      cdkHistoryTotal.value = result.data.total || 0;
-    } else {
-      console.error("获取CDK兑换历史失败:", result.message);
-      message.error(result.message || "获取CDK兑换历史失败");
-      cdkHistory.value = [];
-      cdkHistoryTotal.value = 0;
-    }
+    // 实际 API 返回 { logs: [...] }
+    const logs = result.data?.logs || [];
+    cdkHistory.value = logs.map(log => ({
+      logId: log.logId,
+      code: log.code,
+      username: log.username || "",
+      type: log.type,      // "traffic", "proxy", "vip"
+      value: log.value,
+      useTime: log.useTime * 1000,  // 秒级时间戳转毫秒
+      clientIp: log.clientIp || "",
+      userAgent: log.userAgent || "",
+    } as CdkHistoryLog));
+    cdkHistoryTotal.value = logs.length;
   } catch (error) {
     const errorMessage = handleApiError(error, "加载CDK兑换历史失败", "加载CDK兑换历史失败");
     message.error(errorMessage);
@@ -828,15 +826,20 @@ const loadTrafficStats = async () => {
   activeChartIndex.value = null;
 
   try {
-    const result = await invokeTauriResponse<TrafficStatsData>("api_get_traffic_stats", {
+    const responseText = await invoke<string>("api_get_traffic_stats", {
       datePeriod: datePeriod.value,
     });
+    const result = JSON.parse(responseText) as {
+      code: number;
+      message?: string;
+      data?: TrafficStatsData;
+    };
 
     if (result.code === 200 && result.data) {
-      updateChart(result.data);
+      const trafficData: TrafficStatsData = result.data;
+      updateChart(trafficData);
     } else {
-      console.error("获取流量统计失败:", result.message);
-      message.error(result.message || "获取流量统计失败");
+      throw new Error(result.message || "获取流量统计失败");
     }
   } catch (error) {
     const errorMessage = handleApiError(error, "加载流量统计失败", "加载流量统计失败");

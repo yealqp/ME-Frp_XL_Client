@@ -1,5 +1,4 @@
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
 import { storeToRefs } from "pinia";
 import { useMessage, useNotification } from "naive-ui";
 import { AlertTriangle, CheckCircle, HelpCircle, XCircle } from "lucide-vue-next";
@@ -7,6 +6,9 @@ import { useUserStore } from "@/stores/user";
 import { useUIStore } from "@/stores/ui";
 import { handleApiError } from "@/utils/errorHandler";
 import { useCaptchaVerifier } from "@/composables/useCaptchaVerifier";
+import { useAuthStore } from "@/stores/auth";
+import { getAnnouncements, getSystemStatus, getPopupNotice } from "@/api/system";
+import { userSign } from "@/api/auth";
 
 interface Announcement {
   id: number;
@@ -19,15 +21,6 @@ interface SystemStatus {
   status: number;
   remark: string;
 }
-
-interface PopupNoticeResponse {
-  code: number;
-  data: string;
-  message: string;
-}
-
-let dashboardInitializedOnce = false;
-let dashboardInitPromise: Promise<void> | null = null;
 
 const CACHE_DURATION = 5 * 60 * 1000;
 
@@ -80,6 +73,7 @@ function normalizeAnnouncements(noticeData: unknown): Announcement[] {
 export function useDashboardState() {
   const userStore = useUserStore();
   const uiStore = useUIStore();
+  const authStore = useAuthStore();
   const message = useMessage();
   const notification = useNotification();
   const { userInfo, loading: userInfoLoading } = storeToRefs(userStore);
@@ -124,7 +118,8 @@ export function useDashboardState() {
     announcementsLoading.value = true;
 
     try {
-      const noticeData = await invoke<unknown>("api_get_announcements");
+      const res = await getAnnouncements(authStore.userToken);
+      const noticeData = res.code === 200 ? res.data : null;
       announcements.value = normalizeAnnouncements(noticeData);
       announcementsCache.value = {
         data: announcements.value,
@@ -187,20 +182,13 @@ export function useDashboardState() {
 
   async function fetchSystemStatus() {
     try {
-      const responseText = await invoke<string>("api_get_system_status");
-      const result = JSON.parse(responseText) as { code: number; message?: string; data?: SystemStatus };
-
-      if (result.code === 200 && result.data) {
-        systemStatus.value = {
-          status: result.data.status,
-          remark: result.data.remark,
-        };
-        systemStatusLoaded.value = true;
-        return;
-      }
-
-      console.error("获取系统状态失败:", result.message);
-      systemStatusLoaded.value = false;
+      const res = await getSystemStatus(authStore.userToken);
+      const data = res.data as unknown as SystemStatus;
+      systemStatus.value = {
+        status: data.status,
+        remark: data.remark,
+      };
+      systemStatusLoaded.value = true;
     } catch (error) {
       console.error("获取系统状态失败:", error);
       systemStatusLoaded.value = false;
@@ -225,16 +213,10 @@ export function useDashboardState() {
     popupNoticeLoading.value = true;
 
     try {
-      const responseText = await invoke<string>("api_get_popup_notice");
-
-      try {
-        const result = JSON.parse(responseText) as PopupNoticeResponse;
-        if (result.code === 200 && result.data) {
-          popupNoticeContent.value = result.data;
-          showImportantNotice.value = true;
-        }
-      } catch {
-        // 解析失败时静默忽略，保持原行为
+      const res = await getPopupNotice(authStore.userToken);
+      if (res.data) {
+        popupNoticeContent.value = res.data;
+        showImportantNotice.value = true;
       }
     } catch {
       // 静默处理错误，不影响用户体验
@@ -262,53 +244,36 @@ export function useDashboardState() {
 
     try {
       const token = await verifyCaptcha();
-      const responseText = await invoke<string>("api_user_sign", {
-        captchaToken: token,
-      });
-      const result = JSON.parse(responseText) as {
-        code: number;
-        message?: string;
-        data?: { extraTraffic?: number };
-      };
+      const result = await userSign(authStore.userToken, token);
+      const extraTraffic = (result.data as unknown as { extraTraffic?: number })?.extraTraffic || 0;
+      let successMessage = "自动签到成功！";
 
-      if (result.code === 200) {
-        const trafficGB = result.data?.extraTraffic || 0;
-        let successMessage = "自动签到成功！";
-
-        if (trafficGB > 0) {
-          successMessage = `自动签到成功，获得 ${trafficGB} GB 流量！`;
-        } else if (result.message) {
-          successMessage = result.message;
-        }
-
-        message.success(successMessage);
-        await userStore.loadUserInfo(true);
+      if (extraTraffic > 0) {
+        successMessage = `自动签到成功，获得 ${extraTraffic} GB 流量！`;
       }
+
+      message.success(successMessage);
+      await userStore.loadUserInfo(true);
     } catch (error) {
       console.error("自动签到过程出错:", error);
     }
   }
 
   async function initializeDashboard() {
-    if (dashboardInitializedOnce) {
-      return;
-    }
+    // Fire all independent tasks in parallel (non-blocking)
+    fetchSystemStatus();
+    fetchAnnouncements();
+    fetchPopupNotice();
+    // Notification runs independently; errors are logged but do not block
+    uiStore.fetchAndShowNotification(notification).catch(err =>
+      console.error("Notification error:", err)
+    );
 
-    if (!dashboardInitPromise) {
-      dashboardInitPromise = (async () => {
-        fetchSystemStatus();
-        await userStore.loadUserInfo();
-        await autoSign();
-        fetchAnnouncements();
-        fetchPopupNotice();
-        await uiStore.fetchAndShowNotification(notification);
-        dashboardInitializedOnce = true;
-      })().finally(() => {
-        dashboardInitPromise = null;
-      });
-    }
+    // Load user info (required for auto-sign)
+    await userStore.loadUserInfo();
 
-    await dashboardInitPromise;
+    // Start auto-sign in background – does not block announcements or notifications
+    autoSign().catch(err => console.error("Auto sign error:", err));
   }
 
   return {

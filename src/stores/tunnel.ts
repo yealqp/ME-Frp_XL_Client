@@ -11,6 +11,9 @@ import { invoke } from '@tauri-apps/api/core';
 import type { EditFormData, Tunnel } from '@/types/tunnel';
 import { extractErrorMessage } from '@/utils/errorHandler';
 import { extractProxyList, invokeTauriResponse } from '@/utils/tauriResponse';
+import * as tunnelApi from '@/api/tunnel';
+import * as nodeApi from '@/api/node';
+import { useAuthStore } from './auth';
 
 interface NodeNameItem {
   nodeId: number;
@@ -128,26 +131,37 @@ export const useTunnelStore = defineStore('tunnel', () => {
     error.value = '';
 
     try {
+      const authStore = useAuthStore();
+      const token = authStore.userToken;
+
       const [tunnelResponse, nodeResponse] = await Promise.all([
-        invokeTauriResponse<{ proxies?: Tunnel[] } | Tunnel[]>('api_get_tunnel_list'),
-        invokeTauriResponse<NodeNamePayload | NodeNameItem[]>('api_get_node_name_list'),
+        tunnelApi.getTunnelList(token),
+        (async () => {
+          try {
+            return await nodeApi.getNodeNameList(token);
+          } catch {
+            return { code: 200, data: { nodes: [] }, message: '' };
+          }
+        })(),
       ]);
 
       if (tunnelResponse.code !== 200) {
         throw new Error(tunnelResponse.message || '获取隧道列表失败');
       }
 
-      if (nodeResponse.code !== 200) {
-        throw new Error(nodeResponse.message || '获取节点名称失败');
-      }
-
       tunnels.value = extractProxyList(tunnelResponse.data);
 
-      const nodesList = extractNodeList(nodeResponse.data);
+      const nodeData = nodeResponse.data;
+      const nodesList = nodeData && typeof nodeData === 'object' && 'nodes' in nodeData
+        ? (nodeData as { nodes: NodeNameItem[] }).nodes ?? []
+        : Array.isArray(nodeData)
+          ? nodeData as NodeNameItem[]
+          : [];
+
       const nameMap: Record<number, string> = {};
       const hostnameMap: Record<number, string> = {};
 
-      nodesList.forEach(node => {
+      nodesList.forEach((node: NodeNameItem) => {
         nameMap[node.nodeId] = node.name;
         hostnameMap[node.nodeId] = node.hostname;
       });
@@ -205,9 +219,13 @@ export const useTunnelStore = defineStore('tunnel', () => {
     options: TunnelActionOptions = {},
   ) {
     await withTunnelAction(proxyId, '更新隧道配置失败', async () => {
-      await executeTunnelCommand<null>('api_update_tunnel', {
-        data: JSON.stringify(buildUpdateTunnelRequest(proxyId, updateData)),
-      }, '更新隧道配置失败');
+      const authStore = useAuthStore();
+      const req = buildUpdateTunnelRequest(proxyId, updateData);
+      const res = await tunnelApi.updateTunnel(authStore.userToken, req);
+
+      if (res.code !== 200) {
+        throw new Error(res.message || '更新隧道配置失败');
+      }
 
       if (options.syncAfter !== false) {
         await refreshTunnels();
@@ -221,10 +239,16 @@ export const useTunnelStore = defineStore('tunnel', () => {
     options: TunnelActionOptions = {},
   ) {
     await withTunnelAction(proxyId, enable ? '启用隧道失败' : '禁用隧道失败', async () => {
-      await executeTunnelCommand<null>('api_toggle_tunnel', {
+      const authStore = useAuthStore();
+      const res = await tunnelApi.toggleTunnel(
+        authStore.userToken,
         proxyId,
-        isDisabled: !enable,
-      }, enable ? '启用隧道失败' : '禁用隧道失败');
+        !enable,
+      );
+
+      if (res.code !== 200) {
+        throw new Error(res.message || (enable ? '启用隧道失败' : '禁用隧道失败'));
+      }
 
       if (options.syncAfter !== false) {
         await refreshTunnels();
@@ -237,17 +261,21 @@ export const useTunnelStore = defineStore('tunnel', () => {
     options: KickTunnelOptions = {},
   ) {
     await withTunnelAction(proxyId, '强制下线失败', async () => {
-      await executeTunnelCommand<null>('api_kick_tunnel', {
-        proxyId,
-      }, '强制下线失败');
+      const authStore = useAuthStore();
+      const token = authStore.userToken;
+
+      const res = await tunnelApi.kickTunnel(token, proxyId);
+      if (res.code !== 200) {
+        throw new Error(res.message || '强制下线失败');
+      }
 
       runningTunnels.value.delete(proxyId);
 
       if (options.reEnableAfterKick) {
-        await executeTunnelCommand<null>('api_toggle_tunnel', {
-          proxyId,
-          isDisabled: false,
-        }, '启用隧道失败');
+        const enableRes = await tunnelApi.toggleTunnel(token, proxyId, false);
+        if (enableRes.code !== 200) {
+          throw new Error(enableRes.message || '启用隧道失败');
+        }
       }
 
       if (options.syncAfter !== false) {
@@ -261,9 +289,12 @@ export const useTunnelStore = defineStore('tunnel', () => {
     options: TunnelActionOptions = {},
   ) {
     await withTunnelAction(proxyId, '删除隧道失败', async () => {
-      await executeTunnelCommand<null>('api_delete_tunnel', {
-        proxyId,
-      }, '删除隧道失败');
+      const authStore = useAuthStore();
+      const res = await tunnelApi.deleteTunnel(authStore.userToken, proxyId);
+
+      if (res.code !== 200) {
+        throw new Error(res.message || '删除隧道失败');
+      }
 
       if (options.syncAfter !== false) {
         await refreshTunnels();
