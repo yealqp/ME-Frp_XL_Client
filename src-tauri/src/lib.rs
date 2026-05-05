@@ -197,12 +197,6 @@ async fn read_managed_background_image_data_url(relative_path: String) -> Result
     Ok(format!("data:{mime};base64,{encoded}"))
 }
 
-#[tauri::command]
-async fn clear_config(_app_handle: tauri::AppHandle) -> Result<String, String> {
-    config::clear_config().await?;
-    Ok("Config cleared successfully".to_string())
-}
-
 // 获取流量统计API命令（保留在后端以绕过CORS）
 #[tauri::command]
 async fn api_get_traffic_stats(
@@ -294,18 +288,6 @@ async fn set_always_on_top(
     system::window::set_always_on_top(&app_handle, always_on_top).await
 }
 
-// 显示窗口
-#[tauri::command]
-async fn show_window(app_handle: tauri::AppHandle) -> Result<String, String> {
-    system::window::show_window(&app_handle).await
-}
-
-// 隐藏窗口
-#[tauri::command]
-async fn hide_window(app_handle: tauri::AppHandle) -> Result<String, String> {
-    system::window::hide_window(&app_handle).await
-}
-
 // 设置最小化到托盘行为
 #[tauri::command]
 async fn set_minimize_to_tray(
@@ -384,30 +366,6 @@ async fn save_unified_config(
 #[tauri::command]
 async fn load_unified_config(_app_handle: tauri::AppHandle) -> Result<UnifiedConfig, String> {
     config::load_unified_config().await
-}
-
-#[tauri::command]
-async fn migrate_old_configs(_app_handle: tauri::AppHandle) -> Result<UnifiedConfig, String> {
-    config::migrate_old_configs().await
-}
-
-// 通用API请求命令
-#[tauri::command]
-async fn api_request(
-    _app_handle: tauri::AppHandle,
-    method: String,
-    url: String,
-    data: String,
-) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::system::api_request(&config.user_token, method, url, data).await
 }
 
 // 保存配置文件到本地
@@ -612,16 +570,6 @@ async fn webui_stop_tunnel(
     webui_manager: tauri::State<'_, webui::WebUIManager>,
 ) -> Result<String, String> {
     webui::webui_stop_tunnel(session, proxy_id, frp_token, webui_manager.inner()).await
-}
-
-/// 获取 WebUI 运行日志
-#[tauri::command]
-async fn webui_get_logs(
-    session: String,
-    frp_token: String,
-    webui_manager: tauri::State<'_, webui::WebUIManager>,
-) -> Result<String, String> {
-    webui::webui_get_logs(session, frp_token, webui_manager.inner()).await
 }
 
 #[tauri::command]

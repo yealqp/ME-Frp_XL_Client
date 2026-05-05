@@ -16,7 +16,7 @@ export const useAuthStore = defineStore('auth', () => {
   // State
   // ============================================================================
 
-  const isLoggedIn = ref(false);           // 登录状态
+  const isLoggedIn = ref(localStorage.getItem("mefrp_logged_in") === "true"); // 登录状态
   const isCheckingAuth = ref(false);       // 正在检查认证状态
   const userToken = ref('');               // 用户 token
   const username = ref('');                // 用户名
@@ -50,12 +50,14 @@ export const useAuthStore = defineStore('auth', () => {
       username.value = config.username || '';
       group.value = config.group || '';
       frpToken.value = config.frpToken || '';
+      localStorage.setItem("mefrp_logged_in", "true");
     } else {
       isLoggedIn.value = false;
       userToken.value = '';
       username.value = '';
       group.value = '';
       frpToken.value = '';
+      localStorage.setItem("mefrp_logged_in", "false");
     }
   }
 
@@ -99,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
     username.value = userInfo.username;
     group.value = userInfo.group || '';
     frpToken.value = userInfo.frpToken || '';
+    localStorage.setItem("mefrp_logged_in", "true");
   }
 
   /**
@@ -164,6 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
     username.value = '';
     group.value = '';
     frpToken.value = '';
+    localStorage.setItem("mefrp_logged_in", "false");
 
     // Clear other stores (dynamic import to avoid circular dependencies)
     const results = await Promise.allSettled([

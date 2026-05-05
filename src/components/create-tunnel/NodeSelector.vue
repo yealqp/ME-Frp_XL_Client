@@ -219,6 +219,17 @@ function handleNodeSelect(node: Node) {
   padding: 16px 0;
 }
 
+/* 折叠卡片大容器透明背景 */
+.nodes-container :deep(.n-collapse-item) {
+  background: transparent !important;
+}
+.nodes-container :deep(.n-collapse-item__content-wrapper) {
+  background: transparent !important;
+}
+.nodes-container :deep(.n-collapse-item__header) {
+  background: transparent !important;
+}
+
 @media (max-width: 768px) {
   .nodes-grid {
     grid-template-columns: 1fr;

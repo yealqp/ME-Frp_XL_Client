@@ -263,6 +263,9 @@ onMounted(async () => {
   const persistedConfig = await persistedConfigPromise;
   hasStoredSession.value = Boolean(persistedConfig?.userToken);
   authStore.applyUnifiedConfig(persistedConfig);
+  if (authStore.isLoggedIn && route.path === "/login") {
+    router.replace("/dashboard");
+  }
   shellReady.value = true;
 
   await syncBackgroundImage(settings.value.backgroundImagePath);
@@ -309,6 +312,13 @@ onUnmounted(() => {
   if (checkForUpdatesOnStartTimer !== null) {
     clearTimeout(checkForUpdatesOnStartTimer);
     checkForUpdatesOnStartTimer = null;
+  }
+});
+
+// 检测到登录态时从 /login 跳转 dashboard
+watch(isLoggedIn, (loggedIn) => {
+  if (loggedIn && route.path === "/login") {
+    router.push("/dashboard");
   }
 });
 

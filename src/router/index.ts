@@ -103,8 +103,12 @@ router.beforeEach(async (to, _from) => {
     return "/dashboard";
   }
 
-  // 登录页面直接放行
+  // 登录页面：已登录则跳 dashboard
   if (to.path === "/login") {
+    const authStore = useAuthStore();
+    if (authStore.isLoggedIn) {
+      return "/dashboard";
+    }
     return true;
   }
 
