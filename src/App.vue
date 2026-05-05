@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect } from "vue";
+import { computed, onMounted, ref, useTemplateRef, watch, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { BaseDirectory, readFile } from "@tauri-apps/plugin-fs";
 import { 
   NDialogProvider, 
   NSpin, 
@@ -26,11 +25,12 @@ import { useThemeStore } from "./stores/theme";
 import { useUIStore } from "./stores/ui";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
-import { extractProxyList, invokeTauriResponse } from "@/utils/tauriResponse";
-import { loadUnifiedConfig, saveUnifiedConfig } from "@/utils/unifiedConfig";
-import type { UpdateCheckResult } from "@/types/update";
+import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import type { UnifiedConfig } from "@/types/config";
 import { ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { useBackgroundImage } from "@/composables/useBackgroundImage";
+import { useAutoStartTunnels } from "@/composables/useAutoStartTunnels";
+import { useAutoUpdate } from "@/composables/useAutoUpdate";
 
 interface TunnelSummary {
   proxyId: number;
@@ -57,107 +57,12 @@ const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
 const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 const { settings } = storeToRefs(settingsStore);
 const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRefs(uiStore);
-const backgroundImageUrl = ref<string | null>(null);
-const backgroundImageLoadToken = ref(0);
 const shellReady = ref(false);
 const hasStoredSession = ref(false);
 
-function clampOpacity(value: number | undefined): number {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return 1;
-  }
-
-  return Math.min(1, Math.max(0, value / 100));
-}
-
-function withOpacity(color: string, opacity: number): string {
-  const normalized = color.trim().replace("#", "");
-
-  if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
-    const r = parseInt(normalized.slice(0, 2), 16);
-    const g = parseInt(normalized.slice(2, 4), 16);
-    const b = parseInt(normalized.slice(4, 6), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  }
-
-  if (/^[0-9a-fA-F]{8}$/.test(normalized)) {
-    const r = parseInt(normalized.slice(0, 2), 16);
-    const g = parseInt(normalized.slice(2, 4), 16);
-    const b = parseInt(normalized.slice(4, 6), 16);
-    const a = parseInt(normalized.slice(6, 8), 16) / 255;
-    return `rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, opacity * a))})`;
-  }
-
-  return color;
-}
-
-function revokeBackgroundImageUrl(): void {
-  if (backgroundImageUrl.value?.startsWith("blob:")) {
-    URL.revokeObjectURL(backgroundImageUrl.value);
-  }
-
-  backgroundImageUrl.value = null;
-}
-
-function backgroundImageMime(filePath: string): string {
-  const extension = filePath.split(".").pop()?.toLowerCase();
-
-  switch (extension) {
-    case "jpg":
-    case "jpeg":
-    case "jfif":
-      return "image/jpeg";
-    case "png":
-      return "image/png";
-    case "webp":
-      return "image/webp";
-    case "avif":
-      return "image/avif";
-    case "gif":
-      return "image/gif";
-    case "bmp":
-      return "image/bmp";
-    case "svg":
-      return "image/svg+xml";
-    case "ico":
-      return "image/x-icon";
-    default:
-      return "application/octet-stream";
-  }
-}
-
-async function syncBackgroundImage(path?: string): Promise<void> {
-  const loadToken = ++backgroundImageLoadToken.value;
-  revokeBackgroundImageUrl();
-
-  if (!path) {
-    return;
-  }
-
-  try {
-    const isManagedPath = !/^[a-zA-Z]:[\\/]/.test(path) && !path.startsWith("/") && !path.startsWith("\\");
-    if (!isManagedPath) {
-      return;
-    }
-
-    const bytes = await readFile(path, {
-      baseDir: BaseDirectory.Resource,
-    });
-    const blob = new Blob([bytes], {
-      type: backgroundImageMime(path),
-    });
-
-    const objectUrl = URL.createObjectURL(blob);
-    if (loadToken !== backgroundImageLoadToken.value) {
-      URL.revokeObjectURL(objectUrl);
-      return;
-    }
-
-    backgroundImageUrl.value = objectUrl;
-  } catch (error) {
-    console.error("加载背景图片失败:", error);
-  }
-}
+const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, withOpacity, clampOpacity } = useBackgroundImage();
+const { startAutoStartTunnels } = useAutoStartTunnels();
+const { checkForUpdatesOnStart } = useAutoUpdate();
 
 const appAppearanceStyle = computed(() => {
   const contentOpacity = clampOpacity(settings.value.contentOpacity);
@@ -334,107 +239,6 @@ const handleLogout = async (): Promise<void> => {
   }
 };
 
-const autoStartTunnels = async () => {
-  try {
-    const unifiedConfig = await loadUnifiedConfig();
-
-    if (
-      !unifiedConfig ||
-      !unifiedConfig.autoStartTunnels ||
-      unifiedConfig.autoStartTunnels.length === 0
-    ) {
-      return;
-    }
-
-    let validTunnelIds: number[] = [];
-
-    try {
-      const { getTunnelList } = await import('@/api/tunnel');
-      const { useAuthStore } = await import('@/stores/auth');
-      const authStore = useAuthStore();
-      const tunnelRes = await getTunnelList(authStore.userToken);
-
-      if (tunnelRes.code === 200) {
-        const tunnelData = extractProxyList(tunnelRes.data);
-        const serverTunnelIds = tunnelData.map((tunnel) => tunnel.proxyId);
-        const originalCount = unifiedConfig.autoStartTunnels.length;
-
-        validTunnelIds = unifiedConfig.autoStartTunnels.filter((id) => serverTunnelIds.includes(id));
-
-        if (validTunnelIds.length !== originalCount) {
-          const removedCount = originalCount - validTunnelIds.length;
-          message.warning(`已自动清理 ${removedCount} 个无效的自启动隧道配置`);
-
-          await saveUnifiedConfig({
-            ...unifiedConfig,
-            autoStartTunnels: validTunnelIds,
-          });
-        }
-      } else {
-        console.error("获取隧道列表失败，跳过自启动验证:", tunnelRes.message);
-        validTunnelIds = unifiedConfig.autoStartTunnels;
-      }
-    } catch (error) {
-      console.error("验证自启动隧道时发生错误，跳过验证:", error);
-      validTunnelIds = unifiedConfig.autoStartTunnels;
-    }
-
-    if (validTunnelIds.length === 0) {
-      return;
-    }
-
-    const startupDelay = (unifiedConfig.startupDelay || 5) * 1000;
-
-    setTimeout(async () => {
-      for (let i = 0; i < validTunnelIds.length; i++) {
-        const tunnelId = validTunnelIds[i];
-
-        try {
-          const result = await invokeTauriResponse<null>("api_start_tunnel", {
-            proxyId: tunnelId,
-          });
-
-          if (result.code === 200) {
-            message.success(`自启动隧道 ${tunnelId} 成功`);
-          } else {
-            console.error(`隧道 ${tunnelId} 启动失败:`, result.message);
-            message.error(`自启动隧道 ${tunnelId} 失败: ${result.message}`);
-          }
-        } catch (error) {
-          console.error(`启动隧道 ${tunnelId} 时发生错误:`, error);
-          message.error(`自启动隧道 ${tunnelId} 失败: ${error}`);
-        }
-
-        if (i < validTunnelIds.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-        }
-      }
-    }, startupDelay);
-  } catch (error) {
-    console.error("自启动隧道失败:", error);
-  }
-};
-
-const autoCheckForUpdates = async () => {
-  try {
-    const unifiedConfig = await loadUnifiedConfig();
-
-    if (!unifiedConfig || unifiedConfig.autoUpdate === false) {
-      return;
-    }
-
-    const result = await invoke<UpdateCheckResult>("check_for_updates");
-
-    if (result.has_update) {
-      message.info(`发现新版本 ${result.latest_version}，请前往关于页面查看详情`, {
-        duration: 5000,
-      });
-    }
-  } catch (error) {
-    console.error("自动检查更新失败:", error);
-  }
-};
-
 onMounted(async () => {
   const persistedConfigPromise: Promise<UnifiedConfig | null> = loadUnifiedConfig().catch((error) => {
     console.error("加载本地配置失败:", error);
@@ -476,9 +280,9 @@ onMounted(async () => {
 
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
-      autoStartTunnels();
+      startAutoStartTunnels(message);
       setTimeout(() => {
-        autoCheckForUpdates();
+        checkForUpdatesOnStart(message);
       }, 3000);
     } else {
       setTimeout(waitForLogin, 500);
@@ -506,10 +310,6 @@ watch(
   },
 );
 
-onUnmounted(() => {
-  backgroundImageLoadToken.value += 1;
-  revokeBackgroundImageUrl();
-});
 </script>
 
 <template>

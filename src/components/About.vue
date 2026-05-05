@@ -385,7 +385,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import {
   useMessage,
@@ -404,7 +404,8 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { invokeTauriText } from "@/utils/tauriResponse";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { UpdateCheckResult } from "@/types/update";
+import { useAppUpdate } from "@/composables/useAppUpdate";
+import { useHitokoto } from "@/composables/useHitokoto";
 import {
   MessageCircle,
   MessageSquare,
@@ -419,40 +420,36 @@ import {
   Shield,
 } from "lucide-vue-next";
 import SectionHeader from "@/components/common/SectionHeader.vue";
-import { parseMarkdown } from "@/utils/markdownParser";
-
-interface Hitokoto {
-  sentence: string;
-  from: string;
-  from_who: string;
-  type: string;
-}
+// ---
 
 const router = useRouter();
 const message = useMessage();
-const updateChecking = ref(false);
-const showUpdateModal = ref(false);
-const latestVersion = ref("");
-const currentVersion = ref("");
-const updateInfo = ref<string[]>([]);
-const changelog = ref<Record<string, string[]>>({});
-const appVersion = ref("加载中...");
-const changelogLoading = ref(false);
-const showChangelogModal = ref(false);
 
-const sortedChangelog = computed(() => {
-  const versions = Object.keys(changelog.value);
-  return versions.sort((a, b) => {
-    const partsA = a.split('.').map(Number);
-    const partsB = b.split('.').map(Number);
-    for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-      const numA = partsA[i] || 0;
-      const numB = partsB[i] || 0;
-      if (numA !== numB) return numB - numA;
-    }
-    return 0;
-  });
-});
+const {
+  updateChecking,
+  showUpdateModal,
+  latestVersion,
+  currentVersion,
+  updateInfo,
+  changelog,
+  changelogLoading,
+  showChangelogModal,
+  sortedChangelog,
+  checkForUpdates,
+  parseUpdateInfo,
+  viewChangelog,
+  handleUpdate,
+  handleCancelUpdate,
+} = useAppUpdate();
+
+const {
+  hitokoto,
+  hitokotoLoading,
+  getHitokoto,
+  refreshHitokoto,
+} = useHitokoto();
+
+const appVersion = ref("加载中...");
 
 // 反馈表单相关
 const showFeedbackModal = ref(false);
@@ -460,44 +457,6 @@ const feedbackSubmitting = ref(false);
 const feedbackForm = ref({
   content: "",
 });
-
-// 一言相关
-const hitokoto = ref<Hitokoto>({
-  sentence: "加载中...",
-  from: "",
-  from_who: "",
-  type: "",
-});
-const hitokotoLoading = ref(false);
-
-// 获取一言
-const getHitokoto = async () => {
-  try {
-    const response = await fetch("https://hitokoto.yealqp.cn/?encode=json");
-    const data = await response.json();
-    hitokoto.value = {
-      sentence: data.hitokoto || "获取一言失败",
-      from: data.from || "",
-      from_who: data.from_who || "",
-      type: data.type || "",
-    };
-  } catch (error) {
-    console.error("获取一言失败:", error);
-    hitokoto.value = {
-      sentence: "获取一言失败",
-      from: "获取失败",
-      from_who: "",
-      type: "",
-    };
-  }
-};
-
-// 刷新一言
-const refreshHitokoto = async () => {
-  hitokotoLoading.value = true;
-  await getHitokoto();
-  hitokotoLoading.value = false;
-};
 
 // 获取应用版本号
 const getAppVersion = async () => {
@@ -515,86 +474,6 @@ onMounted(() => {
   getHitokoto();
   getAppVersion();
 });
-
-// 检查更新
-const checkForUpdates = async () => {
-  updateChecking.value = true;
-  try {
-    const result = (await invoke("check_for_updates")) as UpdateCheckResult;
-    if (result.has_update) {
-      latestVersion.value = result.latest_version;
-      currentVersion.value = result.current_version;
-      updateInfo.value = result.update_info || [];
-      changelog.value = result.changelog || {};
-      showUpdateModal.value = true;
-    } else {
-      message.success(`当前已是最新版本 ${result.current_version}`);
-    }
-  } catch (error) {
-    message.error(`检查更新失败: ${error}`);
-  } finally {
-    updateChecking.value = false;
-  }
-};
-
-// 将更新信息数组转换为 Markdown 格式并解析
-const parseUpdateInfo = (infoArray: string[]): string => {
-  if (!infoArray || infoArray.length === 0) {
-    return '<p>暂无更新信息</p>';
-  }
-  
-  // 将数组每一项用换行符连接成一个字符串
-  const markdownContent = infoArray.join('\n');
-  
-  // 使用 parseMarkdown 解析为 HTML
-  return parseMarkdown(markdownContent);
-};
-
-// 查看更新历史
-const viewChangelog = async () => {
-  changelogLoading.value = true;
-  try {
-    const result = (await invoke("get_update_history")) as UpdateCheckResult;
-    latestVersion.value = result.latest_version;
-    currentVersion.value = result.current_version;
-    updateInfo.value = result.update_info || [];
-    changelog.value = result.changelog || {};
-    showChangelogModal.value = true;
-  } catch (error) {
-    message.error(`获取更新历史失败: ${error}`);
-  } finally {
-    changelogLoading.value = false;
-  }
-};
-
-// 处理更新
-const handleUpdate = async () => {
-  try {
-    showUpdateModal.value = false;
-    message.loading("正在下载更新...", { duration: 0 });
-
-    await invoke("download_and_install_update", {
-      version: latestVersion.value,
-    });
-
-    message.destroyAll();
-    message.success("安装程序已启动，应用即将关闭");
-
-    // 等待一下让用户看到消息，然后退出应用
-    setTimeout(() => {
-      invoke("quit_app");
-    }, 2000);
-  } catch (error) {
-    message.destroyAll();
-    message.error(`更新失败: ${error}`);
-  }
-};
-
-// 处理取消更新
-const handleCancelUpdate = () => {
-  showUpdateModal.value = false;
-  message.info("已取消更新，下次启动时会再次检查");
-};
 
 // 桌面版反馈相关
 const sendyEmail = async () => {
