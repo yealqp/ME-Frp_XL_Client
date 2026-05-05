@@ -4,7 +4,9 @@
 //! - client: HTTP客户端创建和配置
 //! - feedback: 反馈相关API（NapCat QQ bot）
 //! - system: 系统相关API（通用请求 + 系统通知）
+//! - ai_analysis: AI 日志分析（OpenAI 兼容 API）
 
+pub mod ai_analysis;
 pub mod client;
 pub mod feedback;
 pub mod system;

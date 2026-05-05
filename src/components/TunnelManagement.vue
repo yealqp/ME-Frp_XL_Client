@@ -67,16 +67,8 @@
       @select-all="selectAll"
     />
 
-    <!-- 错误状态 -->
-    <div v-if="error" class="error-container">
-      <n-alert type="error" :title="error" />
-      <n-button type="primary" @click="handleReload" style="margin-top: 16px">
-        重新加载
-      </n-button>
-    </div>
-
     <!-- 加载状态 -->
-    <div v-else-if="loading" class="tunnels-container">
+    <div v-if="loading" class="tunnels-container">
       <!-- 卡片视图骨架屏 -->
       <div v-if="viewMode === 'grid'" class="tunnels-grid">
         <n-card

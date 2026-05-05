@@ -1,48 +1,40 @@
 <template>
-  <n-modal
-    v-model:show="localShow"
-    preset="card"
-    title="隧道日志"
-    style="width: 80%; max-width: 800px"
-    @after-leave="handleAfterLeave"
-    :auto-focus="false"
-    :trap-focus="false"
-  >
+  <n-modal v-model:show="localShow" preset="card" title="隧道日志" style="width: 80%; max-width: 800px"
+    @after-leave="handleAfterLeave" :auto-focus="false" :trap-focus="false">
     <div class="log-container">
       <div class="log-header">
         <span>隧道 ID: {{ tunnelId }}</span>
         <n-space :size="8">
           <n-tag type="error">如果您截图分享此页面请打码红色字体内容</n-tag>
-          <n-button
-            size="small"
-            @click="handleCopyLogs"
-            :autofocus="false"
-          >
+          <n-button size="small" @click="handleCopyLogs" :autofocus="false">
             <template #icon>
               <Copy :size="14" />
             </template>
             复制日志
           </n-button>
-          <n-button
-            size="small"
-            @click="handleRefresh"
-            :loading="loading"
-            :autofocus="false"
-          >
+          <n-button size="small" @click="handleRefresh" :loading="loading" :autofocus="false">
             刷新日志
+          </n-button>
+          <n-button v-if="enableAi" size="small" @click="handleAIAnalyze" :loading="aiAnalyzing" :autofocus="false">
+            <template #icon>
+              <Brain :size="14" />
+            </template>
+            AI 分析
           </n-button>
         </n-space>
       </div>
       <div class="log-content">
         <div class="log-lines" ref="logLinesRef">
-          <div
-            v-for="(log, index) in logs"
-            :key="index"
-            class="log-line"
-            v-html="colorizeLog(log)"
-          ></div>
+          <div v-for="(log, index) in logs" :key="index" class="log-line" v-html="colorizeLog(log)"></div>
         </div>
       </div>
+    </div>
+  </n-modal>
+
+  <!-- AI 分析结果模态框 -->
+  <n-modal v-model:show="showAnalysisModal" preset="card" title="AI 日志分析结果" style="width: 80%; max-width: 800px">
+    <div class="markdown-content" style="max-height: 500px; overflow-y: auto;">
+      <div v-html="parseMarkdown(analysisResult)"></div>
     </div>
   </n-modal>
 </template>
@@ -50,8 +42,14 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
-import { Copy } from 'lucide-vue-next'
+import { Copy, Brain } from 'lucide-vue-next'
 import { formatLogHtml, getSanitizedLogsText } from '@/utils/logSanitizer'
+import { invoke } from '@tauri-apps/api/core'
+import { parseMarkdown } from '@/utils/markdownParser'
+import { useSettingsStore } from '@/stores/settings'
+
+const settingsStore = useSettingsStore()
+const enableAi = computed(() => settingsStore.settings.enableAi ?? false)
 
 interface TunnelLogsModalProps {
   show: boolean
@@ -72,6 +70,9 @@ const message = useMessage()
 // Local state
 const logLinesRef = ref<HTMLElement | null>(null)
 const autoRefreshTimer = ref<number | null>(null)
+const aiAnalyzing = ref(false)
+const analysisResult = ref('')
+const showAnalysisModal = ref(false)
 
 // Computed v-model
 const localShow = computed({
@@ -86,9 +87,9 @@ const handleCopyLogs = async () => {
       message.warning('暂无日志内容')
       return
     }
-    
+
     const cleanLogs = getSanitizedLogsText(props.logs)
-    
+
     await navigator.clipboard.writeText(cleanLogs)
     message.success('日志已复制到剪贴板')
   } catch (error) {
@@ -159,6 +160,31 @@ const handleAfterLeave = () => {
 
 const colorizeLog = (log: string): string => {
   return formatLogHtml(log, 'line')
+}
+
+// AI 分析
+const handleAIAnalyze = async () => {
+  if (props.logs.length === 0) {
+    message.warning('暂无日志内容，无法分析')
+    return
+  }
+
+  aiAnalyzing.value = true
+  try {
+    message.info("正在分析日志，请稍候...", { duration: 5000 });
+    const logText = props.logs.join('\n')
+    const result = await invoke<string>('api_analyze_log', {
+      logContent: logText,
+      customPrompt: null
+    })
+    analysisResult.value = result
+    showAnalysisModal.value = true
+  } catch (error) {
+    console.error('AI 分析失败:', error)
+    message.error(error instanceof Error ? error.message : 'AI 分析失败')
+  } finally {
+    aiAnalyzing.value = false
+  }
 }
 
 // 监听 show 变化，启动或停止自动刷新

@@ -126,6 +126,15 @@ export function useSettingsPanel() {
     }
   }
 
+  async function handleEnableAiChange(value: boolean) {
+    try {
+      await settingsStore.updateSetting("enableAi", value);
+      message.success(value ? "已启用 AI 日志分析" : "已关闭 AI 日志分析");
+    } catch {
+      message.error("保存 AI 日志分析设置失败");
+    }
+  }
+
   async function handleTunnelAutoStartChange(proxyId: number, checked: boolean) {
     try {
       await settingsStore.toggleAutoStartTunnel(proxyId, checked);
@@ -210,6 +219,7 @@ export function useSettingsPanel() {
     handleMinimizeToTrayChange,
     handleShowAdChange,
     handleHideWebuiEntryChange,
+    handleEnableAiChange,
     handleTunnelAutoStartChange,
     handleStartupDelayChange,
     handleSidebarWidthChange,

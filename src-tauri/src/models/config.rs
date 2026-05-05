@@ -41,6 +41,8 @@ pub struct UnifiedConfig {
     pub show_ad: bool,
     #[serde(rename = "hideWebuiEntry")]
     pub hide_webui_entry: bool,
+    #[serde(rename = "enableAi", default)]
+    pub enable_ai: bool,
 
     // UI 设置
     #[serde(rename = "sidebarWidth", skip_serializing_if = "Option::is_none")]
@@ -103,6 +105,7 @@ impl Default for UnifiedConfig {
             minimize_to_tray: true,
             show_ad: true,
             hide_webui_entry: false,
+            enable_ai: false,
 
             // UI 设置默认值
             sidebar_width: Some(200),

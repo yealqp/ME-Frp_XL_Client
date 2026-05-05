@@ -18,6 +18,7 @@ export interface UnifiedConfig {
   startupDelay: number;
   minimizeToTray: boolean;
   showAd: boolean;
+  enableAi?: boolean;
   
   // UI 设置
   sidebarWidth?: number;
@@ -83,4 +84,5 @@ export interface AppSettings {
   webuiPort?: number;
   webuiPass?: string;
   hideWebuiEntry?: boolean;
+  enableAi?: boolean;
 }

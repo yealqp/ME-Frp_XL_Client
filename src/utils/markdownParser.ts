@@ -1,151 +1,112 @@
-import MarkdownIt from 'markdown-it';
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+import bash from 'highlight.js/lib/languages/bash'
+import ini from 'highlight.js/lib/languages/ini'
+import json from 'highlight.js/lib/languages/json'
+import yaml from 'highlight.js/lib/languages/yaml'
+import xml from 'highlight.js/lib/languages/xml'
+
+import 'highlight.js/styles/github-dark.css'
+
+// Register languages
+hljs.registerLanguage('javascript', javascript)
+hljs.registerLanguage('js', javascript)
+hljs.registerLanguage('typescript', javascript)
+hljs.registerLanguage('ts', javascript)
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('sh', bash)
+hljs.registerLanguage('ini', ini)
+hljs.registerLanguage('toml', ini)
+hljs.registerLanguage('json', json)
+hljs.registerLanguage('yaml', yaml)
+hljs.registerLanguage('yml', yaml)
+hljs.registerLanguage('html', xml)
+hljs.registerLanguage('xml', xml)
+
+// Configure marked
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+})
 
 /**
- * Singleton class for parsing Markdown content
- * Provides a pre-configured markdown-it instance with custom rendering rules
+ * Unescape special characters in content
  */
-class MarkdownParser {
-  private static instance: MarkdownParser;
-  private md: MarkdownIt;
-
-  private constructor() {
-    this.md = new MarkdownIt({
-      html: true,
-      breaks: true,
-      linkify: true,
-    });
-
-    this.configureRenderer();
-  }
-
-  /**
-   * Get the singleton instance of MarkdownParser
-   */
-  public static getInstance(): MarkdownParser {
-    if (!MarkdownParser.instance) {
-      MarkdownParser.instance = new MarkdownParser();
-    }
-    return MarkdownParser.instance;
-  }
-
-  /**
-   * Configure custom rendering rules
-   */
-  private configureRenderer(): void {
-    // Add target="_blank" to all links and handle relative URLs
-    const defaultRender = this.md.renderer.rules.link_open ||
-      function (tokens: any, idx: any, options: any, _env: any, self: any) {
-        return self.renderToken(tokens, idx, options);
-      };
-
-    this.md.renderer.rules.link_open = function (
-      tokens: any,
-      idx: any,
-      options: any,
-      _env: any,
-      self: any,
-    ) {
-      const aIndex = tokens[idx].attrIndex('target');
-      if (aIndex < 0) {
-        tokens[idx].attrPush(['target', '_blank']);
-        tokens[idx].attrPush(['rel', 'noopener noreferrer']);
-      }
-
-      // Handle relative URLs starting with /
-      const hrefIndex = tokens[idx].attrIndex('href');
-      if (hrefIndex >= 0) {
-        const href = tokens[idx].attrs[hrefIndex][1];
-        // If href starts with /, prepend the base URL
-        if (href.startsWith('/')) {
-          tokens[idx].attrs[hrefIndex][1] = 'https://www.mefrp.com' + href;
-        }
-      }
-
-      return defaultRender(tokens, idx, options, _env, self);
-    };
-  }
-
-  /**
-   * Parse markdown content to HTML
-   * @param content - The markdown content to parse
-   * @returns The parsed HTML string
-   */
-  public parse(content: string): string {
-    if (!content) return '';
-
-    // Unescape content
-    const unescapedContent = this.unescapeContent(content);
-
-    try {
-      let html = this.md.render(unescapedContent);
-
-      // Post-processing
-      html = this.postProcess(html);
-
-      return html;
-    } catch (error) {
-      console.error('Markdown parsing failed:', error);
-      return unescapedContent.replace(/\n/g, '<br>');
-    }
-  }
-
-  /**
-   * Unescape special characters in content
-   */
-  private unescapeContent(content: string): string {
-    return content
-      .replace(/\\n/g, '\n')
-      .replace(/\\t/g, '\t')
-      .replace(/\\r/g, '\r')
-      .replace(/\\\\/g, '\\')
-      .replace(/\\"/g, '"')
-      .replace(/\\'/g, "'")
-      .replace(/\\&/g, '&')
-      .replace(/\\</g, '<')
-      .replace(/\\>/g, '>');
-  }
-
-  /**
-   * Post-process the rendered HTML
-   */
-  private postProcess(html: string): string {
-    // Add divider after h2
-    html = html.replace(
-      /<h2>(.*?)<\/h2>/g,
-      '<h2>$1</h2><hr class="h2-divider">',
-    );
-
-    // Add class to inline code
-    html = html.replace(/<code>(?!<\/code>)/g, '<code class="inline-code">');
-
-    // Add class to blockquote
-    html = html.replace(
-      /<blockquote>/g,
-      '<blockquote class="custom-blockquote">',
-    );
-
-    return html;
-  }
-
-  /**
-   * Add a plugin to the markdown-it instance
-   * @param plugin - The plugin to add
-   * @param options - Plugin options
-   */
-  public use(plugin: any, options?: any): this {
-    this.md.use(plugin, options);
-    return this;
-  }
+function unescapeContent(content: string): string {
+  return content
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\r/g, '\r')
+    .replace(/\\\\/g, '\\')
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'")
+    .replace(/\\&/g, '&')
+    .replace(/\\</g, '<')
+    .replace(/\\>/g, '>')
 }
 
-// Export singleton instance
-export const markdownParser = MarkdownParser.getInstance();
-
 /**
- * Convenience function to parse markdown content
+ * Parse markdown content to HTML
+ * Uses marked for parsing, DOMPurify for sanitization, and highlight.js for code highlighting
+ *
  * @param content - The markdown content to parse
  * @returns The parsed HTML string
  */
 export function parseMarkdown(content: string): string {
-  return markdownParser.parse(content);
+  if (!content) return ''
+
+  const unescaped = unescapeContent(content)
+
+  try {
+    // Parse markdown
+    let html = marked.parse(unescaped) as string
+
+    // Sanitize
+    html = DOMPurify.sanitize(html)
+
+    // Apply code highlighting and inline-code classes via temp DOM
+    if (typeof document !== 'undefined') {
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = html
+
+      // Apply hljs to code blocks
+      tempDiv.querySelectorAll('pre code').forEach((el) => {
+        try {
+          const langClasses = Array.from(el.classList).filter((cls) =>
+            cls.startsWith('language-'),
+          )
+          if (langClasses.length > 0) {
+            const lang = langClasses[0].replace('language-', '').trim()
+            if (hljs.getLanguage(lang)) {
+              hljs.highlightElement(el as HTMLElement)
+            }
+          } else {
+            const codeText = el.textContent || ''
+            const result = hljs.highlightAuto(codeText)
+            el.innerHTML = result.value
+            el.classList.add('hljs')
+            if (result.language) {
+              el.classList.add(`language-${result.language}`)
+            }
+          }
+        } catch (e) {
+          console.error('Code highlight error:', e)
+        }
+      })
+
+      // Add inline-code class to inline code elements
+      tempDiv.querySelectorAll('p code, li code, td code, th code').forEach((el) => {
+        el.classList.add('inline-code')
+      })
+
+      html = tempDiv.innerHTML
+    }
+
+    return html
+  } catch (error) {
+    console.error('Markdown parsing failed:', error)
+    return unescaped.replace(/\n/g, '<br>')
+  }
 }

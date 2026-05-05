@@ -636,6 +636,11 @@ async fn webui_get_logs(
     webui::webui_get_logs(session, frp_token, webui_manager.inner()).await
 }
 
+#[tauri::command]
+async fn api_analyze_log(log_content: String, custom_prompt: Option<String>) -> Result<String, String> {
+    crate::api::ai_analysis::analyze_log(&log_content, custom_prompt.as_deref()).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_manager: ProcessManager = Arc::new(Mutex::new(HashMap::new()));
@@ -845,8 +850,9 @@ pub fn run() {
             webui_get_tunnels,
             webui_start_tunnel,
             webui_stop_tunnel,
-            webui_get_logs
+            webui_get_logs,
+            api_analyze_log
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
+    }

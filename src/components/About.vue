@@ -33,6 +33,22 @@
               <a>Yealqp/猫羽雫 QQ1592239257</a>
             </div>
           </n-descriptions-item>
+          <n-descriptions-item label="特别鸣谢">
+            <n-space :size="8" wrap>
+              <div class="member-avatar-wrapper">
+                <img src="https://img.fastmirror.net/s/2025/08/26/68adcd3ec7122.jpg" class="member-avatar-img" />
+                <span class="member-name">落雪无痕</span>
+              </div>
+              <div class="member-avatar-wrapper">
+                <img src="https://img.fastmirror.net/s/2026/03/01/69a3f43ec4b47.jpg" class="member-avatar-img" />
+                <span class="member-name">水化</span>
+              </div>
+              <div class="member-avatar-wrapper">
+                <img src="https://img.fastmirror.net/s/2026/01/23/69724c26b78a1.png" class="member-avatar-img" />
+                <span class="member-name">liuzhen932</span>
+              </div>
+            </n-space>
+          </n-descriptions-item>
           <n-descriptions-item label="技术栈">
             <n-space>
               <n-tag
@@ -914,6 +930,12 @@ const submitFeedback = async () => {
   -ms-user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
+}
+
+.member-name {
+  font-size: 14px;
+  color: var(--app-text-color-2);
+  white-space: nowrap;
 }
 
 /* 检查更新卡片样式 */

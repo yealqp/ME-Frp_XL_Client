@@ -260,6 +260,19 @@
                 </template>
                 复制
               </n-button>
+              <n-button
+                v-if="enableAi"
+                text
+                type="info"
+                @click="handleAIAnalyze"
+                :loading="aiAnalyzing"
+                :disabled="!logs || logs.length === 0"
+              >
+                <template #icon>
+                  <Brain :size="18" />
+                </template>
+                AI 分析
+              </n-button>
             </n-space>
           </div>
         </template>
@@ -287,10 +300,22 @@
       </n-card>
     </div>
   </div>
+
+  <!-- AI 分析结果模态框 -->
+  <n-modal
+    v-model:show="showAnalysisModal"
+    preset="card"
+    title="AI 日志分析结果"
+    style="width: 80%; max-width: 800px"
+  >
+    <div class="markdown-content" style="max-height: 500px; overflow-y: auto;">
+              <div v-html="parseMarkdown(analysisResult)"></div>
+    </div>
+  </n-modal>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useMessage } from "naive-ui";
 import {
   Settings,
@@ -301,17 +326,22 @@ import {
   RefreshCw,
   FileText,
   Copy,
+  Brain,
 } from "lucide-vue-next";
 import { useWebuiStore } from "../stores/webui";
+import { useSettingsStore } from "@/stores/settings";
 import { invoke } from "@tauri-apps/api/core";
 import { extractProxyList, invokeTauriResponse, invokeTauriText } from "@/utils/tauriResponse";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
 import { formatLogHtml, getSanitizedLogsText } from "@/utils/logSanitizer";
+import { parseMarkdown } from "@/utils/markdownParser";
 import type { Tunnel as TunnelRecord } from "@/types/tunnel";
 
 const message = useMessage();
 const webuiStore = useWebuiStore();
+const settingsStore = useSettingsStore();
+const enableAi = computed(() => settingsStore.settings.enableAi ?? false);
 let statusCheckInterval: number | null = null;
 
 // 防抖定时器
@@ -338,6 +368,9 @@ const autoRefreshLogs = ref(true); // 默认开启自动刷新
 const logsTextRef = ref<HTMLElement | null>(null);
 let logsRefreshInterval: number | null = null;
 let lastLogsSnapshot = "";
+const aiAnalyzing = ref(false);
+const analysisResult = ref("");
+const showAnalysisModal = ref(false);
 
 interface TunnelListPayload {
   proxies?: Tunnel[];
@@ -559,6 +592,31 @@ const copyLogs = async () => {
   } catch (error) {
     console.error("复制日志失败:", error);
     message.error("复制日志失败");
+  }
+};
+
+// AI 分析日志
+const handleAIAnalyze = async () => {
+  if (!logs.value || logs.value.length === 0) {
+    message.warning("暂无日志内容，无法分析");
+    return;
+  }
+
+  aiAnalyzing.value = true;
+  try {
+    message.info("正在分析日志，请稍候...");
+    const logText = logs.value.join("\n");
+    const result = await invoke<string>("api_analyze_log", {
+      logContent: logText,
+      customPrompt: null,
+    });
+    analysisResult.value = result;
+    showAnalysisModal.value = true;
+  } catch (error) {
+    console.error("AI 分析失败:", error);
+    message.error(error instanceof Error ? error.message : "AI 分析失败");
+  } finally {
+    aiAnalyzing.value = false;
   }
 };
 

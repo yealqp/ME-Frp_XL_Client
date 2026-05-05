@@ -69,6 +69,18 @@
               @update:value="handleHideWebuiEntryChange"
             />
           </div>
+
+          <!-- AI 日志分析 -->
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>AI 日志分析</h4>
+              <p>开启后可在日志查看页面使用 AI 分析隧道日志</p>
+            </div>
+            <n-switch
+              :value="settings.enableAi"
+              @update:value="handleEnableAiToggle"
+            />
+          </div>
         </n-space>
       </n-card>
 
@@ -292,6 +304,7 @@ import {
   NSpace,
   NCheckbox,
   NTag,
+  useDialog,
 } from "naive-ui";
 import { useSettingsPanel } from "@/composables/useSettingsPanel";
 import {
@@ -303,6 +316,7 @@ import {
 } from "lucide-vue-next";
 
 const router = useRouter();
+const dialog = useDialog();
 
 function openThemeEditorPage(): void {
   router.push("/theme-editor");
@@ -319,6 +333,7 @@ const {
   handleMinimizeToTrayChange,
   handleShowAdChange,
   handleHideWebuiEntryChange,
+  handleEnableAiChange,
   handleTunnelAutoStartChange,
   handleStartupDelayChange,
   refreshTunnels,
@@ -329,6 +344,26 @@ const {
   moveTunnelDown,
   removeDeletedTunnelConfig,
 } = useSettingsPanel();
+
+// AI 日志分析开关 - 开启时弹出隐私确认对话框
+const handleEnableAiToggle = (value: boolean) => {
+  if (value) {
+    dialog.warning({
+      title: "启用 AI 日志分析",
+      content: "启用后将允许将您的隧道日志内容[可能包括敏感信息]发送至 AI 服务进行分析。请确认您已阅读并同意相关隐私政策。",
+      positiveText: "同意",
+      negativeText: "拒绝",
+      onPositiveClick: () => {
+        handleEnableAiChange(true);
+      },
+      onNegativeClick: () => {
+        // 不做任何操作，保持关闭状态
+      },
+    });
+  } else {
+    handleEnableAiChange(false);
+  }
+};
 </script>
 
 <style scoped>
