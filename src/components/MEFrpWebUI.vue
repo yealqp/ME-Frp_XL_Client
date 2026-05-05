@@ -336,6 +336,7 @@ import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
 import { formatLogHtml, getSanitizedLogsText } from "@/utils/logSanitizer";
 import { parseMarkdown } from "@/utils/markdownParser";
+import { useAIAnalysis } from "@/composables/useAIAnalysis";
 import type { Tunnel as TunnelRecord } from "@/types/tunnel";
 
 const message = useMessage();
@@ -368,9 +369,7 @@ const autoRefreshLogs = ref(true); // 默认开启自动刷新
 const logsTextRef = ref<HTMLElement | null>(null);
 let logsRefreshInterval: number | null = null;
 let lastLogsSnapshot = "";
-const aiAnalyzing = ref(false);
-const analysisResult = ref("");
-const showAnalysisModal = ref(false);
+const { aiAnalyzing, analysisResult, showAnalysisModal, handleAIAnalyze } = useAIAnalysis(logs, message);
 
 interface TunnelListPayload {
   proxies?: Tunnel[];
@@ -592,31 +591,6 @@ const copyLogs = async () => {
   } catch (error) {
     console.error("复制日志失败:", error);
     message.error("复制日志失败");
-  }
-};
-
-// AI 分析日志
-const handleAIAnalyze = async () => {
-  if (!logs.value || logs.value.length === 0) {
-    message.warning("暂无日志内容，无法分析");
-    return;
-  }
-
-  aiAnalyzing.value = true;
-  try {
-    message.info("正在分析日志，请稍候...");
-    const logText = logs.value.join("\n");
-    const result = await invoke<string>("api_analyze_log", {
-      logContent: logText,
-      customPrompt: null,
-    });
-    analysisResult.value = result;
-    showAnalysisModal.value = true;
-  } catch (error) {
-    console.error("AI 分析失败:", error);
-    message.error(error instanceof Error ? error.message : "AI 分析失败");
-  } finally {
-    aiAnalyzing.value = false;
   }
 };
 

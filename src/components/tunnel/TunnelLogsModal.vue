@@ -47,6 +47,7 @@ import { formatLogHtml, getSanitizedLogsText } from '@/utils/logSanitizer'
 import { invoke } from '@tauri-apps/api/core'
 import { parseMarkdown } from '@/utils/markdownParser'
 import { useSettingsStore } from '@/stores/settings'
+import { useAIAnalysis } from '@/composables/useAIAnalysis'
 
 const settingsStore = useSettingsStore()
 const enableAi = computed(() => settingsStore.settings.enableAi ?? false)
@@ -70,9 +71,7 @@ const message = useMessage()
 // Local state
 const logLinesRef = ref<HTMLElement | null>(null)
 const autoRefreshTimer = ref<number | null>(null)
-const aiAnalyzing = ref(false)
-const analysisResult = ref('')
-const showAnalysisModal = ref(false)
+const { aiAnalyzing, analysisResult, showAnalysisModal, handleAIAnalyze } = useAIAnalysis(computed(() => props.logs), message)
 
 // Computed v-model
 const localShow = computed({
@@ -160,31 +159,6 @@ const handleAfterLeave = () => {
 
 const colorizeLog = (log: string): string => {
   return formatLogHtml(log, 'line')
-}
-
-// AI 分析
-const handleAIAnalyze = async () => {
-  if (props.logs.length === 0) {
-    message.warning('暂无日志内容，无法分析')
-    return
-  }
-
-  aiAnalyzing.value = true
-  try {
-    message.info("正在分析日志，请稍候...", { duration: 5000 });
-    const logText = props.logs.join('\n')
-    const result = await invoke<string>('api_analyze_log', {
-      logContent: logText,
-      customPrompt: null
-    })
-    analysisResult.value = result
-    showAnalysisModal.value = true
-  } catch (error) {
-    console.error('AI 分析失败:', error)
-    message.error(error instanceof Error ? error.message : 'AI 分析失败')
-  } finally {
-    aiAnalyzing.value = false
-  }
 }
 
 // 监听 show 变化，启动或停止自动刷新
