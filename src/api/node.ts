@@ -22,12 +22,6 @@ export interface CreateProxyDataResponse {
   currentGroup: string;
 }
 
-export async function getNodeList(
-  token: string,
-): Promise<ApiResponse<Node[]>> {
-  return apiGet<Node[]>("/api/auth/node/list", token);
-}
-
 export async function getNodeStatus(
   token: string,
 ): Promise<ApiResponse<NodeStatusData[]>> {

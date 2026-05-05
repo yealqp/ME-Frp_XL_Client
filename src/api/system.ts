@@ -7,12 +7,6 @@
 import { apiGet, apiPost } from "./client";
 import type { ApiResponse } from "@/types/api";
 
-export interface TrafficStatsResponse {
-  date: string;
-  inTraffic: number;
-  outTraffic: number;
-}
-
 export interface OperationLogResponse {
   data: Array<{
     logId: number;
@@ -50,17 +44,6 @@ export async function getPopupNotice(
   token: string,
 ): Promise<ApiResponse<string>> {
   return apiGet<string>("/api/auth/popupNotice", token);
-}
-
-export async function getTrafficStats(
-  token: string,
-  datePeriod: number,
-): Promise<ApiResponse<TrafficStatsResponse[]>> {
-  return apiPost<TrafficStatsResponse[]>(
-    "/api/auth/user/trafficStats",
-    { datePeriod },
-    token,
-  );
 }
 
 export async function getOperationLogs(

@@ -63,19 +63,3 @@ export async function apiPost<T>(
 ): Promise<ApiResponse<T>> {
   return request<T>("POST", path, body, token);
 }
-
-export async function apiPut<T>(
-  path: string,
-  body?: unknown,
-  token?: string,
-): Promise<ApiResponse<T>> {
-  return request<T>("PUT", path, body, token);
-}
-
-export async function apiDelete<T>(
-  path: string,
-  body?: unknown,
-  token?: string,
-): Promise<ApiResponse<T>> {
-  return request<T>("DELETE", path, body, token);
-}

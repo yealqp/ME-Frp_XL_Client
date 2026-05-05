@@ -88,12 +88,6 @@ export async function kickTunnel(
   return apiPost<unknown>("/api/auth/proxy/kick", { proxyId }, token);
 }
 
-export async function kickAllProxies(
-  token: string,
-): Promise<ApiResponse<unknown>> {
-  return apiGet<unknown>("/api/auth/user/kickAllProxies", token);
-}
-
 export async function toggleTunnel(
   token: string,
   proxyId: number,

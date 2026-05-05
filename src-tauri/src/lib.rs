@@ -807,26 +807,20 @@ pub fn run() {
         .manage(webui_manager)
         .manage(minimize_to_tray_state)
         .invoke_handler(tauri::generate_handler![
-            clear_config,
             api_get_traffic_stats,
             api_get_system_notification,
             api_get_tunnel_logs,
             api_get_running_tunnels,
             api_start_tunnel,
             api_stop_tunnel,
-            // api_kick_all_proxies 已删除
-            api_request,
             save_config_file,
             delete_config_file,
             check_tunnel_config_files,
             save_unified_config,
             load_unified_config,
-            migrate_old_configs,
             set_auto_start,
             is_auto_start_enabled,
             set_always_on_top,
-            show_window,
-            hide_window,
             set_minimize_to_tray,
             quit_app,
             get_app_version,
@@ -850,7 +844,6 @@ pub fn run() {
             webui_get_tunnels,
             webui_start_tunnel,
             webui_stop_tunnel,
-            webui_get_logs,
             api_analyze_log
         ])
         .run(tauri::generate_context!())
