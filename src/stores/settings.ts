@@ -25,9 +25,9 @@ export const useSettingsStore = defineStore('settings', () => {
     autoUpdate: true,
     autoStartTunnels: [],
     startupDelay: 5,
-    theme: 'light',
     minimizeToTray: true,
     showAd: true,
+    theme: 'dark',
     hideWebuiEntry: false,
     enableAi: false,
     backgroundImagePath: undefined,
@@ -83,9 +83,9 @@ export const useSettingsStore = defineStore('settings', () => {
         autoUpdate: config.autoUpdate ?? true,
         autoStartTunnels: config.autoStartTunnels ?? [],
         startupDelay: config.startupDelay ?? 5,
-        theme: localStorage.getItem('mefrp_theme') || 'dark',
         minimizeToTray: config.minimizeToTray ?? true,
         showAd: config.showAd ?? true,
+        theme: localStorage.getItem('mefrp_theme') || 'dark',
         hideWebuiEntry: config.hideWebuiEntry ?? false,
         enableAi: config.enableAi ?? false,
         backgroundImagePath: config.backgroundImagePath,
@@ -96,8 +96,6 @@ export const useSettingsStore = defineStore('settings', () => {
         fontWeight: clampAppearanceRange(config.fontWeight, 300, 700, 400) ?? 400,
         shadowIntensity: clampAppearanceRange(config.shadowIntensity, 0, 200, 100) ?? 100,
       };
-
-      // Sync showAd to eventBus
       showAdGlobal.value = settings.value.showAd;
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err);

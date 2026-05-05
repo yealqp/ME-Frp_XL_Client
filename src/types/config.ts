@@ -60,29 +60,15 @@ export interface Config {
   user_info: UserInfo;
 }
 
-// 应用设置类型
-export interface AppSettings {
-  autoStart: boolean;
-  alwaysOnTop: boolean;
-  autoUpdate: boolean;
-  autoStartTunnels: number[];
-  startupDelay: number;
+// 应用设置类型（派生自 UnifiedConfig 以消除字段重复）
+type AppSettingKeys =
+  | 'autoStart' | 'alwaysOnTop' | 'autoUpdate' | 'autoStartTunnels'
+  | 'startupDelay' | 'minimizeToTray' | 'showAd' | 'enableAi'
+  | 'sidebarWidth' | 'sidebarCollapsible' | 'sidebarCollapsed'
+  | 'backgroundImagePath' | 'backgroundImageOpacity' | 'backgroundBlur'
+  | 'sidebarOpacity' | 'contentOpacity' | 'fontWeight' | 'shadowIntensity'
+  | 'webuiAddr' | 'webuiPort' | 'webuiPass' | 'hideWebuiEntry';
+
+export interface AppSettings extends Pick<UnifiedConfig, AppSettingKeys> {
   theme: string;
-  minimizeToTray: boolean;
-  showAd: boolean;
-  sidebarWidth?: number;
-  sidebarCollapsible?: boolean;
-  sidebarCollapsed?: boolean;
-  backgroundImagePath?: string;
-  backgroundImageOpacity?: number;
-  backgroundBlur?: number;
-  sidebarOpacity?: number;
-  contentOpacity?: number;
-  fontWeight?: number;
-  shadowIntensity?: number;
-  webuiAddr?: string;
-  webuiPort?: number;
-  webuiPass?: string;
-  hideWebuiEntry?: boolean;
-  enableAi?: boolean;
 }
