@@ -271,23 +271,3 @@ export function parseThemeCustomization(json: string): ThemeCustomization {
   return sanitized;
 }
 
-export function getThemeCustomizationTemplate(): string {
-  return JSON.stringify(
-    {
-      light: {
-        bodyColor: "#FFFFFF",
-        cardColor: "#F8F9FA",
-        textColorBase: "#1A1A1A",
-        primaryColor: "#2080F0",
-      },
-      dark: {
-        bodyColor: "#101014",
-        cardColor: "#18181C",
-        textColorBase: "#E0E0E6",
-        primaryColor: "#349FF4",
-      },
-    },
-    null,
-    2,
-  );
-}

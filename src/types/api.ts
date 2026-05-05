@@ -17,14 +17,4 @@ export interface ApiResponse<T = any> {
   message: string;
 }
 
-/**
- * API error format
- */
-export interface ApiError {
-  /** Error code */
-  code: number;
-  /** Error message */
-  message: string;
-  /** Additional error details (optional) */
-  details?: any;
-}
+

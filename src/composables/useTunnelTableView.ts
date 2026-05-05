@@ -3,6 +3,7 @@ import { NButton, NIcon, NSkeleton, NSpace, NTag } from "naive-ui";
 import { Copy, FileText, Play, Square } from "lucide-vue-next";
 import type { Tunnel } from "@/types/tunnel";
 import TunnelMoreMenu from "@/components/tunnel/TunnelMoreMenu.vue";
+import { parseDomainArray } from "@/utils/domainUtils";
 
 interface UseTunnelTableViewOptions {
   batchMode: Ref<boolean>;
@@ -33,19 +34,6 @@ export function useTunnelTableView({
   onCopyAddress,
   onMoreAction,
 }: UseTunnelTableViewOptions) {
-  function parseDomainArray(domain: string): string[] {
-    if (!domain) {
-      return [];
-    }
-
-    try {
-      const domains = JSON.parse(domain);
-      return Array.isArray(domains) ? domains : [domain];
-    } catch {
-      return [domain];
-    }
-  }
-
   const skeletonTableColumns = [
     { title: "ID", key: "id", width: 80 },
     { title: "隧道名称", key: "name", width: 150 },

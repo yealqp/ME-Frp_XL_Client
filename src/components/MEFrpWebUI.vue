@@ -4,10 +4,7 @@
       <!-- WebUI 设置卡片 -->
       <n-card :bordered="true" class="webui-section">
         <template #header>
-          <div class="section-header">
-            <Settings :size="18" />
-            <span>MEFrpc WebUI 设置</span>
-          </div>
+          <SectionHeader :icon="Settings" title="MEFrpc WebUI 设置" />
         </template>
 
         <div class="settings-row">
@@ -127,8 +124,7 @@
         class="webui-embed-section"
       >
         <template #header>
-          <div class="section-header">
-            <Monitor :size="18" />
+          <SectionHeader :icon="Monitor">
             <span>隧道列表</span>
             <n-button
               text
@@ -141,7 +137,7 @@
                 <RefreshCw :size="18" />
               </template>
             </n-button>
-          </div>
+          </SectionHeader>
         </template>
 
         <!-- 加载状态 -->
@@ -242,8 +238,7 @@
         class="webui-logs-section"
       >
         <template #header>
-          <div class="section-header">
-            <FileText :size="18" />
+          <SectionHeader :icon="FileText">
             <span>Mefrpc 运行日志</span>
             <n-tag type="error" size="medium" style="margin-left: 8px">
               如果您截图分享此页面请打码红色字体内容
@@ -274,7 +269,7 @@
                 AI 分析
               </n-button>
             </n-space>
-          </div>
+          </SectionHeader>
         </template>
 
         <div class="logs-content">
@@ -328,6 +323,7 @@ import {
   Copy,
   Brain,
 } from "lucide-vue-next";
+import SectionHeader from "@/components/common/SectionHeader.vue";
 import { useWebuiStore } from "../stores/webui";
 import { useSettingsStore } from "@/stores/settings";
 import { invoke } from "@tauri-apps/api/core";
@@ -336,6 +332,7 @@ import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
 import { formatLogHtml, getSanitizedLogsText } from "@/utils/logSanitizer";
 import { parseMarkdown } from "@/utils/markdownParser";
+import { copyToClipboard } from "@/utils/clipboard";
 import { useAIAnalysis } from "@/composables/useAIAnalysis";
 import type { Tunnel as TunnelRecord } from "@/types/tunnel";
 
@@ -586,7 +583,7 @@ const copyLogs = async () => {
 
   try {
     const logsText = getSanitizedLogsText(logs.value);
-    await navigator.clipboard.writeText(logsText);
+    await copyToClipboard(logsText);
     message.success("日志已复制到剪贴板（已净化）");
   } catch (error) {
     console.error("复制日志失败:", error);
@@ -768,13 +765,6 @@ const stopStatusCheck = () => {
   background: var(--app-card-color);
   border: 1px solid var(--app-border-color);
   border-radius: 0px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
 }
 
 .settings-row {

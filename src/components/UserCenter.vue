@@ -14,10 +14,7 @@
     <!-- 流量统计卡片 -->
     <n-card :bordered="true" class="traffic-stats-card">
       <template #header>
-        <div class="section-header">
-          <TrendingUp :size="18" />
-          <span>流量历史记录</span>
-        </div>
+        <SectionHeader :icon="TrendingUp" title="流量历史记录" />
       </template>
       <template #header-extra>
         <n-space>
@@ -182,10 +179,7 @@
     <!-- CDK兑换卡片 -->
     <n-card :bordered="true" class="cdk-section">
       <template #header>
-        <div class="section-header">
-          <Gift :size="18" />
-          <span>CDK兑换</span>
-        </div>
+        <SectionHeader :icon="Gift" title="CDK兑换" />
       </template>
 
       <n-space vertical :size="24">
@@ -202,10 +196,7 @@
           </n-button>
         </div>
       </n-space>
-      <div class="section-header">
-        <History :size="18" />
-        <span>CDK兑换历史</span>
-      </div>
+      <SectionHeader :icon="History" title="CDK兑换历史" />
 
       <div class="cdk-history-content">
         <div v-if="cdkHistoryLoading" class="loading-text">
@@ -381,6 +372,7 @@ import type {
   TrafficStatsData,
 } from "@/types/user";
 import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
+import SectionHeader from "@/components/common/SectionHeader.vue";
 
 const router = useRouter();
 const message = useMessage();
@@ -1195,19 +1187,6 @@ onBeforeUnmount(() => {
 .security-card {
   background: var(--app-card-color);
   border: 1px solid var(--app-border-color);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--app-text-color-1);
-}
-
-.section-header :deep(svg) {
-  color: var(--app-primary-color);
 }
 
 .cdk-redeem-item {

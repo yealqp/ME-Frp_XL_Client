@@ -110,28 +110,3 @@ export async function executeBatchOperation<T>(
 
   return { successCount, failCount };
 }
-
-/**
- * 创建批量操作函数的工厂函数
- * 用于简化常见批量操作的创建
- */
-export function createBatchOperation<T>(
-  operationName: string,
-  executeSingle: (id: T) => Promise<boolean>,
-  message: BatchOperationOptions<T>['message'],
-  options?: {
-    onSuccess?: (id: T) => void;
-    onComplete?: (successCount: number, failCount: number) => void;
-    concurrency?: number;
-  }
-) {
-  return (ids: T[]): Promise<BatchOperationResult> => {
-    return executeBatchOperation({
-      operationName,
-      ids,
-      executeSingle,
-      message,
-      ...options,
-    });
-  };
-}

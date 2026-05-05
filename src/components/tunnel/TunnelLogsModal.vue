@@ -44,6 +44,7 @@ import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import { Copy, Brain } from 'lucide-vue-next'
 import { formatLogHtml, getSanitizedLogsText } from '@/utils/logSanitizer'
+import { copyToClipboard } from '@/utils/clipboard'
 import { invoke } from '@tauri-apps/api/core'
 import { parseMarkdown } from '@/utils/markdownParser'
 import { useSettingsStore } from '@/stores/settings'
@@ -89,7 +90,7 @@ const handleCopyLogs = async () => {
 
     const cleanLogs = getSanitizedLogsText(props.logs)
 
-    await navigator.clipboard.writeText(cleanLogs)
+    await copyToClipboard(cleanLogs)
     message.success('日志已复制到剪贴板')
   } catch (error) {
     console.error('复制日志失败:', error)

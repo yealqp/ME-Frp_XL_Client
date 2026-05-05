@@ -77,19 +77,19 @@ pub async fn migrate_old_configs() -> Result<UnifiedConfig, String> {
     // 尝试加载旧的 config.json
     let old_config_path = config_dir.join("config.json");
     if old_config_path.exists() {
-        // 简单读取 JSON 文件并提取需要的字段
         if let Ok(content) = fs::read_to_string(&old_config_path) {
-            // 使用简单的字符串解析提取字段
-            for line in content.lines() {
-                let line = line.trim();
-                if line.starts_with("user_token:") {
-                    unified_config.user_token = line.split(':').nth(1).unwrap_or("").trim().to_string();
-                } else if line.starts_with("frp_token:") {
-                    unified_config.frp_token = line.split(':').nth(1).unwrap_or("").trim().to_string();
-                } else if line.starts_with("username:") && !line.contains("user_info:") {
-                    unified_config.username = line.split(':').nth(1).unwrap_or("").trim().to_string();
-                } else if line.starts_with("group:") {
-                    unified_config.group = line.split(':').nth(1).unwrap_or("").trim().to_string();
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+                if let Some(v) = json.get("user_token").and_then(|v| v.as_str()) {
+                    unified_config.user_token = v.to_string();
+                }
+                if let Some(v) = json.get("frp_token").and_then(|v| v.as_str()) {
+                    unified_config.frp_token = v.to_string();
+                }
+                if let Some(v) = json.get("username").and_then(|v| v.as_str()) {
+                    unified_config.username = v.to_string();
+                }
+                if let Some(v) = json.get("group").and_then(|v| v.as_str()) {
+                    unified_config.group = v.to_string();
                 }
             }
         }

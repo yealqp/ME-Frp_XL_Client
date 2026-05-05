@@ -2,17 +2,11 @@
 //!
 //! 本模块负责隧道进程的启动、停止、日志捕获和运行状态管理
 
-use std::collections::HashMap;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
-use crate::models::tunnel::TunnelProcess;
+use crate::models::tunnel::{ProcessManager, TunnelProcess};
 use crate::utils::process::{exe_dir, spawn_and_capture, stop_child};
-
-/// 进程管理器类型别名
-///
-/// 用于管理所有运行中的隧道进程，Key为隧道ID(proxy_id)，Value为隧道进程信息
-pub type ProcessManager = Arc<Mutex<HashMap<i32, TunnelProcess>>>;
 
 /// 启动隧道进程
 ///

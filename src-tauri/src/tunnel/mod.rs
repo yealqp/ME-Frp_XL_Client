@@ -7,7 +7,8 @@ pub mod process;
 
 // 重导出常用类型和函数
 pub use process::{
-    get_running_tunnels, get_tunnel_logs, start_tunnel, stop_tunnel, ProcessManager,
+    get_running_tunnels, get_tunnel_logs, start_tunnel, stop_tunnel,
 };
+pub use crate::models::tunnel::ProcessManager;
 
 pub use config_file::{check_tunnel_config_files, delete_config_file, save_config_file};

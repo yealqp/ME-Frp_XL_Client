@@ -163,10 +163,4 @@ export function useSystemTheme(): UseSystemThemeReturn {
   };
 }
 
-/**
- * 导出独立的系统主题检测函数
- * 用于一次性检测，不需要持续监听的场景
- * 
- * @returns 当前系统主题或 null
- */
-export { detectSystemTheme };
+

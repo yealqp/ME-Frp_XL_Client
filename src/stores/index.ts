@@ -76,3 +76,5 @@ export { useNodeStore } from './node';
 export { useSettingsStore } from './settings';
 export { useCreateTunnelStore } from './createTunnel';
 export { useUIStore } from './ui';
+export { useThemeStore } from './theme';
+export { useWebuiStore } from './webui';

@@ -3,10 +3,7 @@
     <div class="settings-content">
       <n-card :bordered="true" class="settings-section">
         <template #header>
-          <div class="section-header">
-            <SettingsIcon :size="18" />
-            <span>应用设置</span>
-          </div>
+          <SectionHeader :icon="SettingsIcon" title="应用设置" />
         </template>
 
         <n-space vertical :size="24">
@@ -86,10 +83,7 @@
 
       <n-card :bordered="true" class="settings-section">
         <template #header>
-          <div class="section-header">
-            <Palette :size="18" />
-            <span>外观设置</span>
-          </div>
+          <SectionHeader :icon="Palette" title="外观设置" />
         </template>
 
         <div class="setting-item theme-editor-entry">
@@ -105,10 +99,7 @@
 
       <n-card :bordered="true" class="settings-section">
         <template #header>
-          <div class="section-header">
-            <Rocket :size="18" />
-            <span>隧道设置</span>
-          </div>
+          <SectionHeader :icon="Rocket" title="隧道设置" />
         </template>
 
         <n-space vertical :size="24">
@@ -314,6 +305,7 @@ import {
   ArrowDown,
   Palette,
 } from "lucide-vue-next";
+import SectionHeader from "@/components/common/SectionHeader.vue";
 
 const router = useRouter();
 const dialog = useDialog();
@@ -381,19 +373,6 @@ const handleEnableAiToggle = (value: boolean) => {
 .settings-section {
   background: var(--app-card-color);
   border: 1px solid var(--app-border-color);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--app-text-color);
-}
-
-.section-header :deep(svg) {
-  color: var(--app-primary-color);
 }
 
 .setting-item {

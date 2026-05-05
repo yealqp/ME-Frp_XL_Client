@@ -11,10 +11,7 @@
     <div class="appearance-grid">
       <n-card :bordered="true" class="appearance-card">
         <template #header>
-          <div class="section-header">
-            <SwatchBook :size="18" />
-            <span>主题模式与布局</span>
-          </div>
+          <SectionHeader :icon="SwatchBook" title="主题模式与布局" />
         </template>
 
         <n-space vertical :size="24">
@@ -76,10 +73,7 @@
 
       <n-card :bordered="true" class="appearance-card">
         <template #header>
-          <div class="section-header">
-            <ImageIcon :size="18" />
-            <span>背景与透明度</span>
-          </div>
+          <SectionHeader :icon="ImageIcon" title="背景与透明度" />
         </template>
 
         <n-space vertical :size="24">
@@ -152,10 +146,7 @@
 
     <n-card :bordered="true" class="appearance-card">
       <template #header>
-        <div class="section-header">
-          <Palette :size="18" />
-          <span>预设主题</span>
-        </div>
+        <SectionHeader :icon="Palette" title="预设主题" />
       </template>
 
       <div class="preset-grid">
@@ -177,6 +168,7 @@
 import { NButton, NCard, NInput, NSpace, NSwitch, useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
 import { Image as ImageIcon, Palette, SwatchBook } from "lucide-vue-next";
+import SectionHeader from "@/components/common/SectionHeader.vue";
 import PresetThemeCard from "@/components/appearance/PresetThemeCard.vue";
 import ThemeEditor from "@/components/settings/ThemeEditor.vue";
 import SettingSliderRow from "@/components/appearance/SettingSliderRow.vue";
@@ -269,19 +261,6 @@ function formatFontWeightTooltip(value: number): string {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--app-text-color);
-}
-
-.section-header :deep(svg) {
-  color: var(--app-primary-color);
 }
 
 .page-header {

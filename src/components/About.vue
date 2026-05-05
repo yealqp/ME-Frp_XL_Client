@@ -145,10 +145,7 @@
       <!-- 帮助与反馈卡片 -->
       <n-card :bordered="true" class="feedback-card">
         <template #header>
-          <div class="section-header">
-            <MessageCircle :size="20" />
-            <span>帮助与反馈</span>
-          </div>
+          <SectionHeader :icon="MessageCircle" title="帮助与反馈" />
         </template>
         
         <div class="feedback-content">
@@ -421,6 +418,7 @@ import {
   BookOpen,
   Shield,
 } from "lucide-vue-next";
+import SectionHeader from "@/components/common/SectionHeader.vue";
 import { parseMarkdown } from "@/utils/markdownParser";
 
 interface Hitokoto {
@@ -942,19 +940,6 @@ const submitFeedback = async () => {
 .update-card {
   background: var(--app-card-color);
   border: 1px solid var(--app-border-color);
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--app-text-color);
-}
-
-.section-header :deep(svg) {
-  color: var(--app-primary-color);
 }
 
 .update-content {

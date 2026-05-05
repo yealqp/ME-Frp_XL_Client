@@ -157,60 +157,17 @@ export function buildNaiveThemeOverrides(config: ThemeConfig): GlobalThemeOverri
 }
 
 /**
- * 应用或移除主题切换过渡动画类
- * 
- * 由于使用全屏蒙层实现主题切换效果，不需要禁用任何过渡动画
- * 保留此函数以维持 API 兼容性，但不执行任何操作
- * 仍然检测用户的"减少动画"偏好设置，以备未来使用
- * 
- * @param enable - 是否启用过渡动画（当前未使用）
- * 
- * Requirements: 7.1, 7.2, 7.3, 7.4
- * 
- * @example
- * ```ts
- * applyTransitionClass(true);  // 不执行任何操作
- * applyTransitionClass(false); // 不执行任何操作
- * ```
- */
-export function applyTransitionClass(enable: boolean): void {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return;
-  }
-  
-  try {
-    // 检查用户是否启用了"减少动画"辅助功能选项
-    // Requirements: 7.4
-    // 保留此检测逻辑以备未来使用
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
-    
-    // 不再添加或移除任何类，因为我们使用全屏蒙层实现主题切换
-    // 这样可以保证所有动画（路由切换、hover 效果等）正常工作
-    
-    // 未来如果需要根据 prefersReducedMotion 做特殊处理，可以在这里实现
-  } catch (error) {
-    console.error('检测动画偏好设置失败:', error);
-  }
-}
-
-/**
  * 完整应用主题
  * 
- * 一次性应用主题的所有方面：CSS Variables 和过渡动画
- * 这是一个便捷函数，组合了 applyCSSVariables 和 applyTransitionClass
+ * 应用 CSS Variables 主题配置
  * 
- * @param theme - 要应用的主题 ('light' | 'dark')
- * @param enableTransitions - 是否启用过渡动画（默认为 true）
+ * @param config - 主题配置
  * 
  * @example
  * ```ts
- * applyTheme('light', true);  // 应用浅色主题，启用动画
- * applyTheme('dark', false);  // 应用深色主题，禁用动画
+ * applyTheme(config);
  * ```
  */
-export function applyTheme(config: ThemeConfig, enableTransitions: boolean = true): void {
+export function applyTheme(config: ThemeConfig): void {
   applyCSSVariables(config);
-  applyTransitionClass(enableTransitions);
 }

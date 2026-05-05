@@ -3,6 +3,8 @@ import type { Ref } from "vue";
 import type { Tunnel } from "@/types/tunnel";
 import { useTunnelStore } from "@/stores/tunnel";
 import { extractErrorMessage } from "@/utils/errorHandler";
+import { parseDomainArray } from "@/utils/domainUtils";
+import { copyToClipboard } from "@/utils/clipboard";
 
 interface UseTunnelMoreActionsOptions {
   tunnels: Ref<Tunnel[]>;
@@ -69,23 +71,10 @@ export function useTunnelMoreActions({
       let remoteAddress: string;
 
       const parseDomain = (domain: string): string => {
-        if (!domain) {
-          return "";
-        }
-
-        if (selectedDomain) {
-          return selectedDomain;
-        }
-
-        try {
-          const domains = JSON.parse(domain);
-          if (Array.isArray(domains) && domains.length > 0) {
-            return domains[0];
-          }
-          return domain;
-        } catch {
-          return domain;
-        }
+        if (!domain) return "";
+        if (selectedDomain) return selectedDomain;
+        const domains = parseDomainArray(domain);
+        return domains.length > 0 ? domains[0] : domain;
       };
 
       if (tunnel.proxyType === "http") {
@@ -109,20 +98,7 @@ export function useTunnelMoreActions({
         remoteAddress = `${nodeAddress}:${tunnel.remotePort}`;
       }
 
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(remoteAddress);
-      } else {
-        const textArea = document.createElement("textarea");
-        textArea.value = remoteAddress;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand("copy");
-        textArea.remove();
-      }
+      await copyToClipboard(remoteAddress);
 
       message.success(`远程地址已复制: ${remoteAddress}`);
     } catch (err) {

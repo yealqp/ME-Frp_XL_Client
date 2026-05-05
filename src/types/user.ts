@@ -26,14 +26,6 @@ export interface CdkHistoryLog {
   userAgent: string;
 }
 
-export interface CdkHistoryData {
-  logs: CdkHistoryLog[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
-
 export interface TrafficStatsData {
   dates: string[];
   trafficIn: number[];
@@ -41,11 +33,4 @@ export interface TrafficStatsData {
   totalTraffic: number[];
 }
 
-export interface ResetTokenData {
-  newToken?: string;
-}
 
-export interface RedeemCdkData {
-  type: string;
-  value: number;
-}

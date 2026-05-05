@@ -43,23 +43,6 @@ export interface UnifiedConfig {
   themeCustomization?: ThemeCustomization;
 }
 
-// 旧的用户信息类型（保留用于向后兼容）
-export interface UserInfo {
-  group: string | null;
-  token: string | null;
-  username: string | null;
-}
-
-// 兼容性配置类型（用于旧API）
-export interface Config {
-  api_status: string;
-  login_time: string;
-  user_token: string;
-  frp_token: string;
-  username: string;
-  user_info: UserInfo;
-}
-
 // 应用设置类型（派生自 UnifiedConfig 以消除字段重复）
 type AppSettingKeys =
   | 'autoStart' | 'alwaysOnTop' | 'autoUpdate' | 'autoStartTunnels'

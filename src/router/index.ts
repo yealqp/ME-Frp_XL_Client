@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { startLoading, finishLoading, errorLoading } from "../composables/useLoadingBar";
-import { loadUnifiedConfig } from "@/utils/unifiedConfig";
+import { useAuthStore } from "@/stores/auth";
 
 // 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
@@ -110,19 +110,11 @@ router.beforeEach(async (to, _from) => {
 
   // 检查是否需要登录
   if (to.meta.requiresAuth) {
-    try {
-      const config = await loadUnifiedConfig();
-      const isLoggedIn = config && config.userToken;
-
-      if (isLoggedIn) {
-        return true;
-      } else {
-        return "/login";
-      }
-    } catch (error) {
-      console.error("路由守卫检查登录状态失败:", error);
-      return "/login";
+    const authStore = useAuthStore();
+    if (authStore.isLoggedIn) {
+      return true;
     }
+    return "/login";
   } else {
     return true;
   }

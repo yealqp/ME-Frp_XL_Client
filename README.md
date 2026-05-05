@@ -7,7 +7,7 @@
 - 🚀 **现代化技术栈**: 使用 Vue 3 Composition API、TypeScript、Pinia 状态管理
 - 🎨 **精美 UI**: 基于 Naive UI 组件库，提供流畅的用户体验
 - ⚡ **高性能**: 使用 Tauri 2 框架，体积小、启动快
-- 🔧 **易于维护**: 代码优化后减少 30-40% 代码行数，消除 80% 重复代码
+- 🔧 **易于维护**: 基于类型化 Pinia 状态管理和模块化 composables
 - 🛠️ **开发友好**: 完整的 TypeScript 类型定义，单元测试和属性测试覆盖
 - 📦 **批量操作**: 支持批量强制下线和批量删除隧道，提高管理效率
 
@@ -35,17 +35,21 @@
 │   │   ├── TunnelManagement.vue
 │   │   └── ...
 │   ├── composables/        # Vue Composables
-│   │   ├── useApi.ts       # API 调用处理
-│   │   └── useLoading.ts   # 加载状态管理
+│   │   ├── useDashboardState.ts  # 仪表盘状态管理
+│   │   ├── useTunnelPageState.ts # 隧道页面状态
+│   │   └── ...
 │   ├── stores/             # Pinia Stores
-│   │   ├── helpers/
-│   │   │   └── asyncAction.ts  # 异步操作辅助
 │   │   ├── auth.ts
 │   │   ├── user.ts
 │   │   └── tunnel.ts
 │   ├── utils/              # 工具函数
 │   │   ├── timeFormatter.ts    # 时间格式化
-│   │   └── markdownParser.ts   # Markdown 解析
+│   │   ├── markdownParser.ts   # Markdown 解析
+│   │   ├── errorHandler.ts     # 错误处理
+│   │   ├── domainUtils.ts      # 域名处理
+│   │   ├── clipboard.ts        # 剪贴板工具
+│   │   ├── batchOperationHelper.ts # 批量操作
+│   │   └── ...
 │   ├── types/              # TypeScript 类型定义
 │   └── App.vue
 ├── src-tauri/              # Tauri 后端代码
@@ -91,9 +95,6 @@ pnpm tauri build
 
 #### Composables
 
-- **useApi**: 统一的 API 调用处理，自动处理 JSON 解析和错误
-- **useLoading**: 统一的加载状态管理
-
 #### 工具函数
 
 - **timeFormatter**: 时间格式化工具（formatTimestamp, formatBandwidth, formatTraffic）
@@ -102,29 +103,6 @@ pnpm tauri build
 #### 可复用组件
 
 - **UserInfoCard**: 用户信息卡片组件，支持自定义字段和插槽
-- **SkeletonLoader**: 骨架屏组件，支持多种类型（list, card, table, text）
-
-#### Store 辅助
-
-- **createAsyncAction**: 异步操作辅助函数，支持乐观更新和回滚
-
-### 使用示例
-
-#### API 调用
-
-```typescript
-import { useApi } from "@/composables/useApi";
-
-const { data, loading, execute } = useApi({
-  command: "api_get_user_info",
-  onSuccess: (data) => {
-    message.success("加载成功");
-  }
-});
-
-await execute();
-```
-
 #### 用户信息卡片
 
 ```vue
