@@ -35,8 +35,8 @@ async fn fetch_version_and_changelog() -> Result<(RemoteVersion, HashMap<String,
     let client = create_http_client();
 
     // 并行请求版本信息和更新日志
-    let version_future = client.get("https://check.yealqp.cn/xl.json").send();
-    let changelog_future = client.get("https://check.yealqp.cn/tpca.json").send();
+    let version_future = client.get("https://xlc.mefrp.yealqp.cn/xl.json").send();
+    let changelog_future = client.get("https://xlc.mefrp.yealqp.cn/tpca.json").send();
 
     let (version_response, changelog_response) = tokio::try_join!(
         async { version_future.await.map_err(|e| format!("请求版本信息失败: {e}")) },
