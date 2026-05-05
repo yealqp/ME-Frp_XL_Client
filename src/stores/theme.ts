@@ -146,7 +146,7 @@ export const useThemeStore = defineStore("theme", () => {
   function syncSystemThemeState(): void {
     if (systemThemeListener.isSupported.value) {
       systemThemeListener.startListening();
-      systemTheme.value = systemThemeListener.systemTheme.value;
+      // System theme synced reactively via watch below — no manual .value read needed
     }
   }
 

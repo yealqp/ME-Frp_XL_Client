@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, useTemplateRef, watch, watchEffect } from "vue";
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -239,6 +239,12 @@ const handleLogout = async (): Promise<void> => {
   }
 };
 
+// Login polling state
+let loginPollingTimer: number | null = null;
+let loginPollingRetries = 0;
+const MAX_LOGIN_POLL_RETRIES = 60;
+let checkForUpdatesOnStartTimer: number | null = null;
+
 onMounted(async () => {
   const persistedConfigPromise: Promise<UnifiedConfig | null> = loadUnifiedConfig().catch((error) => {
     console.error("加载本地配置失败:", error);
@@ -281,15 +287,29 @@ onMounted(async () => {
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
       startAutoStartTunnels(message);
-      setTimeout(() => {
+      checkForUpdatesOnStartTimer = window.setTimeout(() => {
         checkForUpdatesOnStart(message);
       }, 3000);
+    } else if (loginPollingRetries < MAX_LOGIN_POLL_RETRIES) {
+      loginPollingRetries++;
+      loginPollingTimer = window.setTimeout(waitForLogin, 500);
     } else {
-      setTimeout(waitForLogin, 500);
+      console.warn("登录状态检查超时，停止轮询");
     }
   };
 
   waitForLogin();
+});
+
+onUnmounted(() => {
+  if (loginPollingTimer !== null) {
+    clearTimeout(loginPollingTimer);
+    loginPollingTimer = null;
+  }
+  if (checkForUpdatesOnStartTimer !== null) {
+    clearTimeout(checkForUpdatesOnStartTimer);
+    checkForUpdatesOnStartTimer = null;
+  }
 });
 
 watch(

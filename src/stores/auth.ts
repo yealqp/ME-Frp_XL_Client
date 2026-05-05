@@ -166,40 +166,28 @@ export const useAuthStore = defineStore('auth', () => {
     frpToken.value = '';
 
     // Clear other stores (dynamic import to avoid circular dependencies)
-    try {
-      // Import and clear User Store if it exists
-      const { useUserStore } = await import('./user');
-      const userStore = useUserStore();
-      if (userStore.clearUserInfo) {
-        userStore.clearUserInfo();
-      }
-    } catch (error) {
-      // User Store may not exist yet, skip
-      console.warn('User Store not available:', error);
-    }
+    const results = await Promise.allSettled([
+      (async () => {
+        const { useUserStore } = await import('./user');
+        const userStore = useUserStore();
+        userStore.clearUserInfo?.();
+      })(),
+      (async () => {
+        const { useTunnelStore } = await import('./tunnel');
+        const tunnelStore = useTunnelStore();
+        tunnelStore.clearTunnels?.();
+      })(),
+      (async () => {
+        const { useNodeStore } = await import('./node');
+        const nodeStore = useNodeStore();
+        nodeStore.clearNodes?.();
+      })(),
+    ]);
 
-    try {
-      // Import and clear Tunnel Store if it exists
-      const { useTunnelStore } = await import('./tunnel');
-      const tunnelStore = useTunnelStore();
-      if (tunnelStore.clearTunnels) {
-        tunnelStore.clearTunnels();
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.warn('Store not available during logout:', result.reason);
       }
-    } catch (error) {
-      // Tunnel Store may not exist yet, skip
-      console.warn('Tunnel Store not available:', error);
-    }
-
-    try {
-      // Import and clear Node Store if it exists
-      const { useNodeStore } = await import('./node');
-      const nodeStore = useNodeStore();
-      if (nodeStore.clearNodes) {
-        nodeStore.clearNodes();
-      }
-    } catch (error) {
-      // Node Store may not exist yet, skip
-      console.warn('Node Store not available:', error);
     }
 
     // Clear login information from UnifiedConfig

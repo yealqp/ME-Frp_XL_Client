@@ -198,6 +198,7 @@ export function useTrafficChart() {
     };
   }
 
+  // TODO: Reserved for future tooltip-related mouse enter behavior
   const handleChartMouseEnter = () => undefined;
 
   const handleChartMouseMove = (event: MouseEvent) => {

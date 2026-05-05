@@ -1,3 +1,5 @@
+import DOMPurify from "dompurify";
+
 const ANSI_ESCAPE_SEQUENCE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
 
 function escapeHtml(value: string): string {
@@ -73,5 +75,5 @@ export function formatLogHtml(log: string, mode: "token" | "line" = "token"): st
       .replace(/\[E\]/g, '<span style="color: var(--app-log-error-color);">[E]</span>');
   }
 
-  return cleanLog;
+  return DOMPurify.sanitize(cleanLog);
 }

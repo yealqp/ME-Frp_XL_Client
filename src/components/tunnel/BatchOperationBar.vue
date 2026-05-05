@@ -6,7 +6,7 @@
       :show-icon="false"
       positive-text="确认"
       negative-text="取消"
-      @positive-click="$emit(action.event as any)"
+      @positive-click="emitAction(action.event)"
     >
       <template #trigger>
         <n-button
@@ -33,8 +33,10 @@ import { NButton, NPopconfirm } from 'naive-ui';
 import { Play, Square, PlayCircle, PauseCircle, LogOut, Trash2 } from 'lucide-vue-next';
 import type { Component } from 'vue';
 
+type BatchEvent = 'batch-start' | 'batch-stop' | 'batch-enable' | 'batch-disable' | 'batch-kick' | 'batch-delete';
+
 interface BatchAction {
-  event: string;
+  event: BatchEvent;
   type: 'primary' | 'warning' | 'info' | 'error';
   icon: Component;
   label: string;
@@ -55,7 +57,7 @@ const props = defineProps<{
   selectedCount: number;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'batch-start'): void;
   (e: 'batch-stop'): void;
   (e: 'batch-enable'): void;
@@ -64,6 +66,17 @@ defineEmits<{
   (e: 'batch-delete'): void;
   (e: 'cancel'): void;
 }>();
+
+function emitAction(event: BatchEvent): void {
+  switch (event) {
+    case 'batch-start': emit('batch-start'); break;
+    case 'batch-stop': emit('batch-stop'); break;
+    case 'batch-enable': emit('batch-enable'); break;
+    case 'batch-disable': emit('batch-disable'); break;
+    case 'batch-kick': emit('batch-kick'); break;
+    case 'batch-delete': emit('batch-delete'); break;
+  }
+}
 
 function getConfirmText(action: BatchAction): string {
   return action.confirmText.replace('{selectedCount}', String(props.selectedCount));

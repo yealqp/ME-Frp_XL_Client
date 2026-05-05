@@ -442,19 +442,7 @@ async fn api_send_feedback(
     content: String,
     user_id: i32,
 ) -> Result<String, String> {
-    let config = config::load_unified_config()
-        .await
-        .map_err(|_| "未找到配置文件")?;
-
-    if config.user_token.is_empty() {
-        return Err("未找到有效的token".to_string());
-    }
-
-    api::feedback::send_feedback(
-        &content,
-        user_id,
-    )
-    .await
+    api::feedback::send_feedback(&content, user_id).await
 }
 
 // WebUI 相关命令
@@ -689,8 +677,12 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&show_main, &quit])?;
 
             // 创建系统托盘
+            let tray_icon = app.default_window_icon().cloned().unwrap_or_else(|| {
+                // 1x1 透明 RGBA 回退图标
+                tauri::image::Image::new_owned(vec![0, 0, 0, 0], 1, 1)
+            });
             let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray_icon)
                 .tooltip("ME-Frp XL Client")
                 .menu(&menu)
                 .show_menu_on_left_click(false)

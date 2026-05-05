@@ -11,7 +11,8 @@ export function extractErrorMessage(error: unknown, defaultMessage = "操作失�
   }
   
   if (error && typeof error === "object" && "message" in error) {
-    return (error as any).message;
+    const msg = (error as Record<string, unknown>).message;
+    return typeof msg === "string" ? msg : defaultMessage;
   }
   
   return defaultMessage;

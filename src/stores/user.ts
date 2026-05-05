@@ -79,7 +79,12 @@ export const useUserStore = defineStore('user', () => {
         const authStore = useAuthStore();
         const res = await apiGetUserInfo(authStore.userToken);
         if (res.code === 200) {
-          userInfo.value = res.data as unknown as UserDetailInfo;
+          const data = res.data;
+          if (data && typeof data === 'object' && 'inBound' in data && 'outBound' in data) {
+            userInfo.value = data as UserDetailInfo;
+          } else {
+            throw new Error('用户信息数据格式错误');
+          }
         } else {
           throw new Error(res.message || '获取用户信息失败');
         }

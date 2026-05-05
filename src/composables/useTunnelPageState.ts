@@ -38,13 +38,14 @@ export function useTunnelPageState({
   });
 
   async function loadTunnels(showSuccess = true) {
+    let loadSuccess = false;
     try {
       await Promise.all([
         tunnelStore.refreshTunnels(),
         loadConfigFileStatus(),
       ]);
-
-      if (showSuccess && !error.value) {
+      loadSuccess = true;
+      if (showSuccess) {
         message.success(`成功加载 ${tunnels.value.length} 个隧道`);
       }
     } catch (err) {

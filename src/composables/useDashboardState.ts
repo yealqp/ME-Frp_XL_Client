@@ -183,7 +183,11 @@ export function useDashboardState() {
   async function fetchSystemStatus() {
     try {
       const res = await getSystemStatus(authStore.userToken);
-      const data = res.data as unknown as SystemStatus;
+      const responseData = res.data;
+      if (!responseData || typeof responseData !== 'object') {
+        throw new Error('系统状态数据格式错误');
+      }
+      const data = responseData as SystemStatus;
       systemStatus.value = {
         status: data.status,
         remark: data.remark,
@@ -218,8 +222,8 @@ export function useDashboardState() {
         popupNoticeContent.value = res.data;
         showImportantNotice.value = true;
       }
-    } catch {
-      // 静默处理错误，不影响用户体验
+    } catch (error) {
+      console.error("获取弹窗公告失败:", error);
     } finally {
       popupNoticeLoading.value = false;
     }
@@ -245,7 +249,10 @@ export function useDashboardState() {
     try {
       const token = await verifyCaptcha();
       const result = await userSign(authStore.userToken, token);
-      const extraTraffic = (result.data as unknown as { extraTraffic?: number })?.extraTraffic || 0;
+      const signData = result.data;
+      const extraTraffic = signData && typeof signData === 'object' && 'extraTraffic' in signData
+        ? Number((signData as Record<string, unknown>).extraTraffic) || 0
+        : 0;
       let successMessage = "自动签到成功！";
 
       if (extraTraffic > 0) {
@@ -261,9 +268,9 @@ export function useDashboardState() {
 
   async function initializeDashboard() {
     // Fire all independent tasks in parallel (non-blocking)
-    fetchSystemStatus();
-    fetchAnnouncements();
-    fetchPopupNotice();
+    fetchSystemStatus().catch(err => console.error("获取系统状态失败:", err));
+    fetchAnnouncements().catch(err => console.error("获取公告失败:", err));
+    fetchPopupNotice().catch(err => console.error("获取弹窗公告失败:", err));
     // Notification runs independently; errors are logged but do not block
     uiStore.fetchAndShowNotification(notification).catch(err =>
       console.error("Notification error:", err)

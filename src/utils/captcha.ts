@@ -54,6 +54,7 @@ export function createCaptcha(options: CaptchaOptions = {}): CaptchaInstance {
         console.log("开始初始化 Cap.js 隐式验证...");
         
         // 创建 Cap 实例
+        // @cap.js/widget has no type definitions; cast is needed
         capInstance = new Cap({
           apiEndpoint: `https://captcha.mefrp.com/${siteId}/`,
           workerCount: workerCount,
@@ -180,11 +181,6 @@ export function createCaptcha(options: CaptchaOptions = {}): CaptchaInstance {
   const isInitialized = (): boolean => {
     return initialized;
   };
-
-  // 自动初始化
-  init().catch((error) => {
-    console.error("自动初始化失败:", error);
-  });
 
   return {
     verify,

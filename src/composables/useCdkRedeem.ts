@@ -58,7 +58,13 @@ export function useCdkRedeem() {
       const result = await redeemCdk(authStore.userToken, cdkCode.value.trim(), cdkCaptchaToken.value);
       message.destroyAll();
 
-      const { type, value } = result.data as unknown as { type: string; value: number };
+      const redeemData = result.data;
+      if (!redeemData || typeof redeemData !== "object") {
+        throw new Error("兑换响应数据格式错误");
+      }
+      const dataObj = redeemData as Record<string, unknown>;
+      const type = typeof dataObj.type === "string" ? dataObj.type : "";
+      const value = typeof dataObj.value === "number" ? dataObj.value : 0;
       let rewardText = "";
 
       switch (type) {

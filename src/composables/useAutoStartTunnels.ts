@@ -59,30 +59,34 @@ export function useAutoStartTunnels() {
 
       const startupDelay = (unifiedConfig.startupDelay || 5) * 1000;
 
-      setTimeout(async () => {
-        for (let i = 0; i < validTunnelIds.length; i++) {
-          const tunnelId = validTunnelIds[i];
+      setTimeout(() => {
+        (async () => {
+          for (let i = 0; i < validTunnelIds.length; i++) {
+            const tunnelId = validTunnelIds[i];
 
-          try {
-            const result = await invokeTauriResponse<null>("api_start_tunnel", {
-              proxyId: tunnelId,
-            });
+            try {
+              const result = await invokeTauriResponse<null>("api_start_tunnel", {
+                proxyId: tunnelId,
+              });
 
-            if (result.code === 200) {
-              message?.success(`自启动隧道 ${tunnelId} 成功`);
-            } else {
-              console.error(`隧道 ${tunnelId} 启动失败:`, result.message);
-              message?.error(`自启动隧道 ${tunnelId} 失败: ${result.message}`);
+              if (result.code === 200) {
+                message?.success(`自启动隧道 ${tunnelId} 成功`);
+              } else {
+                console.error(`隧道 ${tunnelId} 启动失败:`, result.message);
+                message?.error(`自启动隧道 ${tunnelId} 失败: ${result.message}`);
+              }
+            } catch (error) {
+              console.error(`启动隧道 ${tunnelId} 时发生错误:`, error);
+              message?.error(`自启动隧道 ${tunnelId} 失败: ${error}`);
             }
-          } catch (error) {
-            console.error(`启动隧道 ${tunnelId} 时发生错误:`, error);
-            message?.error(`自启动隧道 ${tunnelId} 失败: ${error}`);
-          }
 
-          if (i < validTunnelIds.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            if (i < validTunnelIds.length - 1) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
           }
-        }
+        })().catch(error => {
+          console.error("自启动隧道执行异常:", error);
+        });
       }, startupDelay);
     } catch (error) {
       console.error("自启动隧道失败:", error);
