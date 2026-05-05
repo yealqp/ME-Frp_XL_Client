@@ -2,11 +2,10 @@
 //!
 //! 本模块负责 MEFrp WebUI 进程的启动、停止和状态管理
 
-use std::io::{BufRead, BufReader};
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
+
+use crate::utils::process::{exe_dir, spawn_and_capture, stop_child};
 
 /// WebUI 进程信息
 #[derive(Debug)]
@@ -49,10 +48,7 @@ pub async fn start_webui(
     }
 
     // 获取可执行文件同目录下 bin 文件夹中的 mefrpc 可执行文件路径
-    let exe_path =
-        std::env::current_exe().map_err(|e| format!("获取当前可执行文件路径失败: {}", e))?;
-    let exe_dir = exe_path.parent().ok_or("无法获取可执行文件目录")?;
-
+    let exe_dir = exe_dir()?;
     let mefrpc_path = exe_dir.join("bin").join("mefrpc.exe");
 
     if !mefrpc_path.exists() {
@@ -70,60 +66,15 @@ pub async fn start_webui(
         .arg("--webui-pass")
         .arg(&pass)
         .arg("--api-root-url")
-        .arg("https://api.mefrp.com")
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .arg("https://api.mefrp.com");
 
-    // 在 Windows 上隐藏命令行窗口
-    #[cfg(windows)]
-    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("启动 WebUI 进程失败: {}", e))?;
-
-    // 创建日志存储
-    let logs = Arc::new(Mutex::new(Vec::new()));
-    let logs_clone = logs.clone();
-
-    // 获取进程的 stdout 和 stderr
-    let stdout = child.stdout.take().ok_or("无法获取进程 stdout")?;
-    let stderr = child.stderr.take().ok_or("无法获取进程 stderr")?;
-
-    // 启动异步任务读取 stdout
-    let logs_stdout = logs.clone();
-    tokio::task::spawn_blocking(move || {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines().map_while(Result::ok) {
-            if let Ok(mut logs) = logs_stdout.lock() {
-                logs.push(line.to_string());
-                // 限制日志数量，避免内存溢出
-                if logs.len() > 1000 {
-                    logs.remove(0);
-                }
-            }
-        }
-    });
-
-    // 启动异步任务读取 stderr
-    let logs_stderr = logs.clone();
-    tokio::task::spawn_blocking(move || {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines().map_while(Result::ok) {
-            if let Ok(mut logs) = logs_stderr.lock() {
-                logs.push(format!("[ERR] {}", line));
-                // 限制日志数量，避免内存溢出
-                if logs.len() > 1000 {
-                    logs.remove(0);
-                }
-            }
-        }
-    });
+    // 启动进程并捕获日志
+    let (child, logs) = spawn_and_capture(&mut command, "WebUI")?;
 
     // 创建 WebUI 进程信息
     let webui_process = WebUIProcess {
         child: Arc::new(Mutex::new(Some(child))),
-        logs: logs_clone,
+        logs,
         addr: addr.clone(),
         port,
     };
@@ -162,24 +113,9 @@ pub async fn stop_webui(webui_manager: &WebUIManager) -> Result<String, String> 
 
     match webui_process {
         Some(process) => {
-            // 尝试终止进程
-            let mut child_guard = process
-                .child
-                .lock()
-                .map_err(|e| format!("获取进程锁失败: {}", e))?;
-            if let Some(mut child) = child_guard.take() {
-                match child.kill() {
-                    Ok(_) => {
-                        // 等待进程结束
-                        let _ = child.wait();
-                        Ok("{\"code\": 200, \"message\": \"WebUI 停止成功\", \"data\": null}"
-                            .to_string())
-                    }
-                    Err(e) => Err(format!("终止进程失败: {}", e)),
-                }
-            } else {
-                Err("进程已经被终止".to_string())
-            }
+            stop_child(&process.child).map_err(|e| format!("{}", e))?;
+            Ok("{\"code\": 200, \"message\": \"WebUI 停止成功\", \"data\": null}"
+                .to_string())
         }
         None => Err("未找到运行中的 WebUI 进程".to_string()),
     }

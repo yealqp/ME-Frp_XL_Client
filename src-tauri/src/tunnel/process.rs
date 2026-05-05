@@ -3,13 +3,11 @@
 //! 本模块负责隧道进程的启动、停止、日志捕获和运行状态管理
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
-#[cfg(windows)]
-use std::os::windows::process::CommandExt;
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 use crate::models::tunnel::TunnelProcess;
+use crate::utils::process::{exe_dir, spawn_and_capture, stop_child};
 
 /// 进程管理器类型别名
 ///
@@ -43,9 +41,7 @@ pub async fn start_tunnel(
     }
 
     // 获取可执行文件同目录下bin文件夹中的mefrpc可执行文件路径
-    let exe_path =
-        std::env::current_exe().map_err(|e| format!("获取当前可执行文件路径失败: {e}"))?;
-    let exe_dir = exe_path.parent().ok_or("无法获取可执行文件目录")?;
+    let exe_dir = exe_dir()?;
 
     let mefrpc_path = exe_dir
         .join("bin")
@@ -84,59 +80,14 @@ pub async fn start_tunnel(
             .arg("https://api.mefrp.com");
     }
 
-    command.stdout(Stdio::piped()).stderr(Stdio::piped());
-
-    // 在Windows上隐藏命令行窗口
-    #[cfg(windows)]
-    command.creation_flags(0x08000000); // CREATE_NO_WINDOW
-
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("启动mefrpc进程失败: {e}"))?;
-
-    // 创建日志存储
-    let logs = Arc::new(Mutex::new(Vec::new()));
-    let logs_clone = logs.clone();
-
-    // 获取进程的 stdout 和 stderr
-    let stdout = child.stdout.take().ok_or("无法获取进程stdout")?;
-    let stderr = child.stderr.take().ok_or("无法获取进程stderr")?;
-
-    // 启动异步任务读取 stdout（使用 spawn_blocking 避免阻塞主线程）
-    let logs_stdout = logs.clone();
-    tokio::task::spawn_blocking(move || {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines().map_while(Result::ok) {
-            if let Ok(mut logs) = logs_stdout.lock() {
-                logs.push(line.to_string());
-                // 限制日志数量，避免内存溢出
-                if logs.len() > 1000 {
-                    logs.remove(0);
-                }
-            }
-        }
-    });
-
-    // 启动异步任务读取 stderr（使用 spawn_blocking 避免阻塞主线程）
-    let logs_stderr = logs.clone();
-    tokio::task::spawn_blocking(move || {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines().map_while(Result::ok) {
-            if let Ok(mut logs) = logs_stderr.lock() {
-                logs.push(format!("[ERR] {line}"));
-                // 限制日志数量，避免内存溢出
-                if logs.len() > 1000 {
-                    logs.remove(0);
-                }
-            }
-        }
-    });
+    // 启动进程并捕获日志
+    let (child, logs) = spawn_and_capture(&mut command, "mefrpc")?;
 
     // 创建隧道进程信息
     let tunnel_process = TunnelProcess {
         proxy_id,
         child: Arc::new(Mutex::new(Some(child))),
-        logs: logs_clone,
+        logs,
     };
 
     // 将进程添加到管理器
@@ -176,23 +127,8 @@ pub async fn stop_tunnel(
 
     match tunnel_process {
         Some(process) => {
-            // 尝试终止进程
-            let mut child_guard = process
-                .child
-                .lock()
-                .map_err(|e| format!("获取进程锁失败: {e}"))?;
-            if let Some(mut child) = child_guard.take() {
-                match child.kill() {
-                    Ok(_) => {
-                        // 等待进程结束
-                        let _ = child.wait();
-                        Ok(format!("{{\"code\": 200, \"message\": \"隧道停止成功\", \"data\": {{\"proxyId\": {proxy_id}}}}}"))
-                    }
-                    Err(e) => Err(format!("终止进程失败: {e}")),
-                }
-            } else {
-                Err("进程已经被终止".to_string())
-            }
+            stop_child(&process.child).map_err(|e| e)?;
+            Ok(format!("{{\"code\": 200, \"message\": \"隧道停止成功\", \"data\": {{\"proxyId\": {proxy_id}}}}}"))
         }
         None => Err("未找到运行中的隧道进程".to_string()),
     }
