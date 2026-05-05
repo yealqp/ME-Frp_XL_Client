@@ -1100,7 +1100,8 @@ const submitFeedback = async () => {
   margin-bottom: 12px;
 }
 
-.update-content-markdown {
+.update-content-markdown,
+.changelog-content-markdown {
   padding: 12px 0;
   line-height: 1.8;
   font-size: 14px;
@@ -1110,97 +1111,122 @@ const submitFeedback = async () => {
 }
 
 /* Markdown 标题样式 */
-.update-content-markdown :deep(h1),
-.update-content-markdown :deep(h2),
-.update-content-markdown :deep(h3),
-.update-content-markdown :deep(h4),
-.update-content-markdown :deep(h5),
-.update-content-markdown :deep(h6) {
+.update-content-markdown,
+.changelog-content-markdown :deep(h1),
+.update-content-markdown,
+.changelog-content-markdown :deep(h2),
+.update-content-markdown,
+.changelog-content-markdown :deep(h3),
+.update-content-markdown,
+.changelog-content-markdown :deep(h4),
+.update-content-markdown,
+.changelog-content-markdown :deep(h5),
+.update-content-markdown,
+.changelog-content-markdown :deep(h6) {
   margin: 16px 0 10px 0;
   font-weight: 600;
   line-height: 1.4;
   color: var(--app-text-color);
 }
 
-.update-content-markdown :deep(h1) {
+.update-content-markdown,
+.changelog-content-markdown :deep(h1) {
   font-size: 20px;
   border-bottom: 1px solid var(--app-divider-color);
   padding-bottom: 8px;
 }
 
-.update-content-markdown :deep(h2) {
+.update-content-markdown,
+.changelog-content-markdown :deep(h2) {
   font-size: 18px;
   margin-bottom: 4px;
 }
 
-.update-content-markdown :deep(h3) {
+.update-content-markdown,
+.changelog-content-markdown :deep(h3) {
   font-size: 16px;
 }
 
-.update-content-markdown :deep(h4) {
+.update-content-markdown,
+.changelog-content-markdown :deep(h4) {
   font-size: 15px;
 }
 
 /* h2下的分割线 */
-.update-content-markdown :deep(.h2-divider) {
+.update-content-markdown,
+.changelog-content-markdown :deep(.h2-divider) {
   border: none;
   border-top: 1px solid var(--app-divider-color);
   margin: 0 0 12px 0;
 }
 
 /* 段落样式 */
-.update-content-markdown :deep(p) {
+.update-content-markdown,
+.changelog-content-markdown :deep(p) {
   margin: 10px 0;
   line-height: 1.8;
   color: var(--app-text-color-2);
 }
 
 /* 列表样式 */
-.update-content-markdown :deep(ul),
-.update-content-markdown :deep(ol) {
+.update-content-markdown,
+.changelog-content-markdown :deep(ul),
+.update-content-markdown,
+.changelog-content-markdown :deep(ol) {
   margin: 12px 0;
   padding-left: 24px;
 }
 
-.update-content-markdown :deep(li) {
+.update-content-markdown,
+.changelog-content-markdown :deep(li) {
   margin: 0;
   line-height: 1.8;
   padding-left: 8px;
   color: var(--app-text-color-2);
 }
 
-.update-content-markdown :deep(ul li) {
+.update-content-markdown,
+.changelog-content-markdown :deep(ul li) {
   list-style-type: disc;
 }
 
-.update-content-markdown :deep(ul li::marker) {
+.update-content-markdown,
+.changelog-content-markdown :deep(ul li::marker) {
   font-size: 0.8em;
   color: #4da8f5;
 }
 
-.update-content-markdown :deep(ol li) {
+.update-content-markdown,
+.changelog-content-markdown :deep(ol li) {
   list-style-type: decimal;
 }
 
-.update-content-markdown :deep(ol li::marker) {
+.update-content-markdown,
+.changelog-content-markdown :deep(ol li::marker) {
   font-weight: 600;
   color: #4da8f5;
 }
 
-.update-content-markdown :deep(ul ul),
-.update-content-markdown :deep(ol ol),
-.update-content-markdown :deep(ul ol),
-.update-content-markdown :deep(ol ul) {
+.update-content-markdown,
+.changelog-content-markdown :deep(ul ul),
+.update-content-markdown,
+.changelog-content-markdown :deep(ol ol),
+.update-content-markdown,
+.changelog-content-markdown :deep(ul ol),
+.update-content-markdown,
+.changelog-content-markdown :deep(ol ul) {
   margin: 0;
   padding-left: 24px;
 }
 
-.update-content-markdown :deep(li p) {
+.update-content-markdown,
+.changelog-content-markdown :deep(li p) {
   margin: 2px 0;
 }
 
 /* 行内代码样式 */
-.update-content-markdown :deep(code.inline-code) {
+.update-content-markdown,
+.changelog-content-markdown :deep(code.inline-code) {
   background: var(--app-card-color);
   color: #ff6b6b;
   padding: 2px 6px;
@@ -1211,7 +1237,8 @@ const submitFeedback = async () => {
 }
 
 /* 代码块样式 */
-.update-content-markdown :deep(pre) {
+.update-content-markdown,
+.changelog-content-markdown :deep(pre) {
   background: var(--app-card-color);
   padding: 12px;
   border-radius: 4px;
@@ -1220,7 +1247,8 @@ const submitFeedback = async () => {
   border: 1px solid var(--app-border-color);
 }
 
-.update-content-markdown :deep(pre code) {
+.update-content-markdown,
+.changelog-content-markdown :deep(pre code) {
   background: transparent;
   padding: 0;
   border: none;
@@ -1231,7 +1259,8 @@ const submitFeedback = async () => {
 }
 
 /* 引用块样式 */
-.update-content-markdown :deep(blockquote.custom-blockquote) {
+.update-content-markdown,
+.changelog-content-markdown :deep(blockquote.custom-blockquote) {
   border-left: 4px solid #4da8f5;
   margin: 12px 0;
   padding: 10px 14px;
@@ -1239,12 +1268,14 @@ const submitFeedback = async () => {
   border-radius: 0 4px 4px 0;
 }
 
-.update-content-markdown :deep(blockquote.custom-blockquote p) {
+.update-content-markdown,
+.changelog-content-markdown :deep(blockquote.custom-blockquote p) {
   margin: 4px 0;
 }
 
 /* 链接样式 */
-.update-content-markdown :deep(a) {
+.update-content-markdown,
+.changelog-content-markdown :deep(a) {
   color: #4da8f5;
   text-decoration: none;
   transition: color 0.2s;
@@ -1252,7 +1283,8 @@ const submitFeedback = async () => {
   position: relative;
 }
 
-.update-content-markdown :deep(a::after) {
+.update-content-markdown :deep(a::after),
+.changelog-content-markdown :deep(a::after) {
   content: '';
   position: absolute;
   left: 0;
@@ -1263,76 +1295,47 @@ const submitFeedback = async () => {
   transition: width 0.3s ease;
 }
 
-.update-content-markdown :deep(a:hover) {
+.update-content-markdown :deep(a:hover),
+.changelog-content-markdown :deep(a:hover) {
   color: #6bb8f7;
 }
 
-.update-content-markdown :deep(a:hover::after) {
+.update-content-markdown :deep(a:hover::after),
+.changelog-content-markdown :deep(a:hover::after) {
   width: 100%;
 }
 
 /* 强调文本 */
-.update-content-markdown :deep(strong) {
+.update-content-markdown :deep(strong),
+.changelog-content-markdown :deep(strong) {
   font-weight: 600;
   color: var(--app-text-color);
 }
 
-.update-content-markdown :deep(em) {
+.update-content-markdown :deep(em),
+.changelog-content-markdown :deep(em) {
   font-style: italic;
 }
 
 /* 删除线 */
-.update-content-markdown :deep(del) {
+.update-content-markdown :deep(del),
+.changelog-content-markdown :deep(del) {
   text-decoration: line-through;
 }
 
 /* 水平分割线 */
-.update-content-markdown :deep(hr) {
+.update-content-markdown :deep(hr),
+.changelog-content-markdown :deep(hr) {
   border: none;
   border-top: 1px solid var(--app-divider-color);
   margin: 16px 0;
 }
 
-.update-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.update-list li {
-  padding: 8px 0;
-  color: var(--app-text-color-2);
-  font-size: 14px;
-  line-height: 1.6;
-  border-bottom: 1px solid var(--app-divider-color);
-}
-
-.update-list li:last-child {
-  border-bottom: none;
-}
-
-/* 更新历史模态框样式 */
-.changelog-modal-content {
-  padding: 0;
-  max-height: 65vh;
-  overflow-y: auto;
-}
-
-.changelog-info {
-  margin-top: 0;
-  padding: 0 4px;
-}
-
+/* changelog-content-markdown 差异覆盖 */
 .changelog-content-markdown {
   padding: 16px;
-  line-height: 1.8;
-  font-size: 14px;
-  color: var(--app-text-color-2);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
 }
 
-/* 复用 update-content-markdown 的所有样式 */
 .changelog-content-markdown :deep(h1),
 .changelog-content-markdown :deep(h2),
 .changelog-content-markdown :deep(h3),
@@ -1340,9 +1343,6 @@ const submitFeedback = async () => {
 .changelog-content-markdown :deep(h5),
 .changelog-content-markdown :deep(h6) {
   margin: 20px 0 12px 0;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--app-text-color);
 }
 
 .changelog-content-markdown :deep(h1) {
@@ -1356,55 +1356,17 @@ const submitFeedback = async () => {
   margin-bottom: 8px;
 }
 
-.changelog-content-markdown :deep(h3) {
-  font-size: 16px;
-}
-
-.changelog-content-markdown :deep(h4) {
-  font-size: 15px;
-}
-
-.changelog-content-markdown :deep(.h2-divider) {
-  border: none;
-  border-top: 1px solid var(--app-divider-color);
-  margin: 0 0 12px 0;
-}
-
 .changelog-content-markdown :deep(p) {
   margin: 12px 0;
-  line-height: 1.8;
-  color: var(--app-text-color-2);
 }
 
 .changelog-content-markdown :deep(ul),
 .changelog-content-markdown :deep(ol) {
-  margin: 12px 0;
   padding-left: 28px;
 }
 
 .changelog-content-markdown :deep(li) {
   margin: 6px 0;
-  line-height: 1.8;
-  padding-left: 8px;
-  color: var(--app-text-color-2);
-}
-
-.changelog-content-markdown :deep(ul li) {
-  list-style-type: disc;
-}
-
-.changelog-content-markdown :deep(ul li::marker) {
-  font-size: 0.9em;
-  color: var(--primary-color);
-}
-
-.changelog-content-markdown :deep(ol li) {
-  list-style-type: decimal;
-}
-
-.changelog-content-markdown :deep(ol li::marker) {
-  font-weight: 600;
-  color: var(--primary-color);
 }
 
 .changelog-content-markdown :deep(ul ul),
@@ -1412,87 +1374,13 @@ const submitFeedback = async () => {
 .changelog-content-markdown :deep(ul ol),
 .changelog-content-markdown :deep(ol ul) {
   margin: 4px 0;
-  padding-left: 24px;
 }
 
 .changelog-content-markdown :deep(li p) {
   margin: 4px 0;
 }
 
-.changelog-content-markdown :deep(code.inline-code) {
-  background: var(--app-card-color);
-  color: var(--app-error-color);
-  padding: 3px 8px;
-  border-radius: 4px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  border: 1px solid var(--app-border-color);
-  font-weight: 500;
-}
-
-.changelog-content-markdown :deep(pre) {
-  background: var(--app-card-color);
-  padding: 16px;
-  border-radius: 8px;
-  overflow-x: auto;
-  margin: 16px 0;
-  border: 1px solid var(--app-border-color);
-}
-
-.changelog-content-markdown :deep(pre code) {
-  background: transparent;
-  padding: 0;
-  border: none;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--app-text-color-2);
-}
-
-.changelog-content-markdown :deep(blockquote.custom-blockquote) {
-  border-left: 4px solid var(--app-primary-color);
-  margin: 16px 0;
-  padding: 12px 16px;
-  background: color-mix(in srgb, var(--app-primary-color) 8%, transparent);
-  border-radius: 0 6px 6px 0;
-}
-
-.changelog-content-markdown :deep(blockquote.custom-blockquote p) {
-  margin: 6px 0;
-}
-
-.changelog-content-markdown :deep(a) {
-  color: var(--primary-color);
-  text-decoration: none;
-  transition: all 0.2s;
-  font-weight: 500;
-  position: relative;
-  border-bottom: 1px solid transparent;
-}
-
-.changelog-content-markdown :deep(a:hover) {
-  color: var(--primary-color-hover);
-  border-bottom-color: var(--primary-color-hover);
-}
-
-.changelog-content-markdown :deep(strong) {
-  font-weight: 600;
-  color: var(--app-text-color);
-}
-
-.changelog-content-markdown :deep(em) {
-  font-style: italic;
-  color: var(--app-text-color-2);
-}
-
-.changelog-content-markdown :deep(del) {
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-
 .changelog-content-markdown :deep(hr) {
-  border: none;
-  border-top: 1px solid var(--app-divider-color);
   margin: 20px 0;
 }
 
