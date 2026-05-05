@@ -110,7 +110,6 @@ $data['_user_agent']  = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 
 // ---------- 飞书 webhook 通知 ----------
 const WEBHOOK_URL = 'https://open.feishu.cn/open-apis/bot/v2/hook/ec686408-92b4-421b-b449-d505dfa727b3';
-const WEBHOOK_SECRET = 'n7oifm8UuB9gr4IvQVrBVc';
 
 /**
  * 发送飞书机器人通知
@@ -118,7 +117,6 @@ const WEBHOOK_SECRET = 'n7oifm8UuB9gr4IvQVrBVc';
  */
 function send_feishu_notification($data) {
     $timestamp = (string)time();
-    $stringToSign = $timestamp . "\n" . WEBHOOK_SECRET;
     
     $text = sprintf(
         "XL Client用户反馈\n用户ID: %d\n内容: %s\nIP: %s\n时间: %s",
