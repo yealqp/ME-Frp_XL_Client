@@ -234,16 +234,26 @@ export function useDashboardState() {
   }
 
   async function autoSign() {
-    if (hasAutoSigned.value || !userInfo.value) {
+    if (hasAutoSigned.value) {
       return;
     }
 
-    if (userInfo.value.todaySigned) {
+    // 确保用户信息已加载，获取 todaySigned 状态
+    if (!userInfo.value) {
+      try {
+        await userStore.loadUserInfo();
+      } catch {
+        // 用户信息加载失败，无法判断是否已签到，跳过本次自动签到
+        return;
+      }
+    }
+
+    if (userInfo.value?.todaySigned) {
       hasAutoSigned.value = true;
+      message.warning("今日已签到，跳过自动签到");
       return;
     }
 
-    message.success("正在尝试自动签到", { duration: 8000 });
     hasAutoSigned.value = true;
 
     try {
@@ -253,16 +263,17 @@ export function useDashboardState() {
       const extraTraffic = signData && typeof signData === 'object' && 'extraTraffic' in signData
         ? Number((signData as Record<string, unknown>).extraTraffic) || 0
         : 0;
-      let successMessage = "自动签到成功！";
 
       if (extraTraffic > 0) {
-        successMessage = `自动签到成功，获得 ${extraTraffic} GB 流量！`;
+        message.success(`自动签到成功，获得 ${extraTraffic} GB 流量！`);
+      } else {
+        message.success("自动签到成功");
       }
 
-      message.success(successMessage);
       await userStore.loadUserInfo(true);
     } catch (error) {
       console.error("自动签到过程出错:", error);
+      message.error("自动签到失败，请稍后手动签到");
     }
   }
 
@@ -276,10 +287,12 @@ export function useDashboardState() {
       console.error("Notification error:", err)
     );
 
-    // Load user info (required for auto-sign)
-    await userStore.loadUserInfo();
+    // 加载用户信息（失败不阻塞后续流程，autoSign 内部会自行处理）
+    userStore.loadUserInfo().catch(err =>
+      console.error("加载用户信息失败:", err),
+    );
 
-    // Start auto-sign in background – does not block announcements or notifications
+    // 自动签到后台执行，不阻塞其它初始化流程
     autoSign().catch(err => console.error("Auto sign error:", err));
   }
 
