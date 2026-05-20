@@ -49,10 +49,7 @@ export default defineConfig({
   },
   // Handle font assets properly
   assetsInclude: ['**/*.woff', '**/*.woff2', '**/*.eot', '**/*.ttf', '**/*.otf'],
-  // 优化依赖预构建
-  optimizeDeps: {
-    include: ['@cap.js/widget'],
-  },
+
   build: {
     // 启用代码分割
     rollupOptions: {
@@ -133,7 +130,6 @@ export default defineConfig({
       },
       external: [],
     },
-    // 确保 cap.js 依赖被正确包含
     commonjsOptions: {
       include: [/node_modules/],
     },

@@ -1,13 +1,190 @@
 /**
- * 隐式验证码工具
- * 使用 Cap.js 进行隐式人机验证
+ * 自实现 Cap.js PoW 验证码求解器
+ *
+ * 零外部依赖，零原生库。算法:
+ *   1. FNV-1a PRNG 生成 salt + target
+ *   2. SHA-256(salt + nonce) 碰撞求解 (Web Crypto API)
+ *   3. 提交 nonce 数组换 token
  */
 
-import Cap from "@cap.js/widget";
+const CAP_BASE_URL = "https://captcha.mefrp.com";
+const CAP_SITE_ID = "2bf50e050d";
+
+// ── FNV-1a 伪随机数生成器 ──
+
+function fnv1a(str: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+  return hash >>> 0;
+}
+
+function prng(seed: string, length: number): string {
+  let state = fnv1a(seed);
+  let result = "";
+
+  function next(): number {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return state >>> 0;
+  }
+
+  while (result.length < length) {
+    result += next().toString(16).padStart(8, "0");
+  }
+
+  return result.substring(0, length);
+}
+
+// ── SHA-256 PoW 求解（Web Crypto API） ──
+
+async function sha256Hex(input: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(input);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function solveSingleChallenge(
+  token: string,
+  index: number,
+  saltLength: number,
+  difficulty: number,
+): Promise<number> {
+  const salt = prng(`${token}${index}`, saltLength);
+  const target = prng(`${token}${index}d`, difficulty);
+  let nonce = 0;
+
+  while (true) {
+    const hash = await sha256Hex(salt + nonce);
+
+    if (hash.startsWith(target)) {
+      return nonce;
+    }
+
+    nonce++;
+
+    if (nonce > 50_000_000) {
+      throw new Error(
+        `PoW 求解超限 (idx=${index}, target=${target}, salt=${salt.substring(0, 8)}...)`,
+      );
+    }
+  }
+}
+
+// ── HTTP 交互 ──
+
+interface ChallengeResponse {
+  token: string;
+  count: number;
+  saltLength: number;
+  difficulty: number;
+}
+
+async function fetchCapChallenge(apiEndpoint: string): Promise<ChallengeResponse> {
+  const response = await fetch(`${apiEndpoint}challenge`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+
+  if (!response.ok) {
+    let body = "";
+    try { body = await response.text(); } catch { /* ignore */ }
+    throw new Error(
+      `获取挑战失败: HTTP ${response.status} | 响应体: ${body.substring(0, 1000)}`,
+    );
+  }
+
+  const rawText = await response.text();
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(rawText) as Record<string, unknown>;
+  } catch {
+    throw new Error(
+      `挑战接口返回非 JSON | 响应体: ${rawText.substring(0, 1000)}`,
+    );
+  }
+
+  const root = ((payload.data || payload) ?? {}) as Record<string, unknown>;
+  const token = root.token as string | undefined;
+  const challenge = root.challenge as Record<string, unknown> | undefined;
+
+  if (!token || typeof challenge !== "object") {
+    throw new Error(
+      `挑战接口缺少 token/challenge | 完整响应: ${rawText.substring(0, 1000)}`,
+    );
+  }
+
+  const count = Number(challenge.c);
+  const saltLength = Number(challenge.s);
+  const difficulty = Number(challenge.d);
+
+  if (!Number.isFinite(count) || !Number.isFinite(saltLength) || !Number.isFinite(difficulty)) {
+    throw new Error(
+      `挑战参数解析失败: c=${challenge.c} s=${challenge.s} d=${challenge.d} | ${rawText.substring(0, 1000)}`,
+    );
+  }
+
+  return { token, count, saltLength, difficulty };
+}
+
+async function redeemCapSolution(
+  apiEndpoint: string,
+  token: string,
+  solutions: number[],
+): Promise<string> {
+  const body = JSON.stringify({ token, solutions });
+  const response = await fetch(`${apiEndpoint}redeem`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+
+  let responseBody: string;
+  try {
+    responseBody = await response.text();
+  } catch {
+    responseBody = "<unable to read body>";
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `提交解答失败: HTTP ${response.status} | 响应体: ${(responseBody || "<空>").substring(0, 1000)}`,
+    );
+  }
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(responseBody) as Record<string, unknown>;
+  } catch {
+    throw new Error(
+      `解析响应 JSON 失败 (HTTP 200) | 响应体: ${(responseBody || "<空>").substring(0, 1000)}`,
+    );
+  }
+
+  const root = (payload.data || payload) as Record<string, unknown>;
+
+  if (root.success === false) {
+    throw new Error(`服务端拒绝: ${String(root.message || "unknown")}`);
+  }
+
+  if (!root.token) {
+    throw new Error("服务端未返回 token");
+  }
+
+  return String(root.token);
+}
+
+// ── 公开 API ──
 
 interface CaptchaOptions {
   siteId?: string;
-  workerCount?: number;
   onProgress?: (progress: number) => void;
   onError?: (error: string) => void;
 }
@@ -20,167 +197,65 @@ interface CaptchaInstance {
   isInitialized: () => boolean;
 }
 
-/**
- * 创建验证码实例
- * @param options 配置选项
- * @returns 验证码实例
- */
 export function createCaptcha(options: CaptchaOptions = {}): CaptchaInstance {
-  const {
-    siteId = "2bf50e050d",
-    workerCount = 2,
-    onProgress,
-    onError,
-  } = options;
+  const { siteId = CAP_SITE_ID, onProgress, onError } = options;
+  const endpoint = `${CAP_BASE_URL}/${siteId}/`;
 
-  let capInstance: any = null;
-  let initialized = false;
-  let currentToken: string | null = null;
-  let initPromise: Promise<void> | null = null;
+  let solvedToken: string | null = null;
+  let destroyed = false;
 
-  /**
-   * 初始化 Cap 实例
-   */
-  const init = async (): Promise<void> => {
-    if (initialized) return;
-    
-    // 如果正在初始化，等待初始化完成
-    if (initPromise) {
-      return initPromise;
-    }
-
-    initPromise = (async () => {
-      try {
-        console.log("开始初始化 Cap.js 隐式验证...");
-        
-        // 创建 Cap 实例
-        // @cap.js/widget has no type definitions; cast is needed
-        capInstance = new Cap({
-          apiEndpoint: `https://captcha.mefrp.com/${siteId}/`,
-          workerCount: workerCount,
-        } as any);
-
-        // 监听进度事件
-        if (onProgress) {
-          capInstance.addEventListener("progress", (event: any) => {
-            const progress = event.detail?.progress || 0;
-            console.log(`Cap.js 隐式验证进度: ${progress}%`);
-            onProgress(progress);
-          });
-        }
-
-        // 监听错误事件
-        if (onError) {
-          capInstance.addEventListener("error", (event: any) => {
-            const error = event.detail?.error || "验证失败";
-            console.error("Cap.js 隐式验证错误:", error);
-            onError(error);
-          });
-        }
-
-        initialized = true;
-        console.log("Cap.js 隐式验证实例初始化成功");
-      } catch (error) {
-        console.error("Cap.js 隐式验证初始化失败:", error);
-        const errorMessage = error instanceof Error ? error.message : "验证组件初始化失败";
-        if (onError) {
-          onError(errorMessage);
-        }
-        throw error;
-      }
-    })();
-
-    return initPromise;
-  };
-
-  /**
-   * 触发验证
-   * @returns 验证 token
-   */
   const verify = async (): Promise<string> => {
+    if (solvedToken) return solvedToken;
+    if (destroyed) throw new Error("验证实例已销毁");
+
     try {
-      // 确保已初始化
-      await init();
+      onProgress?.(10);
 
-      if (!initialized || !capInstance) {
-        throw new Error("验证组件未初始化");
+      // 1. 获取挑战
+      const challenge = await fetchCapChallenge(endpoint);
+      onProgress?.(30);
+
+      const { token, count, saltLength, difficulty } = challenge;
+
+      // 2. 逐题求解
+      const solutions: number[] = [];
+      for (let i = 1; i <= count; i++) {
+        const nonce = await solveSingleChallenge(token, i, saltLength, difficulty);
+        solutions.push(nonce);
+        onProgress?.(30 + Math.round((i / count) * 40));
       }
 
-      console.log("开始 Cap.js 隐式验证...");
-
-      // 调用 solve() 方法
-      const result = await capInstance.solve();
-
-      // 处理不同的返回类型
-      let token: string;
-      if (typeof result === "string") {
-        token = result;
-      } else if (result && typeof result === "object" && "token" in result) {
-        token = result.token;
-      } else {
-        console.error("Cap.js 返回了意外的格式:", result);
-        throw new Error("验证失败：返回格式错误");
+      if (solutions.length === 0) {
+        throw new Error("求解器未产生任何 nonce");
       }
 
-      if (!token || typeof token !== "string") {
-        throw new Error("验证失败：token 格式错误");
-      }
+      onProgress?.(70);
 
-      currentToken = token;
-      console.log("Cap.js 隐式验证成功，token 长度:", token.length);
+      // 3. 提交解答
+      const resultToken = await redeemCapSolution(endpoint, token, solutions);
+      onProgress?.(100);
 
-      return token;
+      solvedToken = resultToken;
+      return resultToken;
     } catch (error) {
-      console.error("Cap.js 隐式验证失败:", error);
       const errorMessage = error instanceof Error ? error.message : "验证失败";
-      if (onError) {
-        onError(errorMessage);
-      }
+      onError?.(errorMessage);
       throw error;
     }
   };
 
-  /**
-   * 重置验证状态
-   */
   const reset = (): void => {
-    if (capInstance && typeof capInstance.reset === "function") {
-      capInstance.reset();
-      currentToken = null;
-      console.log("Cap.js 隐式验证已重置");
-    }
+    solvedToken = null;
   };
 
-  /**
-   * 获取当前 token
-   * @returns 当前的验证 token
-   */
-  const getToken = (): string | null => {
-    return currentToken || (capInstance ? capInstance.token : null);
-  };
+  const getToken = (): string | null => solvedToken;
 
-  /**
-   * 销毁实例，释放资源
-   */
   const destroy = (): void => {
-    if (capInstance) {
-      // 直接清空实例引用，让垃圾回收处理
-      // Cap.js 实例会在引用清空后自动清理
-      capInstance = null;
-      initialized = false;
-      currentToken = null;
-      initPromise = null;
-      console.log("Cap.js 隐式验证实例已销毁");
-    }
+    destroyed = true;
+    solvedToken = null;
   };
 
-  /**
-   * 检查是否已初始化
-   * @returns 是否已初始化
-   */
-  const isInitialized = (): boolean => {
-    return initialized;
-  };
+  const isInitialized = (): boolean => !destroyed;
 
   return {
     verify,
