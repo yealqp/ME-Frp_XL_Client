@@ -13,13 +13,7 @@
       <n-collapse default-expanded-names="mainland">
         <n-collapse-item title="加载中..." name="mainland">
           <div class="nodes-grid">
-            <n-card
-              v-for="i in 6"
-              :key="i"
-              :bordered="true"
-              size="small"
-              class="node-card"
-            >
+            <n-card v-for="i in 6" :key="i" :bordered="true" size="small" class="node-card">
               <template #header>
                 <div class="node-header">
                   <n-skeleton text width="60" />
@@ -35,8 +29,19 @@
       </n-collapse>
     </div>
 
-    <!-- 节点列表 -->
-    <div v-else class="nodes-container">
+    <!-- 地图模式 -->
+    <NodeMap
+      v-if="!loading && mapMode"
+      :nodes="activeNodes"
+      :node-status="nodeStatus"
+      :selected-node-id="selectedNode?.nodeId ?? null"
+      :loading="loading"
+      :user-group="userGroup"
+      @select-node="handleNodeSelect"
+    />
+
+    <!-- 列表模式 -->
+    <div v-else-if="!loading && !mapMode" class="nodes-container">
       <n-collapse default-expanded-names="mainland">
         <n-collapse-item
           v-for="(regionNodes, regionKey) in groupedNodes"
@@ -68,88 +73,58 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { NCollapse, NCollapseItem, NTag, NAlert, NButton, NCard, NSkeleton } from 'naive-ui';
-import NodeCard from './NodeCard.vue';
-import type { Node, NodeStatus, GroupedNodes } from './types';
+import { computed } from "vue";
+import { NCollapse, NCollapseItem, NTag, NAlert, NButton, NCard, NSkeleton } from "naive-ui";
+import NodeCard from "./NodeCard.vue";
+import NodeMap from "./NodeMap.vue";
+import type { Node, NodeStatus, GroupedNodes } from "./types";
 
-/**
- * NodeSelector 组件
- * 
- * 节点选择器组件，负责展示节点列表和处理节点选择逻辑
- * 
- * @component
- */
-
-/**
- * 组件 Props 接口
- */
 interface NodeSelectorProps {
-  /** 节点数组 */
   nodes: Node[];
-  /** 节点状态数组 */
   nodeStatus: NodeStatus[];
-  /** 当前选中的节点 */
   selectedNode: Node | null;
-  /** 用户组信息 */
   userGroup: string;
-  /** 筛选函数 */
   filterFn: (node: Node) => boolean;
-  /** 加载状态 */
   loading: boolean;
-  /** 错误信息 */
   error: string;
+  /** 地图模式 */
+  mapMode: boolean;
 }
 
-/**
- * 组件 Emits 接口
- */
 interface NodeSelectorEmits {
-  /** 节点被选中事件 */
-  (e: 'select-node', node: Node): void;
-  /** 请求重新加载事件 */
-  (e: 'reload'): void;
+  (e: "select-node", node: Node): void;
+  (e: "reload"): void;
 }
 
 const props = defineProps<NodeSelectorProps>();
 const emit = defineEmits<NodeSelectorEmits>();
 
-/**
- * 将节点按地区分组
- * 
- * 根据 API 返回的 region 字段进行分组：
- * - cn: 中国大陆地区
- * - cnos: 港澳台地区
- * - oversea: 海外
- * 
- * 每个分组内的节点按照节点 ID 升序排列
- */
+// Nodes passed to the map (filtered by parent's filterFn)
+const activeNodes = computed(() => props.nodes.filter(props.filterFn));
+
 function groupNodesByRegion(nodes: Node[]): GroupedNodes {
   const mainland: Node[] = [];
   const hkMacaoTaiwan: Node[] = [];
   const overseas: Node[] = [];
 
-  nodes.forEach(node => {
-    const region = node.region.toLowerCase();
-
+  nodes.forEach((node) => {
+    const region = (node.region || "").toLowerCase();
     switch (region) {
-      case 'cn':
+      case "cn":
         mainland.push(node);
         break;
-      case 'cnos':
+      case "cnos":
         hkMacaoTaiwan.push(node);
         break;
-      case 'oversea':
+      case "oversea":
         overseas.push(node);
         break;
       default:
-        // 未知地区归类到海外
         overseas.push(node);
         break;
     }
   });
 
-  // 按节点 ID 升序排序
   const sortByNodeId = (a: Node, b: Node) => a.nodeId - b.nodeId;
   mainland.sort(sortByNodeId);
   hkMacaoTaiwan.sort(sortByNodeId);
@@ -158,40 +133,26 @@ function groupNodesByRegion(nodes: Node[]): GroupedNodes {
   return { mainland, hkMacaoTaiwan, overseas };
 }
 
-/**
- * 计算分组后的节点
- * 先应用筛选函数，再按地区分组
- */
 const groupedNodes = computed<GroupedNodes>(() => {
-  const filteredNodes = props.nodes.filter(props.filterFn);
-  return groupNodesByRegion(filteredNodes);
+  return groupNodesByRegion(activeNodes.value);
 });
 
-/**
- * 获取节点负载百分比
- */
 function getNodeLoadPercent(nodeId: number): number {
-  const status = props.nodeStatus.find(s => s.nodeId === nodeId);
+  const status = props.nodeStatus.find((s) => s.nodeId === nodeId);
   return status?.loadPercent ?? 0;
 }
 
-/**
- * 获取地区标题
- */
 function getRegionTitle(regionKey: string): string {
   const titles: Record<string, string> = {
-    mainland: '中国大陆',
-    hkMacaoTaiwan: '中国港澳台地区',
-    overseas: '海外'
+    mainland: "中国大陆",
+    hkMacaoTaiwan: "中国港澳台地区",
+    overseas: "海外",
   };
   return titles[regionKey] || regionKey;
 }
 
-/**
- * 处理节点选择事件
- */
 function handleNodeSelect(node: Node) {
-  emit('select-node', node);
+  emit("select-node", node);
 }
 </script>
 
@@ -219,7 +180,6 @@ function handleNodeSelect(node: Node) {
   padding: 16px 0;
 }
 
-/* 折叠卡片大容器透明背景 */
 .nodes-container :deep(.n-collapse-item) {
   background: transparent !important;
 }

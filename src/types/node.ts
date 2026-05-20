@@ -18,6 +18,12 @@ export interface Node {
   totalTrafficOut: number;
   upTime: number;
   version: string;
+  /** 节点纬度（地图模式使用） */
+  latitude?: number | null;
+  /** 节点经度（地图模式使用） */
+  longitude?: number | null;
+  /** 负载百分比 */
+  loadPercent?: number;
 }
 
 export interface NodeStatusData {

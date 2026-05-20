@@ -58,7 +58,7 @@
       <n-tag type="error" size="small" :bordered="true">负载过高</n-tag>
     </div>
     <div v-else-if="showVipStyle()" class="vip-indicator">
-      <n-tag type="warning" size="small" :bordered="true">VIP专享</n-tag>
+      <n-tag type="warning" size="small" :bordered="true">VIP</n-tag>
     </div>
   </n-card>
 </template>
@@ -154,49 +154,76 @@ function handleClick() {
 </script>
 
 <style scoped>
+/* ====================
+   ① 未选中 + 未悬停（默认态）
+   ==================== */
 .node-card {
   background: var(--app-card-color);
   border: 1px solid var(--app-border-color);
-  transition: all 0.3s ease;
-  border-radius: 0px;
+  transition: all 0.3s;
+  border-radius: 0;
   width: 100%;
-  position: relative;
 }
 
 .node-card--selectable {
   cursor: pointer;
 }
 
-.node-card--selectable:hover {
+/* ====================
+   ② 未选中 + 悬停
+   ==================== */
+.node-card--selectable:not(.node-card--selected):hover {
   transform: translateY(-2px);
-  box-shadow: var(--app-box-shadow-1);
-  background-color: var(--app-card-color);
-  border-color: var(--app-primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background-color: rgba(33, 150, 243, 0.08) !important;
 }
 
-.node-card--vip.node-card--selectable:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--app-box-shadow-2);
-  background-color: var(--app-card-color);
-  border-color: #f2c94c;
-}
-
+/* ====================
+   ③ 选中 + 未悬停
+   ==================== */
 .node-card--selected {
-  background-color: var(--app-card-color);
-  border-color: var(--app-primary-color);
-  box-shadow: 0 0 0 2px var(--app-primary-color-hover);
+  background-color: rgba(33, 150, 243, 0.08) !important;
+  box-shadow: 0 6px 14px rgba(33, 150, 243, 0.18), inset 0 1px 0 rgba(33, 150, 243, 0.16);
+  border-color: var(--app-border-color) !important;
 }
 
+/* ====================
+   ④ 选中 + 悬停
+   ==================== */
+.node-card--selected:hover {
+  transform: translateY(-2px);
+  background-color: rgba(33, 150, 243, 0.12) !important;
+  box-shadow: 0 8px 16px rgba(33, 150, 243, 0.22), inset 0 1px 0 rgba(33, 150, 243, 0.18);
+}
+
+/* ── VIP 节点悬浮：金色边框提示 ── */
+.node-card--vip.node-card--selectable:hover {
+  border-color: #f2c94c !important;
+}
+
+/* ====================
+   禁用状态 (不可选)
+   ==================== */
 .node-card--disabled {
   cursor: not-allowed;
-  opacity: 0.7;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04); /* 极弱阴影 */
 }
 
 .node-card--disabled:hover {
-  background-color: rgba(239, 68, 68, 0.05);
-  border-color: rgba(239, 68, 68, 0.3);
+  transform: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+  background-color: var(--app-card-color) !important;
 }
 
+.node-card--disabled :deep(.n-card-header__main),
+.node-card--disabled :deep(.n-thing__header),
+.node-card--disabled :deep(.n-thing__description) {
+  color: rgba(128, 128, 128, 0.7) !important;
+}
+
+/* --------------------
+   内部元素排版与细节
+   -------------------- */
 .node-header {
   display: flex;
   align-items: center;
@@ -272,6 +299,7 @@ function handleClick() {
   bottom: 0;
   background-color: rgba(128, 128, 128, 0.6);
   z-index: 1;
+  pointer-events: none;
 }
 
 .vip-overlay {

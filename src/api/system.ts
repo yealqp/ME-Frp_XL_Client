@@ -4,7 +4,7 @@
  * System-related API calls to api.mefrp.com (NOT xlc.mefrp.yealqp.cn or other external APIs).
  */
 
-import { apiGet, apiPost } from "./client";
+import { apiGet, apiPost, API_BASE_URL } from "./client";
 import type { ApiResponse } from "@/types/api";
 
 export interface OperationLogResponse {
@@ -75,4 +75,17 @@ export async function getStatistics(
   token?: string,
 ): Promise<ApiResponse<StatisticsResponse>> {
   return apiGet<StatisticsResponse>("/api/public/statistics", token);
+}
+
+/** GeoIP 响应（经纬度） */
+export interface GeoIpData {
+  latitude: number;
+  longitude: number;
+}
+
+/** 获取 IP 地理位置（免费 GeoIP 兜底方案） */
+export async function getGeoIp(): Promise<GeoIpData> {
+  const res = await fetch(`${API_BASE_URL}/geoip`);
+  if (!res.ok) throw new Error(`GeoIP 请求失败: ${res.status}`);
+  return res.json();
 }

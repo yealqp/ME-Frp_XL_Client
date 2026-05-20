@@ -1287,6 +1287,11 @@ const submitFeedback = async () => {
   opacity: 1;
 }
 
+.changelog-modal-content {
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
 .changelog-version:last-child {
   margin-bottom: 0;
 }

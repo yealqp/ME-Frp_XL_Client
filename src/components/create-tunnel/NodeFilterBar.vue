@@ -1,114 +1,155 @@
 <template>
-  <n-card class="filter-card" :bordered="true">
-    <div class="filter-content">
+  <div class="filter-bar">
+    <!-- 左侧：搜索 + 筛选 -->
+    <div class="filter-bar-left">
       <n-input
         :value="searchKeyword"
         @update:value="$emit('update:searchKeyword', $event)"
         placeholder="搜索..."
         class="search-input"
         clearable
+        size="small"
       />
+      <div class="filter-divider" />
       <div class="checkbox-group">
         <n-checkbox
           :checked="showWebsiteNodes"
           @update:checked="$emit('update:showWebsiteNodes', $event)"
+          size="small"
         >
           可建站
         </n-checkbox>
         <n-checkbox
           :checked="showHighTrafficNodes"
           @update:checked="$emit('update:showHighTrafficNodes', $event)"
+          size="small"
         >
           大流量
         </n-checkbox>
         <n-checkbox
           :checked="showUnexpiredNodes"
           @update:checked="$emit('update:showUnexpiredNodes', $event)"
+          size="small"
         >
           未过载
         </n-checkbox>
         <n-checkbox
           :checked="showFreeNodes"
           @update:checked="$emit('update:showFreeNodes', $event)"
+          size="small"
         >
           非VIP
         </n-checkbox>
       </div>
     </div>
-  </n-card>
+
+    <!-- 右侧：地图模式 + 下一步 -->
+    <div class="filter-bar-right">
+      <div class="map-mode-toggle">
+        <n-switch
+          :value="mapMode"
+          @update:value="$emit('update:mapMode', $event)"
+          size="small"
+        />
+        <span class="toggle-label">地图模式</span>
+      </div>
+      <div class="filter-divider" />
+      <n-button
+        type="primary"
+        size="small"
+        :disabled="!nextEnabled"
+        @click="$emit('next-step')"
+      >
+        下一步
+      </n-button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-/**
- * NodeFilterBar 组件
- * 
- * 节点筛选栏组件,提供搜索和筛选功能
- * 
- * @component
- */
-
-/**
- * 组件 Props 接口
- */
 interface NodeFilterBarProps {
-  /** 搜索关键词 */
   searchKeyword: string;
-  /** 是否只显示可建站节点 */
   showWebsiteNodes: boolean;
-  /** 是否只显示大流量节点 */
   showHighTrafficNodes: boolean;
-  /** 是否只显示未过载节点 */
   showUnexpiredNodes: boolean;
-  /** 是否只显示非VIP节点 */
   showFreeNodes: boolean;
+  /** 地图模式开关状态 */
+  mapMode: boolean;
+  /** 下一步按钮是否可用（不可用时灰色禁用） */
+  nextEnabled: boolean;
 }
 
-/**
- * 组件 Emits 接口
- */
 interface NodeFilterBarEmits {
-  /** 搜索关键词更新事件 */
-  (e: 'update:searchKeyword', value: string): void;
-  /** 可建站筛选更新事件 */
-  (e: 'update:showWebsiteNodes', value: boolean): void;
-  /** 大流量筛选更新事件 */
-  (e: 'update:showHighTrafficNodes', value: boolean): void;
-  /** 未过载筛选更新事件 */
-  (e: 'update:showUnexpiredNodes', value: boolean): void;
-  /** 非VIP筛选更新事件 */
-  (e: 'update:showFreeNodes', value: boolean): void;
+  (e: "update:searchKeyword", value: string): void;
+  (e: "update:showWebsiteNodes", value: boolean): void;
+  (e: "update:showHighTrafficNodes", value: boolean): void;
+  (e: "update:showUnexpiredNodes", value: boolean): void;
+  (e: "update:showFreeNodes", value: boolean): void;
+  (e: "update:mapMode", value: boolean): void;
+  (e: "next-step"): void;
 }
 
-// 定义 Props
-const props = defineProps<NodeFilterBarProps>();
-
-// 定义 Emits
-const emit = defineEmits<NodeFilterBarEmits>();
+defineProps<NodeFilterBarProps>();
+defineEmits<NodeFilterBarEmits>();
 </script>
 
 <style scoped>
-.filter-card {
-  background: var(--app-card-color);
-  border: 1px solid var(--app-border-color);
-  margin-bottom: 20px;
-  border-radius: 0px;
-}
-
-.filter-content {
+.filter-bar {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  border: 1px solid var(--app-border-color, rgba(128, 128, 128, 0.2));
+  border-radius: 6px;
+  background: var(--app-card-color);
   flex-wrap: wrap;
 }
 
-.search-input {
-  min-width: 200px;
+.filter-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   flex: 1;
+}
+
+.filter-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  min-width: 160px;
+  max-width: 240px;
+}
+
+.filter-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--app-border-color, rgba(128, 128, 128, 0.25));
+  flex-shrink: 0;
 }
 
 .checkbox-group {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.map-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--app-text-color-2);
 }
 </style>

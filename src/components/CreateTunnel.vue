@@ -5,13 +5,16 @@
       <div v-if="currentStep === 1" key="step1">
         <h2 class="page-title">选择节点</h2>
 
-        <!-- 节点筛选栏 -->
+        <!-- 搜索筛选栏 + 工具栏 -->
         <NodeFilterBar
           v-model:searchKeyword="searchKeyword"
           v-model:showWebsiteNodes="showWebsiteNodes"
           v-model:showHighTrafficNodes="showHighTrafficNodes"
           v-model:showUnexpiredNodes="showUnexpiredNodes"
           v-model:showFreeNodes="showFreeNodes"
+          v-model:mapMode="mapMode"
+          :nextEnabled="!!selectedNode"
+          @next-step="nextStep"
         />
 
         <!-- 节点选择器 -->
@@ -23,16 +26,10 @@
           :filterFn="shouldShowNode"
           :loading="loading"
           :error="error"
+          :mapMode="mapMode"
           @select-node="selectNode"
           @reload="reloadData"
         />
-
-        <!-- 下一步按钮 -->
-        <div v-if="selectedNode" class="next-button-container">
-          <n-button type="primary" size="large" @click="nextStep"
-            >下一步</n-button
-          >
-        </div>
       </div>
 
       <!-- 步骤 2: 配置隧道 -->
@@ -85,6 +82,9 @@ const showWebsiteNodes = ref(false);
 const showHighTrafficNodes = ref(false);
 const showUnexpiredNodes = ref(false);
 const showFreeNodes = ref(false);
+
+// 地图模式
+const mapMode = ref(false);
 
 // 表单数据
 const tunnelForm = ref<TunnelForm>({
@@ -233,13 +233,13 @@ const shouldShowNode = (node: Node): boolean => {
   return true;
 };
 
-// 节点选择处理
+// 节点选择处理（列表模式仅选中，地图模式自动进入配置页）
 function selectNode(node: Node) {
   if (!isNodeSelectable(node)) return;
-  if (selectedNode.value?.nodeId === node.nodeId) {
-    selectedNode.value = null;
-  } else {
-    selectedNode.value = node;
+  selectedNode.value = node;
+  // 地图模式下选择节点后自动进入下一步
+  if (mapMode.value) {
+    nextStep();
   }
 }
 
@@ -440,32 +440,9 @@ onMounted(async () => {
   color: var(--app-text-color-2);
 }
 
-.next-button-container {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  z-index: 1000;
-  animation: slideInUp 0.3s ease-out;
-}
-
-@keyframes slideInUp {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
 @media (max-width: 768px) {
   .create-tunnel {
     padding: 10px;
-  }
-  .next-button-container {
-    bottom: 20px;
-    right: 20px;
   }
 }
 </style>
