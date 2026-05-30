@@ -97,7 +97,12 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { init as initE, registerMap as registerEChartsMap } from "echarts";
+import { init as initE, registerMap as registerEChartsMap, use } from "echarts/core";
+import { ScatterChart } from "echarts/charts";
+import { GeoComponent, TooltipComponent } from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+
+use([ScatterChart, GeoComponent, TooltipComponent, CanvasRenderer]);
 import { feature as topoFeature, merge } from "topojson-client";
 import { useThemeVars, useMessage } from "naive-ui";
 import type { Node, NodeStatus } from "@/types/node";
