@@ -175,7 +175,7 @@ export const useThemeStore = defineStore("theme", () => {
   }
 
   function applyResolvedTheme(): void {
-    applyTheme(resolvedActiveThemeConfig.value);
+    applyTheme(resolvedActiveThemeConfig.value, activeTheme.value);
     void setWindowTheme(activeTheme.value);
   }
 

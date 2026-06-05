@@ -32,8 +32,8 @@
   --md-pre-color: #d4d4d4;
 }
 
-/* 暗色模式覆盖 */
-body[style*="--app-bg-color: #101014"] .markdown-content {
+/* 暗色模式覆盖 — 通过 html[data-theme] 属性（由 themeApplier 设置） */
+html[data-theme="dark"] .markdown-content {
   --md-primary-color: #4da8f5;
   --md-primary-hover: #6bb8f7;
   --md-code-bg: rgba(255, 255, 255, 0.08);

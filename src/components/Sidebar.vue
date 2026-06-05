@@ -11,7 +11,6 @@
     @collapse="handleCollapse"
     @expand="handleExpand"
   >
-    <n-config-provider :theme="themeStore.naiveTheme">
       <div class="sidebar-header" @click="handleLogoClick">
         <h2 class="app-title">
           <img 
@@ -27,6 +26,7 @@
         <n-menu
           :options="menuOptions"
           :value="activeNav"
+          inverted
           @update:value="handleMenuSelect"
           :collapsed="sidebarCollapsed"
           :collapsed-width="64"
@@ -57,9 +57,8 @@
               <div class="ad-subtitle">推荐服务商 价格低廉</div>
             </div>
           </div>
-        </a>
-      </div>
-    </n-config-provider>
+      </a>
+    </div>
   </n-layout-sider>
 </template>
 
@@ -72,7 +71,6 @@ import type { MenuOption } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
 import { useUIStore } from "../stores/ui";
-import { useThemeStore } from "../stores/theme";
 import {
   Home,
   PlusCircle,
@@ -93,9 +91,6 @@ const dialog = useDialog();
 // UI Store
 const uiStore = useUIStore();
 const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
-
-// Theme Store
-const themeStore = useThemeStore();
 
 // 处理收缩
 const handleCollapse = async () => {
@@ -473,23 +468,22 @@ function handleMenuSelect(key: string) {
   height: 44px;
 }
 
-/* 选中状态 - 持久蓝色背景 */
+/* 选中状态 - 与 hover 背景一致，文字为主题色 */
 :deep(.n-menu .n-menu-item--selected) {
-  background-color: var(--app-primary-color) !important;
-  color: white !important;
+  background-color: color-mix(in srgb, var(--app-primary-color) 10%, transparent) !important;
 }
 
 :deep(.n-menu .n-menu-item--selected .n-menu-item-content-header) {
-  color: white !important;
+  color: var(--app-primary-color) !important;
 }
 
 :deep(.n-menu .n-menu-item--selected .n-icon) {
-  color: white !important;
+  color: var(--app-primary-color) !important;
 }
 
-/* hover 状态 - 浅蓝色背景 */
+/* hover 状态 */
 :deep(.n-menu .n-menu-item:hover:not(.n-menu-item--selected)) {
-  background-color: color-mix(in srgb, var(--app-primary-color) 10%, transparent) !important;
+  background-color: color-mix(in srgb, var(--app-primary-color) 6%, transparent) !important;
 }
 
 /* 菜单项内容 - 使用相对定位作为参考点 */

@@ -7,6 +7,7 @@ import {
   NDialogProvider, 
   NSpin, 
   NConfigProvider,
+  NGlobalStyle,
   NLoadingBarProvider,
   NMessageProvider,
   NNotificationProvider,
@@ -31,6 +32,7 @@ import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import { useBackgroundImage } from "@/composables/useBackgroundImage";
 import { useAutoStartTunnels } from "@/composables/useAutoStartTunnels";
 import { useAutoUpdate } from "@/composables/useAutoUpdate";
+import { hljs } from "@/utils/markdownParser";
 
 interface TunnelSummary {
   proxyId: number;
@@ -60,7 +62,7 @@ const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRef
 const shellReady = ref(false);
 const hasStoredSession = ref(false);
 
-const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, withOpacity, clampOpacity } = useBackgroundImage();
+const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, clampOpacity } = useBackgroundImage();
 const { startAutoStartTunnels } = useAutoStartTunnels();
 const { checkForUpdatesOnStart } = useAutoUpdate();
 
@@ -69,7 +71,6 @@ const appAppearanceStyle = computed(() => {
   const textShadowIntensity = clampOpacity(settings.value.shadowIntensity);
   const backgroundBlur = settings.value.backgroundBlur ?? 0;
   const fontWeight = settings.value.fontWeight ?? 400;
-  const activeTheme = themeStore.resolvedActiveThemeConfig.common;
 
   return {
     "--app-custom-bg-image": backgroundImageUrl.value ? `url("${backgroundImageUrl.value}")` : "none",
@@ -78,13 +79,6 @@ const appAppearanceStyle = computed(() => {
     "--app-custom-bg-filter": backgroundBlur > 0 ? `blur(${backgroundBlur}px)` : "none",
     "--app-sidebar-opacity": String((settings.value.sidebarOpacity ?? 100) / 100),
     "--app-content-opacity": String(contentOpacity),
-    "--app-content-bg-color": withOpacity(activeTheme.bodyColor, contentOpacity),
-    "--app-content-card-color": withOpacity(activeTheme.cardColor, contentOpacity),
-    "--app-content-modal-color": withOpacity(activeTheme.modalColor, contentOpacity),
-    "--app-content-popover-color": withOpacity(activeTheme.popoverColor, contentOpacity),
-    "--app-content-input-color": withOpacity(activeTheme.inputColor, contentOpacity),
-    "--app-content-input-disabled-color": withOpacity(activeTheme.inputColorDisabled, contentOpacity),
-    "--app-content-table-header-color": withOpacity(activeTheme.tableHeaderColor, contentOpacity),
     "--app-font-weight-base": String(fontWeight),
     "--app-font-weight-medium": String(Math.min(800, fontWeight + 100)),
     "--app-font-weight-strong": String(Math.min(900, fontWeight + 200)),
@@ -348,6 +342,7 @@ watch(
     <n-config-provider
       :theme="themeStore.naiveTheme"
       :theme-overrides="themeStore.naiveThemeOverrides"
+      :hljs="hljs"
     >
       <n-loading-bar-provider ref="loadingBar">
         <n-message-provider ref="messageProvider" :container-style="{ zIndex: 100000 }">
@@ -416,6 +411,7 @@ watch(
           </n-dialog-provider>
         </n-message-provider>
       </n-loading-bar-provider>
+      <n-global-style />
     </n-config-provider>
   </div>
 </template>
@@ -437,13 +433,9 @@ body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--app-text-color, #333333);
-  background-color: var(--app-bg-color, #f5f5f5);
 }
 
 body {
-  color: var(--app-text-color, #333333);
-  background-color: var(--app-bg-color, #f5f5f5);
   font-weight: var(--app-font-weight-base, 400);
 }
 
@@ -518,15 +510,13 @@ body {
   position: relative;
   background: transparent !important;
   overflow: hidden;
-  --app-bg-color: var(--app-content-bg-color);
-  --app-card-color: var(--app-content-card-color);
 }
 
 .content-layout::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--app-content-bg-color, var(--app-bg-color));
+  opacity: var(--app-content-opacity, 1);
   pointer-events: none;
   z-index: 0;
 }
@@ -554,158 +544,6 @@ body {
 .content-layout .n-layout,
 .content-layout .n-layout-content {
   background: transparent !important;
-}
-
-.content-layout .n-card,
-.content-layout .n-alert,
-.content-layout .n-collapse-item,
-.content-layout .n-data-table,
-.content-layout .n-tabs-nav--segment-type,
-.content-layout .n-input,
-.content-layout .n-base-selection,
-.content-layout .n-input-number {
-  --n-color: var(--app-content-card-color) !important;
-}
-
-.content-layout .n-card,
-.content-layout .n-alert,
-.content-layout .n-collapse-item {
-  background-color: var(--app-content-card-color) !important;
-}
-
-.content-layout .n-card > .n-card-header,
-.content-layout .n-card > .n-card__content,
-.content-layout .n-card > .n-card__footer,
-.content-layout .n-card > .n-card__action {
-  background-color: transparent !important;
-}
-
-.content-layout .n-input,
-.content-layout .n-input-number,
-.content-layout .n-base-selection {
-  --n-color: var(--app-content-input-color) !important;
-  --n-color-disabled: var(--app-content-input-disabled-color) !important;
-}
-
-.content-layout .n-input .n-input-wrapper,
-.content-layout .n-input-number .n-input-wrapper,
-.content-layout .n-base-selection .n-base-selection-label {
-  background-color: var(--app-content-input-color) !important;
-}
-
-.content-layout .n-input.n-input--disabled .n-input-wrapper,
-.content-layout .n-input-number.n-input-number--disabled .n-input-wrapper,
-.content-layout .n-base-selection.n-base-selection--disabled .n-base-selection-label {
-  background-color: var(--app-content-input-disabled-color) !important;
-}
-
-.content-layout .n-data-table-th {
-  background-color: var(--app-content-table-header-color) !important;
-}
-
-.content-layout .n-data-table thead,
-.content-layout .n-data-table thead tr,
-.content-layout .n-data-table thead th,
-.content-layout .n-data-table-base-table-header,
-.content-layout .n-data-table-base-table-header tr,
-.content-layout .n-data-table-base-table-header th,
-.content-layout .n-data-table-th__title,
-.content-layout .n-data-table-sorter,
-.content-layout .n-data-table-filter {
-  background-color: var(--app-content-table-header-color) !important;
-  color: var(--app-text-color) !important;
-}
-
-.content-layout .n-data-table,
-.content-layout .n-data-table-wrapper,
-.content-layout .n-data-table-base-table,
-.content-layout .n-data-table-table,
-.content-layout .n-data-table-tr,
-.content-layout .n-data-table-td,
-.content-layout .n-data-table-empty,
-.content-layout .n-data-table-empty__content,
-.content-layout .n-empty,
-.content-layout .n-pagination {
-  background-color: var(--app-content-card-color) !important;
-}
-
-.content-layout .n-data-table-td,
-.content-layout .n-data-table-empty,
-.content-layout .n-empty,
-.content-layout .n-pagination,
-.content-layout .n-data-table .n-button,
-.content-layout .n-data-table .n-tag {
-  color: var(--app-text-color) !important;
-}
-
-.content-layout .n-data-table .n-base-selection,
-.content-layout .n-data-table .n-base-selection-label,
-.content-layout .n-data-table .n-input,
-.content-layout .n-data-table .n-input-wrapper {
-  background-color: var(--app-content-input-color) !important;
-}
-
-.content-layout .n-descriptions,
-.content-layout .n-descriptions-table,
-.content-layout .n-descriptions-table-header,
-.content-layout .n-descriptions-table-content,
-.content-layout .n-descriptions-table-content__label,
-.content-layout .n-descriptions-table-content__content,
-.content-layout .n-descriptions-table-header__title,
-.content-layout .n-descriptions-table-wrapper {
-  background-color: var(--app-content-card-color) !important;
-}
-
-.content-layout .n-descriptions-table-content__label,
-.content-layout .n-descriptions-table-content__content,
-.content-layout .n-descriptions-table-header__title {
-  color: var(--app-text-color) !important;
-}
-
-.content-layout .n-tabs-content,
-.content-layout .n-tab-pane,
-.content-layout .n-tabs-pane-wrapper,
-.content-layout .n-tabs-wrapper {
-  background-color: transparent !important;
-}
-
-.content-layout .n-tabs .n-card,
-.content-layout .n-tab-pane .n-card,
-.content-layout .n-tabs-pane-wrapper .n-card {
-  background-color: var(--app-content-card-color) !important;
-}
-
-.n-modal,
-.n-dialog,
-.n-drawer,
-.n-drawer-content,
-.n-popover,
-.n-dropdown-menu,
-.n-select-menu {
-  --n-color: var(--app-content-modal-color) !important;
-  background-color: var(--app-content-modal-color) !important;
-}
-
-.n-popover,
-.n-dropdown-menu,
-.n-select-menu {
-  --n-color: var(--app-content-popover-color) !important;
-  background-color: var(--app-content-popover-color) !important;
-}
-
-.n-tooltip,
-.n-popover,
-.n-dropdown-menu,
-.n-select-menu,
-.n-popover-body,
-.n-tooltip__content {
-  color: var(--app-text-color) !important;
-}
-
-.n-modal .n-card,
-.n-dialog .n-card,
-.n-drawer .n-card {
-  --n-color: var(--app-content-modal-color) !important;
 }
 
 .route-loading {

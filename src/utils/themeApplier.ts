@@ -1,173 +1,161 @@
 /**
- * Theme Applier Utility Module
- * 
- * 负责将主题应用到 UI 的工具模块
- * 包括 CSS Variables 应用、Naive UI 主题对象生成和过渡动画控制
- * 
- * Requirements: 2.3, 7.1, 7.2, 7.3, 7.4
+ * Theme Applier — Naive UI 原生主题系统
+ *
+ * 通过 NConfigProvider theme + themeOverrides 实现主题，CSS 变量仅保留
+ * 非 Naive UI 组件所需的颜色（lucide 图标、自定义元素、日志渲染等）。
  */
 
-import { darkTheme, type GlobalTheme, type GlobalThemeOverrides } from 'naive-ui';
-import type { Theme, ThemeConfig } from '@/types/theme';
+import { darkTheme, type GlobalTheme, type GlobalThemeOverrides } from "naive-ui";
+import type { Theme, ThemeConfig } from "@/types/theme";
 
-/**
- * 检查浏览器是否支持 CSS Variables
- * @returns 是否支持 CSS Variables
- */
-function supportsCSSVariables(): boolean {
-  if (typeof window === 'undefined' || typeof CSS === 'undefined') {
-    return false;
-  }
-  
-  try {
-    return CSS.supports('color', 'var(--test)');
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 应用主题到 CSS Variables
- * 
- * 将主题配置映射到 CSS 自定义属性，应用到文档根元素
- * 如果浏览器不支持 CSS Variables，会记录警告并回退到 Naive UI 主题系统
- * 
- * @param theme - 要应用的主题 ('light' | 'dark')
- * 
- * Requirements: 2.3, 7.1, 7.2, 7.3
- * 
- * @example
- * ```ts
- * applyCSSVariables('light'); // 应用浅色主题
- * applyCSSVariables('dark');  // 应用深色主题
- * ```
- */
-export function applyCSSVariables(config: ThemeConfig): void {
-  // 检查浏览器支持
-  if (!supportsCSSVariables()) {
-    console.warn('浏览器不支持 CSS Variables，使用 Naive UI 主题');
-    return;
-  }
-  
-  try {
-    const root = document.documentElement;
-    
-    // 将主题配置映射到 CSS Variables
-    // 使用 --theme- 前缀以避免命名冲突
-    Object.entries(config.common).forEach(([key, value]) => {
-      // 将驼峰命名转换为短横线命名
-      // 例如: bodyColor -> body-color
-      const cssVarName = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-      root.style.setProperty(`--theme-${cssVarName}`, value);
-    });
-    
-    // 同时设置应用级别的 CSS Variables（使用 --app- 前缀）
-    // 这些变量可以在自定义组件中使用
-    root.style.setProperty('--app-bg-color', config.common.bodyColor);
-    root.style.setProperty('--app-card-color', config.common.cardColor);
-    root.style.setProperty('--app-text-color', config.common.textColorBase);
-    root.style.setProperty('--app-text-color-1', config.common.textColor1);
-    root.style.setProperty('--app-text-color-2', config.common.textColor2);
-    root.style.setProperty('--app-text-color-3', config.common.textColor3);
-    root.style.setProperty('--app-border-color', config.common.borderColor);
-    root.style.setProperty('--app-divider-color', config.common.dividerColor);
-    root.style.setProperty('--app-primary-color', config.common.primaryColor);
-    root.style.setProperty('--app-primary-color-hover', config.common.primaryColorHover);
-    root.style.setProperty('--app-primary-color-pressed', config.common.primaryColorPressed);
-    root.style.setProperty('--app-info-color', config.common.infoColor);
-    root.style.setProperty('--app-success-color', config.common.successColor);
-    root.style.setProperty('--app-warning-color', config.common.warningColor);
-    root.style.setProperty('--app-error-color', config.common.errorColor);
-    root.style.setProperty('--app-log-timestamp-color', config.common.textColor3);
-    root.style.setProperty('--app-log-info-color', config.common.infoColor);
-    root.style.setProperty('--app-log-warning-color', config.common.warningColor);
-    root.style.setProperty('--app-log-error-color', config.common.errorColor);
-    root.style.setProperty('--app-log-path-color', config.common.successColor);
-    root.style.setProperty('--app-log-highlight-color', config.common.errorColor);
-    root.style.setProperty('--app-box-shadow-1', config.common.boxShadow1);
-    root.style.setProperty('--app-box-shadow-2', config.common.boxShadow2);
-    root.style.setProperty('--app-box-shadow-3', config.common.boxShadow3);
-    
-    // 登录按钮和广告横幅使用当前主题的主色调
-    root.style.setProperty('--login-btn-bg', config.common.primaryColor);
-    root.style.setProperty('--login-btn-bg-hover', config.common.primaryColorHover);
-    root.style.setProperty('--login-btn-bg-pressed', config.common.primaryColorPressed);
-    root.style.setProperty('--ad-banner-bg', config.common.primaryColor);
-    root.style.setProperty('--ad-banner-bg-hover', config.common.primaryColorHover);
-    
-  } catch (error) {
-    console.error('应用 CSS Variables 失败:', error);
-  }
-}
-
-/**
- * 获取 Naive UI 主题对象
- * 
- * 根据主题类型返回对应的 Naive UI 主题对象
- * - 浅色模式: 返回 null (Naive UI 默认使用浅色主题)
- * - 深色模式: 返回 darkTheme 对象
- * 
- * @param theme - 主题类型 ('light' | 'dark')
- * @returns Naive UI 主题对象或 null
- * 
- * Requirements: 2.3
- * 
- * @example
- * ```ts
- * const naiveTheme = getNaiveTheme('dark');
- * // 在 n-config-provider 中使用:
- * // <n-config-provider :theme="naiveTheme">
- * ```
- */
+/** Naive UI 亮色 = null（默认），暗色 = darkTheme */
 export function getNaiveTheme(theme: Theme): GlobalTheme | null {
-  // Naive UI 的浅色主题是默认主题，不需要传递 theme prop
-  // 只有深色模式需要传递 darkTheme
-  return theme === 'dark' ? darkTheme : null;
+  return theme === "dark" ? darkTheme : null;
 }
 
+/** 构建 Naive UI themeOverrides，覆盖 common + 组件级变量 */
 export function buildNaiveThemeOverrides(config: ThemeConfig): GlobalThemeOverrides {
+  const c = config.common;
   return {
     common: {
-      bodyColor: config.common.bodyColor,
-      cardColor: config.common.cardColor,
-      modalColor: config.common.modalColor,
-      popoverColor: config.common.popoverColor,
-      tableHeaderColor: config.common.tableHeaderColor,
-      textColorBase: config.common.textColorBase,
-      textColor1: config.common.textColor1,
-      textColor2: config.common.textColor2,
-      textColor3: config.common.textColor3,
-      primaryColor: config.common.primaryColor,
-      primaryColorHover: config.common.primaryColorHover,
-      primaryColorPressed: config.common.primaryColorPressed,
-      primaryColorSuppl: config.common.primaryColorSuppl,
-      infoColor: config.common.infoColor,
-      successColor: config.common.successColor,
-      warningColor: config.common.warningColor,
-      errorColor: config.common.errorColor,
-      borderColor: config.common.borderColor,
-      dividerColor: config.common.dividerColor,
-      inputColor: config.common.inputColor,
-      inputColorDisabled: config.common.inputColorDisabled,
-      boxShadow1: config.common.boxShadow1,
-      boxShadow2: config.common.boxShadow2,
-      boxShadow3: config.common.boxShadow3,
+      primaryColor: c.primaryColor,
+      primaryColorHover: c.primaryColorHover,
+      primaryColorPressed: c.primaryColorPressed,
+      primaryColorSuppl: c.primaryColorSuppl,
+      infoColor: c.infoColor,
+      successColor: c.successColor,
+      warningColor: c.warningColor,
+      errorColor: c.errorColor,
+      bodyColor: c.bodyColor,
+      cardColor: c.cardColor,
+      modalColor: c.modalColor,
+      popoverColor: c.popoverColor,
+      tableHeaderColor: c.tableHeaderColor,
+      textColorBase: c.textColorBase,
+      textColor1: c.textColor1,
+      textColor2: c.textColor2,
+      textColor3: c.textColor3,
+      borderColor: c.borderColor,
+      dividerColor: c.dividerColor,
+      inputColor: c.inputColor,
+      inputColorDisabled: c.inputColorDisabled,
+      boxShadow1: c.boxShadow1,
+      boxShadow2: c.boxShadow2,
+      boxShadow3: c.boxShadow3,
+    },
+    Button: {
+      textColorPrimary: "#ffffff",
+      colorPrimary: c.primaryColor,
+      colorHoverPrimary: c.primaryColorHover,
+      colorPressedPrimary: c.primaryColorPressed,
+    },
+    Input: {
+      color: c.inputColor,
+      colorFocus: c.inputColor,
+      border: `1px solid ${c.borderColor}`,
+      borderHover: `1px solid ${c.primaryColorHover}`,
+      borderFocus: `1px solid ${c.primaryColor}`,
+      boxShadowFocus: `0 0 0 2px ${c.primaryColor}1a`,
+    },
+    Card: {
+      color: c.cardColor,
+      borderColor: c.borderColor,
+    },
+    Menu: {
+      itemTextColorActive: c.primaryColor,
+      itemColorActive: "transparent",
+      itemColorActiveHover: c.primaryColorHover,
+      itemIconColorActive: c.primaryColor,
+      itemTextColorActiveInverted: c.primaryColor,
+      itemColorActiveInverted: "transparent",
+      itemColorActiveHoverInverted: c.primaryColorHover,
+      itemIconColorActiveInverted: c.primaryColor,
+    },
+    DataTable: {
+      tdColor: c.cardColor,
+      thColor: c.tableHeaderColor,
+      tdColorStriped: c.tableHeaderColor,
+    },
+    Layout: {
+      color: c.bodyColor,
+      siderColor: c.cardColor,
+      siderBorderColor: c.borderColor,
+    },
+    Alert: {
+      color: c.cardColor,
+    },
+    Drawer: {
+      color: c.modalColor,
+    },
+    Modal: {
+      color: c.modalColor,
+    },
+    Popover: {
+      color: c.popoverColor,
+    },
+    Dropdown: {
+      color: c.popoverColor,
+      optionColorActive: c.primaryColor,
     },
   };
 }
 
 /**
- * 完整应用主题
- * 
- * 应用 CSS Variables 主题配置
- * 
- * @param config - 主题配置
- * 
- * @example
- * ```ts
- * applyTheme(config);
- * ```
+ * 设置 CSS 变量 — 仅用于非 Naive UI 元素
+ * 保留：primary/success/warning/error/info/log/login/ad 相关变量
+ * 删除：body/card/text/border/divider/boxShadow（由 Naive UI 接管）
  */
-export function applyTheme(config: ThemeConfig): void {
-  applyCSSVariables(config);
+export function applyCSSVariables(config: ThemeConfig, theme: Theme = "light"): void {
+  try {
+    const root = document.documentElement;
+    const c = config.common;
+
+    root.setAttribute("data-theme", theme);
+
+    // 基础表面色（非 Naive UI 自定义元素使用：背景层、侧栏切换按钮、滚动条等）
+    root.style.setProperty("--app-bg-color", c.bodyColor);
+    root.style.setProperty("--app-card-color", c.cardColor);
+    root.style.setProperty("--app-border-color", c.borderColor);
+    root.style.setProperty("--app-divider-color", c.dividerColor);
+
+    // 文本色（自定义非 Naive 元素使用）
+    root.style.setProperty("--app-text-color", c.textColorBase);
+    root.style.setProperty("--app-text-color-1", c.textColor1);
+    root.style.setProperty("--app-text-color-2", c.textColor2);
+    root.style.setProperty("--app-text-color-3", c.textColor3);
+
+    // 阴影（自定义元素使用）
+    root.style.setProperty("--app-box-shadow-1", c.boxShadow1);
+    root.style.setProperty("--app-box-shadow-2", c.boxShadow2);
+
+    // 主题色系（lucide 图标、自定义元素使用）
+    root.style.setProperty("--app-primary-color", c.primaryColor);
+    root.style.setProperty("--app-primary-color-hover", c.primaryColorHover);
+    root.style.setProperty("--app-primary-color-pressed", c.primaryColorPressed);
+
+    // 状态色系
+    root.style.setProperty("--app-info-color", c.infoColor);
+    root.style.setProperty("--app-success-color", c.successColor);
+    root.style.setProperty("--app-warning-color", c.warningColor);
+    root.style.setProperty("--app-error-color", c.errorColor);
+
+    // 日志颜色
+    root.style.setProperty("--app-log-timestamp-color", c.textColor3);
+    root.style.setProperty("--app-log-info-color", c.infoColor);
+    root.style.setProperty("--app-log-warning-color", c.warningColor);
+    root.style.setProperty("--app-log-error-color", c.errorColor);
+    root.style.setProperty("--app-log-path-color", c.successColor);
+    root.style.setProperty("--app-log-highlight-color", c.errorColor);
+
+    // 广告横幅
+    root.style.setProperty("--ad-banner-bg", c.primaryColor);
+    root.style.setProperty("--ad-banner-bg-hover", c.primaryColorHover);
+
+  } catch (error) {
+    console.error("应用 CSS 变量失败:", error);
+  }
+}
+
+export function applyTheme(config: ThemeConfig, theme: Theme = "light"): void {
+  applyCSSVariables(config, theme);
 }
