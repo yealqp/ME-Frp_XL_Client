@@ -90,14 +90,17 @@ export function formatBandwidth(value: number): string {
 }
 
 /**
- * Format traffic value to MB or GB
+ * Format traffic with automatic unit scaling up to ZB.
  * @param value - Traffic value in MB
- * @param unit - Target unit (MB or GB)
- * @returns Formatted traffic string
+ * @returns Formatted traffic string with appropriate unit
  */
-export function formatTraffic(value: number, unit: 'MB' | 'GB' = 'GB'): string {
-  if (unit === 'GB') {
-    return `${(value / 1024).toFixed(2)} GB`;
+export function formatTraffic(value: number): string {
+  const units = ["MB", "GB", "TB", "PB", "EB", "ZB"];
+  let idx = 0;
+  let v = value;
+  while (v >= 1024 && idx < units.length - 1) {
+    v /= 1024;
+    idx++;
   }
-  return `${value.toFixed(2)} MB`;
+  return `${v.toFixed(2)} ${units[idx]}`;
 }

@@ -58,7 +58,7 @@ export async function login(
   return apiPost<LoginResponse>("/api/public/login", {
     username,
     password,
-    ...(captchaToken ? { vaptchaToken: captchaToken } : {}),
+    ...(captchaToken ? { captchaToken } : {}),
   });
 }
 

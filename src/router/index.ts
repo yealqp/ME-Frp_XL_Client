@@ -51,6 +51,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/luckydraw",
+    name: "Luckydraw",
+    component: () => import("../components/Luckydraw.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/operation-log",
     name: "OperationLog",
     component: () => import("../components/OperationLog.vue"),
