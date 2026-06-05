@@ -119,18 +119,9 @@ onMounted(async () => {
   padding: 0;
 }
 
-/* 重要公告警告框样式 */
+/* 重要公告警告框 — 使用 Naive UI 原生配色 */
 .important-notice-alert {
   border-radius: 0;
-  background: color-mix(in srgb, var(--app-warning-color) 90%, transparent);
-  border: 1px solid color-mix(in srgb, var(--app-warning-color) 38%, var(--app-border-color));
-}
-
-.important-notice-alert :deep(.n-alert-body),
-.important-notice-alert :deep(.n-alert-body__content),
-.important-notice-alert :deep(.n-alert-body__title),
-.important-notice-alert :deep(.n-alert-header) {
-  background: transparent !important;
 }
 
 .important-notice-alert .alert-title {

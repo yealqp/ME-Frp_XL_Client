@@ -135,11 +135,12 @@ const paginationConfig = reactive({
 
 // 操作分类选项
 const categoryOptions = [
-  { label: "认证相关", value: "auth" },
-  { label: "隧道相关", value: "proxy" },
-  { label: "节点相关", value: "node" },
-  { label: "用户相关", value: "user" },
-  { label: "财务相关", value: "finance" },
+  { label: "认证", value: "auth" },
+  { label: "隧道", value: "proxy" },
+  { label: "节点", value: "node" },
+  { label: "用户", value: "user" },
+  { label: "系统", value: "system" },
+  { label: "财务", value: "finance" },
 ];
 
 // 操作状态选项
@@ -151,11 +152,14 @@ const statusOptions = [
 // 获取分类标签
 const getCategoryLabel = (category: string): string => {
   const map: Record<string, string> = {
-    auth: "认证相关",
-    proxy: "隧道相关",
-    node: "节点相关",
-    user: "用户相关",
-    finance: "财务相关",
+    auth: "认证",
+    proxy: "隧道",
+    node: "节点",
+    user: "用户",
+    system: "系统",
+    finance: "财务",
+    admin: "管理",
+    security: "安全",
   };
   return map[category] || category;
 };
@@ -163,16 +167,19 @@ const getCategoryLabel = (category: string): string => {
 // 获取分类标签类型
 const getCategoryType = (
   category: string,
-): "info" | "success" | "warning" | "error" | "default" => {
+): "primary" | "info" | "success" | "warning" | "error" | "default" => {
   const map: Record<
     string,
-    "info" | "success" | "warning" | "error" | "default"
+    "primary" | "info" | "success" | "warning" | "error" | "default"
   > = {
-    auth: "info",
-    proxy: "success",
-    node: "warning",
-    user: "default",
-    finance: "error",
+    auth: "primary",
+    proxy: "info",
+    node: "success",
+    user: "warning",
+    system: "error",
+    finance: "warning",
+    admin: "error",
+    security: "error",
   };
   return map[category] || "default";
 };
