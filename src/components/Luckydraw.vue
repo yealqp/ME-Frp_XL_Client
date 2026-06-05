@@ -224,7 +224,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { Gift, Dices, Sparkles } from "lucide-vue-next";
+import { Gift, Dices, Sparkles } from "@lucide/vue";
 import { NIcon, NStatistic, NDataTable, NInputGroup } from "naive-ui";
 import confetti from "canvas-confetti";
 import { useAuthStore } from "@/stores/auth";

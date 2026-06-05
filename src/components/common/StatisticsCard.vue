@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { NCard, NSkeleton, NText, NIcon, useMessage } from 'naive-ui';
-import { Users, Server, Network, HardDrive } from 'lucide-vue-next';
+import { Users, Server, Network, HardDrive } from '@lucide/vue';
 
 interface Statistics {
   users: number;

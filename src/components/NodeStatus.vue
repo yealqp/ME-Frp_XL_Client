@@ -66,7 +66,7 @@
 <script setup lang="ts">
 import { h, onMounted, computed } from 'vue';
 import { NTag, NProgress, NSpace, NIcon, NStatistic, NDataTable } from 'naive-ui';
-import { ArrowDown, ArrowUp, Search, RefreshCw } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, Search, RefreshCw } from '@lucide/vue';
 import { useNodeStore } from '../stores/node';
 import type { NodeStatusData } from '@/types/node';
 

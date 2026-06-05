@@ -364,7 +364,7 @@ import { createCaptcha } from "@/utils/captcha";
 import { handleApiError } from "@/utils/errorHandler";
 import { resetToken } from '@/api/auth';
 import UserInfoCard from "./common/UserInfoCard.vue";
-import { TrendingUp, Gift, Ticket, History, Power, Shield } from "lucide-vue-next";
+import { TrendingUp, Gift, Ticket, History, Power, Shield } from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
 import { useTrafficChart } from "@/composables/useTrafficChart";
 import { useCdkRedeem } from "@/composables/useCdkRedeem";

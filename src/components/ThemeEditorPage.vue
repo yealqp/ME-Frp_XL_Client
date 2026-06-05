@@ -167,7 +167,7 @@
 <script setup lang="ts">
 import { NButton, NCard, NInput, NSpace, NSwitch, useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
-import { Image as ImageIcon, Palette, SwatchBook } from "lucide-vue-next";
+import { Image as ImageIcon, Palette, SwatchBook } from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
 import PresetThemeCard from "@/components/appearance/PresetThemeCard.vue";
 import ThemeEditor from "@/components/settings/ThemeEditor.vue";

@@ -82,7 +82,7 @@ import {
   LogOut,
   Activity,
   Globe,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 const router = useRouter();
 const route = useRoute();

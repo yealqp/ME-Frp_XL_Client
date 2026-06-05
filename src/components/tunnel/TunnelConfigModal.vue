@@ -104,7 +104,7 @@
 
 <script setup lang="ts">
 import { NModal, NButton, NSpace, NTabs, NTabPane, NInput, NCode, NEmpty } from 'naive-ui'
-import { Edit, Save, Check, X } from 'lucide-vue-next'
+import { Edit, Save, Check, X } from '@lucide/vue'
 import {
   getTunnelConfigLanguage,
   TUNNEL_CONFIG_FORMATS,

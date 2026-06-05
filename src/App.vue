@@ -28,7 +28,7 @@ import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import type { UnifiedConfig } from "@/types/config";
-import { ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { ChevronLeft, ChevronRight } from "@lucide/vue";
 import { useBackgroundImage } from "@/composables/useBackgroundImage";
 import { useAutoStartTunnels } from "@/composables/useAutoStartTunnels";
 import { useAutoUpdate } from "@/composables/useAutoUpdate";

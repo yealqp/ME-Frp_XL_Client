@@ -322,7 +322,7 @@ import {
   FileText,
   Copy,
   Brain,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
 import { useWebuiStore } from "../stores/webui";
 import { useSettingsStore } from "@/stores/settings";

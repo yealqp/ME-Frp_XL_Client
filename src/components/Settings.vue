@@ -304,7 +304,7 @@ import {
   ArrowUp,
   ArrowDown,
   Palette,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
 
 const router = useRouter();

@@ -224,7 +224,7 @@ import {
   Inbox,
   LayoutGrid,
   List,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 
 // Import child components
 import TunnelEditModal from "./tunnel/TunnelEditModal.vue";

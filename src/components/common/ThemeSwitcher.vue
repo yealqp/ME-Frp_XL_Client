@@ -71,7 +71,7 @@
 <script setup lang="ts">
 import { computed, h } from 'vue';
 import { NButton, NButtonGroup, NDropdown, NIcon } from 'naive-ui';
-import { Sun, Moon, Monitor } from 'lucide-vue-next';
+import { Sun, Moon, Monitor } from '@lucide/vue';
 import { useThemeStore } from '@/stores/theme';
 import type { ThemeMode } from '@/types/theme';
 import type { DropdownOption } from 'naive-ui';

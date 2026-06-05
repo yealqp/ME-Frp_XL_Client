@@ -42,7 +42,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
-import { Copy, Brain } from 'lucide-vue-next'
+import { Copy, Brain } from '@lucide/vue'
 import { formatLogHtml, getSanitizedLogsText } from '@/utils/logSanitizer'
 import { copyToClipboard } from '@/utils/clipboard'
 import { invoke } from '@tauri-apps/api/core'

@@ -73,7 +73,7 @@
 import { ref, h, onMounted, reactive } from "vue";
 import { useMessage, NTag, NDataTable } from "naive-ui";
 import type { DataTableColumns } from "naive-ui";
-import { RefreshCw, Filter, RotateCcw } from "lucide-vue-next";
+import { RefreshCw, Filter, RotateCcw } from "@lucide/vue";
 import { extractErrorMessage } from "@/utils/errorHandler";
 import { getOperationLogs } from "@/api/system";
 import { useAuthStore } from "@/stores/auth";

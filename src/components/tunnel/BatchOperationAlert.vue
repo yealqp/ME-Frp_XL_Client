@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { LayoutGrid } from 'lucide-vue-next'
+import { LayoutGrid } from '@lucide/vue'
 import { NAlert, NButton } from 'naive-ui';
 
 interface Props {

@@ -418,7 +418,7 @@ import {
   FileText,
   BookOpen,
   Shield,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
 // ---
 

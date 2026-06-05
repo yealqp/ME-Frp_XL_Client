@@ -40,7 +40,7 @@
 
 <script setup lang="ts">
 import { NButton, NPopconfirm } from 'naive-ui';
-import { Play, Square, PlayCircle, PauseCircle, LogOut, Trash2, ImageDown } from 'lucide-vue-next';
+import { Play, Square, PlayCircle, PauseCircle, LogOut, Trash2, ImageDown } from '@lucide/vue';
 import type { Component } from 'vue';
 
 type BatchEvent = 'batch-start' | 'batch-stop' | 'batch-enable' | 'batch-disable' | 'batch-kick' | 'batch-delete';

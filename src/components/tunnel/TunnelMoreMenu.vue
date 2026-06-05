@@ -29,7 +29,7 @@ import {
   PauseCircle,
   LogOut,
   Trash2,
-} from 'lucide-vue-next';
+} from '@lucide/vue';
 import type { Tunnel as TunnelRecord } from '@/types/tunnel';
 
 type Tunnel = Pick<TunnelRecord, 'proxyId' | 'proxyName' | 'isDisabled'>

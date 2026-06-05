@@ -302,7 +302,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { ArrowLeft, Plus } from 'lucide-vue-next';
+import { ArrowLeft, Plus } from '@lucide/vue';
 import type { Node, TunnelForm } from './types';
 import type { FormInst, FormRules } from 'naive-ui';
 

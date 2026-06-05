@@ -34,7 +34,7 @@
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { NCard, NResult, NButton } from 'naive-ui';
-import { Shield, ArrowLeft } from 'lucide-vue-next';
+import { Shield, ArrowLeft } from '@lucide/vue';
 import { useMarkdownContent } from '@/composables/useMarkdownContent';
 
 const router = useRouter();

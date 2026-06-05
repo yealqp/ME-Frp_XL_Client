@@ -22,7 +22,7 @@ import {
   useDialog,
   useMessage,
 } from "naive-ui";
-import { Upload, Download, RotateCcw, Save } from "lucide-vue-next";
+import { Upload, Download, RotateCcw, Save } from "@lucide/vue";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import {

@@ -188,7 +188,7 @@ import {
   FileText,
   Copy,
   Settings as SettingsIcon,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import TunnelMoreMenu from "./TunnelMoreMenu.vue";
 import type { Tunnel } from "@/types/tunnel";
 import { parseDomainArray } from "@/utils/domainUtils";

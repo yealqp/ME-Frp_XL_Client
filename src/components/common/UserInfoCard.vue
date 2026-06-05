@@ -139,7 +139,7 @@ import {
   ArrowDown,
   ArrowUp,
   Network,
-} from "lucide-vue-next";
+} from "@lucide/vue";
 import {
   formatTimestamp,
   formatBandwidth,

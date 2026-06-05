@@ -1,7 +1,7 @@
 import { ref } from "vue";
 import { storeToRefs } from "pinia";
 import { useMessage, useNotification } from "naive-ui";
-import { AlertTriangle, CheckCircle, HelpCircle, XCircle } from "lucide-vue-next";
+import { AlertTriangle, CheckCircle, HelpCircle, XCircle } from "@lucide/vue";
 import { useUserStore } from "@/stores/user";
 import { useUIStore } from "@/stores/ui";
 import { handleApiError } from "@/utils/errorHandler";

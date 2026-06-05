@@ -1,6 +1,6 @@
 import { computed, h, type Ref } from "vue";
 import { NButton, NIcon, NSkeleton, NSpace, NTag } from "naive-ui";
-import { Copy, FileText, Play, Square } from "lucide-vue-next";
+import { Copy, FileText, Play, Square } from "@lucide/vue";
 import type { Tunnel } from "@/types/tunnel";
 import TunnelMoreMenu from "@/components/tunnel/TunnelMoreMenu.vue";
 import { parseDomainArray } from "@/utils/domainUtils";
