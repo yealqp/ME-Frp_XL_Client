@@ -62,7 +62,7 @@ const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRef
 const shellReady = ref(false);
 const hasStoredSession = ref(false);
 
-const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, clampOpacity } = useBackgroundImage();
+const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, withOpacity, clampOpacity } = useBackgroundImage();
 const { startAutoStartTunnels } = useAutoStartTunnels();
 const { checkForUpdatesOnStart } = useAutoUpdate();
 
@@ -71,6 +71,7 @@ const appAppearanceStyle = computed(() => {
   const textShadowIntensity = clampOpacity(settings.value.shadowIntensity);
   const backgroundBlur = settings.value.backgroundBlur ?? 0;
   const fontWeight = settings.value.fontWeight ?? 400;
+  const activeTheme = themeStore.resolvedActiveThemeConfig.common;
 
   return {
     "--app-custom-bg-image": backgroundImageUrl.value ? `url("${backgroundImageUrl.value}")` : "none",
@@ -79,6 +80,8 @@ const appAppearanceStyle = computed(() => {
     "--app-custom-bg-filter": backgroundBlur > 0 ? `blur(${backgroundBlur}px)` : "none",
     "--app-sidebar-opacity": String((settings.value.sidebarOpacity ?? 100) / 100),
     "--app-content-opacity": String(contentOpacity),
+    "--app-content-bg-color": withOpacity(activeTheme.bodyColor, contentOpacity),
+    "--app-content-card-color": withOpacity(activeTheme.cardColor, contentOpacity),
     "--app-font-weight-base": String(fontWeight),
     "--app-font-weight-medium": String(Math.min(800, fontWeight + 100)),
     "--app-font-weight-strong": String(Math.min(900, fontWeight + 200)),
@@ -516,6 +519,7 @@ body {
   content: "";
   position: absolute;
   inset: 0;
+  background: var(--app-bg-color);
   opacity: var(--app-content-opacity, 1);
   pointer-events: none;
   z-index: 0;
@@ -528,6 +532,18 @@ body {
   background: transparent !important;
   min-height: 100%;
   overflow-y: auto;
+}
+
+/* 内容区透明度 — 统一由 .content-layout::before 控制底色 */
+.content-layout .n-card {
+  background-color: transparent !important;
+}
+
+.content-layout .n-card > .n-card-header,
+.content-layout .n-card > .n-card__content,
+.content-layout .n-card > .n-card__footer,
+.content-layout .n-card > .n-card__action {
+  background-color: transparent !important;
 }
 
 .route-container {

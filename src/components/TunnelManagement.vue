@@ -24,6 +24,7 @@
           @batch-disable="batchDisableTunnels"
           @batch-kick="batchKickTunnels"
           @batch-delete="batchDeleteTunnels"
+          @batch-export-image="exportConnectionImage"
           @cancel="exitBatchMode"
         />
         
@@ -211,6 +212,7 @@
 <script setup lang="ts">
 import { NDataTable, NAlert } from "naive-ui";
 import type { Tunnel } from "@/types/tunnel";
+import { useUserStore } from "@/stores/user";
 import { useTunnelBatchActions } from "@/composables/useTunnelBatchActions";
 import { useTunnelConfigFiles } from "@/composables/useTunnelConfigFiles";
 import { useTunnelDialogs } from "@/composables/useTunnelDialogs";
@@ -303,6 +305,98 @@ const {
   loadTunnels,
   loadRunningTunnels,
 });
+
+const userStore = useUserStore();
+
+function exportConnectionImage() {
+  const selectedIds = [...selectedTunnels.value];
+  if (selectedIds.length === 0) return;
+
+  const lines: string[] = [];
+  for (const id of selectedIds) {
+    const tunnel = tunnels.value.find(t => t.proxyId === id);
+    if (!tunnel) continue;
+    const host = nodeHostnameMap.value[tunnel.nodeId] || "未知";
+    const addr = tunnel.proxyType === "tcp" || tunnel.proxyType === "udp"
+      ? `${host}:${tunnel.remotePort || "未分配"}`
+      : host;
+    lines.push(`${tunnel.proxyName} - ${addr}`);
+  }
+
+  const text = lines.join("\n");
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d")!;
+  const scale = 4;
+  const fontSize = 14;
+  const lineHeight = fontSize * 1.8;
+  const padding = 24;
+
+  ctx.font = `${fontSize}px "Consolas", "Monaco", monospace`;
+  const linesArr = text.split("\n");
+  const maxLineWidth = Math.max(...linesArr.map(l => ctx.measureText(l).width));
+  const w = Math.ceil(maxLineWidth) + padding * 2;
+  const h = linesArr.length * lineHeight + padding * 2;
+
+  canvas.width = w * scale;
+  canvas.height = h * scale;
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.font = `${fontSize}px "Consolas", "Monaco", monospace`;
+  ctx.fillStyle = "#1e1e1e";
+  ctx.textBaseline = "top";
+
+  for (let i = 0; i < linesArr.length; i++) {
+    ctx.fillText(linesArr[i], padding, padding + i * lineHeight);
+  }
+
+  // 右下角 ID 溯源
+  const userId = userStore.userInfo?.userId ?? 0;
+  const watermarkText = `${userId}`;
+  ctx.save();
+  // 斜体水印 — 仅提高对比度可见
+  ctx.font = `italic 12px "Consolas", "Monaco", monospace`;
+  ctx.fillStyle = "rgba(0, 0, 0, 0.005)";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const step = 25;
+  for (let y = step; y < h; y += step) {
+    for (let x = 0; x < w; x += step * 3) {
+      ctx.save();
+      ctx.translate(x + step, y);
+      ctx.rotate(-0.5);
+      ctx.fillText(watermarkText, 0, 0);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+
+  canvas.toBlob(async (blob) => {
+    if (!blob) return;
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeFile } = await import("@tauri-apps/plugin-fs");
+      const path = await save({
+        defaultPath: `tunnels-${new Date().toISOString().slice(0, 10)}.png`,
+        filters: [{ name: "PNG 图片", extensions: ["png"] }],
+      });
+      if (path) {
+        await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
+      }
+    } catch {
+      // 回退：浏览器下载
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tunnels-${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  });
+}
 
 const {
   showLogs,

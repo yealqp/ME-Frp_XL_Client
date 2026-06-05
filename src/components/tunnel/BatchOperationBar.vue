@@ -22,6 +22,16 @@
       {{ getConfirmText(action) }}
     </n-popconfirm>
 
+    <n-button
+      :disabled="selectedCount === 0"
+      @click="$emit('batch-export-image')"
+    >
+      <template #icon>
+        <ImageDown :size="16" />
+      </template>
+      导出图片 ({{ selectedCount }})
+    </n-button>
+
     <n-button @click="$emit('cancel')">
       取消
     </n-button>
@@ -30,7 +40,7 @@
 
 <script setup lang="ts">
 import { NButton, NPopconfirm } from 'naive-ui';
-import { Play, Square, PlayCircle, PauseCircle, LogOut, Trash2 } from 'lucide-vue-next';
+import { Play, Square, PlayCircle, PauseCircle, LogOut, Trash2, ImageDown } from 'lucide-vue-next';
 import type { Component } from 'vue';
 
 type BatchEvent = 'batch-start' | 'batch-stop' | 'batch-enable' | 'batch-disable' | 'batch-kick' | 'batch-delete';
@@ -64,6 +74,7 @@ const emit = defineEmits<{
   (e: 'batch-disable'): void;
   (e: 'batch-kick'): void;
   (e: 'batch-delete'): void;
+  (e: 'batch-export-image'): void;
   (e: 'cancel'): void;
 }>();
 
