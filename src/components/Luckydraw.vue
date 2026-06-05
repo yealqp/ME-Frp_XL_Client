@@ -228,8 +228,7 @@ import { Gift, Dices, Sparkles } from "lucide-vue-next";
 import { NIcon, NStatistic, NDataTable, NInputGroup } from "naive-ui";
 import confetti from "canvas-confetti";
 import { useAuthStore } from "@/stores/auth";
-import { doLuckydraw, getLuckydrawInfo } from "@/api/lottery";
-import { getUserInfo } from "@/api/auth";
+import { doLuckydraw, getLuckydrawInfo, getUserInfo } from "@/api/auth";
 import { formatTraffic } from "@/utils/timeFormatter";
 
 const authStore = useAuthStore();

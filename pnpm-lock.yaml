@@ -44,9 +44,6 @@ importers:
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@6.0.3)(vue@3.5.35(typescript@6.0.3))
-      qrcode-vue3:
-        specifier: ^1.7.1
-        version: 1.7.1
       topojson-client:
         specifier: ^3.1.0
         version: 3.1.0
@@ -885,6 +882,7 @@ packages:
 
   lucide-vue-next@1.0.0:
     resolution: {integrity: sha512-V6SPvx1IHTj/UY+FrIYWV5faISsPSb8BnWSFDxAtezWKvWc9ZZ40PDrdu1/Qb5vg4lHWr1hs1BAMGVGm6V1Xdg==}
+    deprecated: Package deprecated. Please use @lucide/vue instead.
     peerDependencies:
       vue: '>=3.0.1'
 
@@ -990,12 +988,6 @@ packages:
 
   pure-rand@8.4.0:
     resolution: {integrity: sha512-IoM8YF/jY0hiugFo/wOWqfmarlE6J0wc6fDK1PhftMk7MGhVZl88sZimmqBBFomLOCSmcCCpsfj7wXASCpvK9A==}
-
-  qrcode-generator@1.5.2:
-    resolution: {integrity: sha512-pItrW0Z9HnDBnFmgiNrY1uxRdri32Uh9EjNYLPVC2zZ3ZRIIEqBoDgm4DkvDwNNDHTK7FNkmr8zAa77BYc9xNw==}
-
-  qrcode-vue3@1.7.1:
-    resolution: {integrity: sha512-Xa82NslFJUqsnQbLtc1qO+xPEOeFaTRxktg3ugRd2Pk116kta1X+7GLSEPQj9gor8jWVyfmLmhYZHuANnRZoLQ==}
 
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
@@ -2131,12 +2123,6 @@ snapshots:
   proto-list@1.2.4: {}
 
   pure-rand@8.4.0: {}
-
-  qrcode-generator@1.5.2: {}
-
-  qrcode-vue3@1.7.1:
-    dependencies:
-      qrcode-generator: 1.5.2
 
   quansync@0.2.11: {}
 

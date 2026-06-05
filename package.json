@@ -1,7 +1,7 @@
 {
   "name": "me-frp_xl_client",
   "private": true,
-  "version": "2.2.2",
+  "version": "2.2.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,7 +22,6 @@
     "marked": "^18.0.4",
     "naive-ui": "^2.44.1",
     "pinia": "^3.0.4",
-    "qrcode-vue3": "^1.7.1",
     "topojson-client": "^3.1.0",
     "vue": "^3.5.35",
     "vue-router": "^5.1.0"
