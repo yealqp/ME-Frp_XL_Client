@@ -7,8 +7,7 @@ import ini from 'highlight.js/lib/languages/ini'
 import json from 'highlight.js/lib/languages/json'
 import yaml from 'highlight.js/lib/languages/yaml'
 import xml from 'highlight.js/lib/languages/xml'
-
-import 'highlight.js/styles/github-dark.css'
+import toml from 'highlight.js/lib/languages/ini'
 
 // Register languages
 hljs.registerLanguage('javascript', javascript)
@@ -18,12 +17,15 @@ hljs.registerLanguage('ts', javascript)
 hljs.registerLanguage('bash', bash)
 hljs.registerLanguage('sh', bash)
 hljs.registerLanguage('ini', ini)
-hljs.registerLanguage('toml', ini)
+hljs.registerLanguage('toml', toml)
 hljs.registerLanguage('json', json)
 hljs.registerLanguage('yaml', yaml)
 hljs.registerLanguage('yml', yaml)
 hljs.registerLanguage('html', xml)
 hljs.registerLanguage('xml', xml)
+
+/** 共享 hljs 实例（已注册所需语言），供 n-code 等 Naive UI 组件使用 */
+export { hljs }
 
 // Configure marked
 marked.setOptions({
