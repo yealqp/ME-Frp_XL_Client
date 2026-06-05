@@ -210,7 +210,7 @@
 </template>
 
 <script setup lang="ts">
-import { NDataTable, NAlert } from "naive-ui";
+import { NDataTable, NAlert, useMessage } from "naive-ui";
 import type { Tunnel } from "@/types/tunnel";
 import { useUserStore } from "@/stores/user";
 import { useTunnelBatchActions } from "@/composables/useTunnelBatchActions";
@@ -243,6 +243,7 @@ interface Emits {
 }
 
 const emit = defineEmits<Emits>();
+const message = useMessage();
 
 const {
   showConfigModal,
@@ -385,6 +386,7 @@ function exportConnectionImage() {
       });
       if (path) {
         await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
+        message.success("连接信息图片保存成功");
       }
     } catch {
       // 回退：浏览器下载
