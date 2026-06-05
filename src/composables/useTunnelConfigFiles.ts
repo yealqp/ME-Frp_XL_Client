@@ -51,7 +51,15 @@ export function useTunnelConfigFiles() {
       const result = await apiGetTunnelConfig(authStore.userToken, tunnelId, format);
 
       if (result.code === 200 && result.data) {
-        return result.data;
+        // API 可能返回字符串或 { content: "..." } 等嵌套对象
+        const raw = result.data;
+        if (typeof raw === "string") return raw;
+        if (typeof raw === "object" && raw !== null) {
+          return (raw as Record<string, unknown>).content as string
+            || (raw as Record<string, unknown>).config as string
+            || JSON.stringify(raw, null, 2);
+        }
+        return String(raw);
       }
 
       throw new Error(result.message || "获取配置文件失败");

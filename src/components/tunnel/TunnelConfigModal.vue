@@ -82,17 +82,13 @@
                   :rows="20"
                   :autosize="{ minRows: 20, maxRows: 30 }"
                   placeholder="请输入配置内容"
-                  :style="{
-                    fontFamily: 'Consolas, Monaco, Courier New, monospace',
-                    fontSize: '12px'
-                  }"
+                  class="code-input"
                 />
                 <n-code
                   v-else
                   :code="configContents[format]"
                   :language="getLanguageForFormat(format)"
                   show-line-numbers
-                  word-wrap
                 />
               </template>
               <div v-else class="no-config">
@@ -242,5 +238,14 @@ function handleTypeChange(value: string | number) {
 .config-content :deep(.n-code) {
   height: 100%;
   max-height: none;
+}
+
+.code-input :deep(textarea) {
+  font-family: 'Consolas', Monaco, 'Courier New', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  background: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  caret-color: #ffffff !important;
 }
 </style>
