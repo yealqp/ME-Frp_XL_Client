@@ -8,7 +8,7 @@
  *   客户端 POST JSON 数据到此脚本 URL，需携带 Bearer token 认证。
  *   保存的文件位于同目录的 feedbacks/ 文件夹中，
  *   文件名格式为 feedback_YYYYmmdd_HHMMSS_5位随机数_4字节hex.json。
- *   同时会将反馈内容发送到指定的飞书机器人 webhook。
+ *   同时会将反馈内容发送到指定的 QQ 群（OneBot 协议）。
  */
 
 // 设置时区
@@ -108,45 +108,45 @@ $data['_received_at'] = date('Y-m-d H:i:s');
 $data['_remote_ip']   = $_SERVER['HTTP_EO_FORWARD_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 $data['_user_agent']  = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
 
-// ---------- 飞书 webhook 通知 ----------
-const WEBHOOK_URL = 'https://open.feishu.cn/open-apis/bot/v2/hook/ec686408-92b4-421b-b449-d505dfa727b3';
+// ---------- QQ 群通知（OneBot 协议）----------
+const QQ_API_URL     = 'http://103.236.84.213:38840/send_group_msg';
+const QQ_GROUP_ID    = 1039784218;
+const QQ_API_KEY     = 'REDACTED_QQ_BOT_API_KEY';
 
 /**
- * 发送飞书机器人通知
+ * 发送 QQ 群机器人通知（OneBot 协议）
  * @param array $data 反馈数据，包含 user_id, content, _remote_ip, _received_at
  */
-function send_feishu_notification($data) {
-    $timestamp = (string)time();
-    
+function send_qq_notification($data) {
     $text = sprintf(
-        "XL Client用户反馈\n用户ID: %d\n内容: %s\nIP: %s\n时间: %s",
+        "XL Client 用户反馈\n用户ID: %d\n内容: %s\nIP: %s\n时间: %s",
         $data['user_id'],
         $data['content'],
         $data['_remote_ip'],
         $data['_received_at']
     );
-    
+
     $payload = [
-        'msg_type' => 'text',
-        'content' => [
-            'text' => $text
-        ]
+        'group_id' => QQ_GROUP_ID,
+        'message' => $text
     ];
-    
-    $ch = curl_init(WEBHOOK_URL);
+
+    $ch = curl_init(QQ_API_URL);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 2); // 2秒超时，避免阻塞主流程
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . QQ_API_KEY
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 2);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 1);
     curl_exec($ch);
     $error = curl_error($ch);
     curl_close($ch);
-    
-    // 静默失败，仅记录错误（可选）
+
     if ($error) {
-        error_log("飞书webhook通知失败: " . $error);
+        error_log("QQ 群通知发送失败: " . $error);
     }
 }
 
@@ -178,8 +178,8 @@ if (file_put_contents($filePath, $jsonString, LOCK_EX) === false) {
     die(json_encode(['error' => 'Failed to write file']));
 }
 
-    // ---------- 发送飞书通知（非阻塞，忽略失败）----------
-    send_feishu_notification([
+    // ---------- 发送 QQ 群通知（非阻塞，忽略失败）----------
+    send_qq_notification([
         'user_id' => $data['user_id'],
         'content' => $data['content'],
         '_remote_ip' => $data['_remote_ip'],
