@@ -8,7 +8,99 @@
 
 use crate::tunnel::ProcessManager;
 use std::sync::{Arc, Mutex};
-use tauri::Manager;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    Emitter, Manager,
+};
+
+fn stop_all_tunnels(process_manager: &ProcessManager) {
+    if let Ok(manager) = process_manager.lock() {
+        let running_tunnels: Vec<i32> = manager.keys().cloned().collect();
+        drop(manager);
+
+        for proxy_id in running_tunnels {
+            if let Ok(mut manager) = process_manager.lock() {
+                if let Some(tunnel_process) = manager.get_mut(&proxy_id) {
+                    if let Ok(mut child_opt) = tunnel_process.child.lock() {
+                        if let Some(ref mut child) = *child_opt {
+                            let _ = child.kill();
+                            let _ = child.wait();
+                        }
+                    }
+                }
+                manager.remove(&proxy_id);
+            }
+        }
+    }
+}
+
+pub async fn open_url(app_handle: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    app_handle
+        .opener()
+        .open_url(&url, None::<&str>)
+        .map_err(|e| format!("打开 URL 失败: {}", e))
+}
+
+pub async fn open_webview_window(
+    app_handle: tauri::AppHandle,
+    url: String,
+    window_id: String,
+    title: String,
+) -> Result<(), String> {
+    use tauri::WebviewUrl;
+    use tauri::WebviewWindowBuilder;
+
+    if let Some(window) = app_handle.get_webview_window(&window_id) {
+        window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+        window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;
+        return Ok(());
+    }
+
+    let window = WebviewWindowBuilder::new(
+        &app_handle,
+        &window_id,
+        WebviewUrl::External(url.parse().map_err(|e| format!("URL 解析失败: {}", e))?),
+    )
+    .title(&title)
+    .inner_size(1200.0, 800.0)
+    .min_inner_size(800.0, 600.0)
+    .resizable(true)
+    .visible(false)
+    .build()
+    .map_err(|e| format!("创建窗口失败: {}", e))?;
+
+    let window_id_clone = window_id.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::Destroyed = event {
+            println!("WebView 窗口 {} 已销毁", window_id_clone);
+        }
+    });
+
+    window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
+    window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;
+
+    Ok(())
+}
+
+pub async fn close_webview_window(
+    app_handle: tauri::AppHandle,
+    window_id: String,
+) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window(&window_id) {
+        let _ = window.hide();
+
+        let window_clone = window.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(tokio::time::Duration::from_millis(300)).await;
+            if let Err(e) = window_clone.close() {
+                eprintln!("关闭窗口时出错（可忽略）: {}", e);
+            }
+        });
+    }
+    Ok(())
+}
 
 /// 设置窗口置顶
 ///
@@ -121,30 +213,97 @@ pub async fn quit_app(
     app_handle: &tauri::AppHandle,
     process_manager: &ProcessManager,
 ) -> Result<String, String> {
-    // 先停止所有正在运行的隧道
-    let manager = process_manager
-        .lock()
-        .map_err(|e| format!("获取进程管理器锁失败: {e}"))?;
-
-    // 收集所有正在运行的隧道ID
-    let running_tunnels: Vec<i32> = manager.keys().cloned().collect();
-    drop(manager); // 释放锁
-
-    // 逐个停止隧道
-    for proxy_id in running_tunnels {
-        if let Ok(mut manager) = process_manager.lock() {
-            if let Some(tunnel_process) = manager.get_mut(&proxy_id) {
-                if let Ok(mut child_opt) = tunnel_process.child.lock() {
-                    if let Some(ref mut child) = *child_opt {
-                        let _ = child.kill(); // 强制终止进程
-                        let _ = child.wait(); // 等待进程结束
-                    }
-                }
-            }
-            manager.remove(&proxy_id); // 从管理器中移除
-        }
-    }
+    stop_all_tunnels(process_manager);
 
     app_handle.exit(0);
     Ok("应用已退出".to_string())
 }
+
+pub fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
+    let show_main = MenuItem::with_id(app, "show_main", "显示主页面", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show_main, &quit])?;
+
+    let tray_icon = app.default_window_icon().cloned().unwrap_or_else(|| {
+        tauri::image::Image::new_owned(vec![0, 0, 0, 0], 1, 1)
+    });
+
+    let _tray = TrayIconBuilder::new()
+        .icon(tray_icon)
+        .tooltip("ME-Frp XL Client")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(move |app, event| match event.id().as_ref() {
+            "show_main" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    let _ = window.unminimize();
+                }
+            }
+            "quit" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.emit("quit-app", ());
+                }
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    std::process::exit(0);
+                });
+            }
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| match event {
+            TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } => {
+                if let Some(app) = tray.app_handle().get_webview_window("main") {
+                    if app.is_visible().unwrap_or(false) {
+                        let _ = app.hide();
+                    } else {
+                        let _ = app.show();
+                        let _ = app.set_focus();
+                    }
+                }
+            }
+            TrayIconEvent::DoubleClick { .. } => {
+                if let Some(app) = tray.app_handle().get_webview_window("main") {
+                    let _ = app.show();
+                    let _ = app.set_focus();
+                }
+            }
+            _ => {}
+        })
+        .build(app)?;
+
+    Ok(())
+}
+
+pub fn handle_close_requested(window: &tauri::Window, api: &tauri::CloseRequestApi) {
+    let minimize_to_tray = window
+        .app_handle()
+        .state::<Arc<Mutex<bool>>>()
+        .lock()
+        .map(|state| *state)
+        .unwrap_or(true);
+
+    api.prevent_close();
+
+    if minimize_to_tray {
+        let _ = window.hide();
+        return;
+    }
+
+    let app_handle = window.app_handle();
+    let process_manager = app_handle.state::<ProcessManager>();
+    let app_handle_clone = app_handle.clone();
+    let process_manager_clone = process_manager.inner().clone();
+
+    std::thread::spawn(move || {
+        stop_all_tunnels(&process_manager_clone);
+        std::thread::sleep(std::time::Duration::from_millis(200));
+        app_handle_clone.exit(0);
+    });
+}
+

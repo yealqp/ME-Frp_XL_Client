@@ -5,6 +5,7 @@
 //! - startup: 自动启动设置
 //! - update: 版本更新检查
 
+pub mod background;
 pub mod startup;
 pub mod update;
 pub mod window;
