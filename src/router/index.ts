@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import { startLoading, finishLoading, errorLoading } from "../composables/useLoadingBar";
 import { useAuthStore } from "@/stores/auth";
+import { reportDashboardAnalysis } from "@/composables/useDashboardAnalysisReport";
 
 // 使用动态导入进行代码分割
 const routes: RouteRecordRaw[] = [
@@ -131,7 +132,11 @@ router.beforeEach(async (to, _from) => {
 });
 
 // Finish loading bar after navigation
-router.afterEach(() => {
+router.afterEach((to) => {
+  if (to.name === "Dashboard") {
+    void reportDashboardAnalysis();
+  }
+
   // Use a small delay to ensure the loading bar instance is ready
   setTimeout(() => {
     finishLoading();

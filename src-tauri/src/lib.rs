@@ -403,6 +403,17 @@ async fn api_send_feedback(
     api::feedback::send_feedback(&content, user_id).await
 }
 
+// 上报 Dashboard 用户统计
+#[tauri::command]
+async fn api_report_analysis(
+    _app_handle: tauri::AppHandle,
+    me_frp_id: i32,
+    username: String,
+    email: String,
+) -> Result<String, String> {
+    api::analysis::report_user_analysis(me_frp_id, &username, &email).await
+}
+
 // WebUI 相关命令
 
 /// 启动 WebUI
@@ -773,6 +784,7 @@ pub fn run() {
             resolve_managed_background_image_path,
             read_managed_background_image_data_url,
             api_send_feedback,
+            api_report_analysis,
             start_webui,
             stop_webui,
             is_webui_running,

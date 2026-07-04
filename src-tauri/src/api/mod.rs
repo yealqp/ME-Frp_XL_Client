@@ -3,10 +3,12 @@
 //! 本模块封装非 api.mefrp.com 的HTTP API请求：
 //! - client: HTTP客户端创建和配置
 //! - feedback: 反馈相关API（NapCat QQ bot）
+//! - analysis: 用户统计上报 API
 //! - system: 系统相关API（通用请求 + 系统通知）
 //! - ai_analysis: AI 日志分析（OpenAI 兼容 API）
 
 pub mod ai_analysis;
+pub mod analysis;
 pub mod client;
 pub mod feedback;
 pub mod system;
