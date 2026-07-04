@@ -1,12 +1,12 @@
 [package]
-name = "me-frp_desktop_unoffical"
+name = "xl-client"
 version = "2.2.3"
 description = "ME-FrpXLDesktop"
 authors = ["yealqp"]
 edition = "2021"
 
 [lib]
-name = "me_frp_desktop_unoffical_lib"
+name = "xl_client_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

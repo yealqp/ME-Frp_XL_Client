@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    me_frp_desktop_unoffical_lib::run()
+    xl_client_lib::run()
 }
