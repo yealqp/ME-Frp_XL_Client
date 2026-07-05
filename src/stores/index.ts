@@ -38,7 +38,6 @@
  * ### Settings Store (settings.ts)
  * - Manages application settings (AppSettings)
  * - Validates auto-start tunnel IDs against Tunnel Store
- * - Syncs showAd setting with eventBus
  * 
  * ### CreateTunnel Store (createTunnel.ts)
  * - Manages multi-step tunnel creation flow
@@ -46,9 +45,8 @@
  * - Stores selected node for tunnel configuration
  * 
  * ### UI Store (ui.ts)
- * - Manages global UI state (theme, showAd)
+ * - Manages global UI state (theme, sidebar)
  * - Handles theme switching and persistence
- * - Syncs ad display state with eventBus
  * 
  * ## Store Communication
  * 
@@ -56,7 +54,6 @@
  * - Auth Store → Tunnel Store: Clears tunnel data on logout
  * - Auth Store → Node Store: Clears node data on logout
  * - Settings Store → Tunnel Store: Validates auto-start tunnel IDs
- * - UI Store ↔ eventBus: Syncs showAd state
  * 
  * ## Best Practices
  * 

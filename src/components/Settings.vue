@@ -43,18 +43,6 @@
             />
           </div>
 
-          <!-- 显示广告 -->
-          <div class="setting-item">
-            <div class="setting-info">
-              <h4>显示侧边栏广告</h4>
-              <p>显示或隐藏侧边栏底部的广告</p>
-            </div>
-            <n-switch
-              v-model:value="settings.showAd"
-              @update:value="handleShowAdChange"
-            />
-          </div>
-
           <!-- 隐藏 WebUI 入口 -->
           <div class="setting-item">
             <div class="setting-info">
@@ -323,7 +311,6 @@ const {
   handleAutoStartChange,
   handleAlwaysOnTopChange,
   handleMinimizeToTrayChange,
-  handleShowAdChange,
   handleHideWebuiEntryChange,
   handleEnableAiChange,
   handleTunnelAutoStartChange,

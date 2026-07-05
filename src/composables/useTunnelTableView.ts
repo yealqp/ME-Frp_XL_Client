@@ -37,8 +37,8 @@ export function useTunnelTableView({
   const skeletonTableColumns = [
     { title: "ID", key: "id", width: 80 },
     { title: "隧道名称", key: "name", width: 150 },
-    { title: "状态", key: "status", width: 120 },
-    { title: "协议", key: "protocol", width: 80 },
+    { title: "状态", key: "status", width: 140 },
+    { title: "类型", key: "protocol", width: 80 },
     { title: "节点", key: "node", width: 150 },
     { title: "本地地址", key: "local", width: 150 },
     { title: "远程端口/域名", key: "remote", width: 200 },
@@ -100,16 +100,19 @@ export function useTunnelTableView({
     {
       title: "状态",
       key: "status",
-      width: 120,
+      width: 140,
       render: (row: Tunnel) =>
         h(NSpace, { size: 4 }, () => [
+          row.isBanned
+            ? h(NTag, { type: "error", bordered: false, size: "small" }, { default: () => "已封禁" })
+            : null,
           row.isDisabled
             ? h(NTag, { type: "warning", bordered: false, size: "small" }, { default: () => "已禁用" })
             : null,
           h(
             NTag,
             {
-              type: row.isOnline ? "success" : "default",
+              type: row.isOnline ? "success" : "warning",
               bordered: false,
               size: "small",
             },
@@ -118,11 +121,22 @@ export function useTunnelTableView({
         ]),
     },
     {
-      title: "协议",
+      title: "类型",
       key: "proxyType",
       width: 80,
-      render: (row: Tunnel) =>
-        h(NTag, { bordered: false, size: "small" }, { default: () => row.proxyType.toUpperCase() }),
+      render: (row: Tunnel) => {
+        const typeMap: Record<string, "info" | "success" | "warning" | "error"> = {
+          tcp: "info",
+          udp: "warning",
+          http: "success",
+          https: "success",
+        };
+        return h(
+          NTag,
+          { type: typeMap[row.proxyType] || "default", bordered: false, size: "small" },
+          { default: () => row.proxyType.toUpperCase() },
+        );
+      },
     },
     {
       title: "节点",

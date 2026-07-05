@@ -4,12 +4,12 @@
     <div v-if="tunnel" class="details-container">
       <n-descriptions :column="2" bordered label-placement="left">
         <n-descriptions-item label="状态">
-          <n-tag :type="tunnel.isOnline ? 'success' : 'default'" size="small" :bordered="false">
+          <n-tag :type="tunnel.isOnline ? 'success' : 'warning'" size="small" :bordered="false">
             {{ tunnel.isOnline ? "在线" : "离线" }}
           </n-tag>
         </n-descriptions-item>
         <n-descriptions-item label="协议类型">
-          <n-tag type="primary" size="small" :bordered="false">
+          <n-tag :type="protocolTagType" size="small" :bordered="false">
             {{ tunnel.proxyType.toUpperCase() }}
           </n-tag>
         </n-descriptions-item>
@@ -111,6 +111,17 @@ defineEmits<Emits>();
 const message = useMessage();
 
 const selectedDomain = ref<string>("");
+
+const protocolTagType = computed(() => {
+  if (!props.tunnel) return "default";
+  const typeMap: Record<string, "info" | "success" | "warning" | "error"> = {
+    tcp: "info",
+    udp: "warning",
+    http: "success",
+    https: "success",
+  };
+  return typeMap[props.tunnel.proxyType] || "default";
+});
 
 const domainOptions = computed(() => {
   if (!props.tunnel || !props.tunnel.domain) return [];

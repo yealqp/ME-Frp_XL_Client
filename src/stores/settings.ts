@@ -11,7 +11,6 @@ import { invoke } from '@tauri-apps/api/core';
 import type { AppSettings } from '@/types/config';
 import { clampAppearanceOpacity, clampAppearanceRange } from '@/utils/appearanceSettings';
 import { extractErrorMessage } from '@/utils/errorHandler';
-import { showAdGlobal } from '@/utils/eventBus';
 import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -26,7 +25,6 @@ export const useSettingsStore = defineStore('settings', () => {
     autoStartTunnels: [],
     startupDelay: 5,
     minimizeToTray: true,
-    showAd: true,
     theme: 'dark',
     hideWebuiEntry: false,
     enableAi: false,
@@ -37,6 +35,7 @@ export const useSettingsStore = defineStore('settings', () => {
     contentOpacity: 100,
     fontWeight: 400,
     shadowIntensity: 100,
+    sidebarPosition: 'left' as 'left' | 'top',
   });
 
   const loading = ref(false);
@@ -67,7 +66,6 @@ export const useSettingsStore = defineStore('settings', () => {
   /**
    * Load settings from UnifiedConfig
    * Sets default values for undefined settings
-   * Syncs showAd to eventBus
    */
   async function loadSettings(): Promise<void> {
     loading.value = true;
@@ -84,7 +82,6 @@ export const useSettingsStore = defineStore('settings', () => {
         autoStartTunnels: config.autoStartTunnels ?? [],
         startupDelay: config.startupDelay ?? 5,
         minimizeToTray: config.minimizeToTray ?? true,
-        showAd: config.showAd ?? true,
         theme: localStorage.getItem('mefrp_theme') || 'dark',
         hideWebuiEntry: config.hideWebuiEntry ?? false,
         enableAi: config.enableAi ?? false,
@@ -95,8 +92,10 @@ export const useSettingsStore = defineStore('settings', () => {
         contentOpacity: clampAppearanceOpacity(config.contentOpacity, 100) ?? 100,
         fontWeight: clampAppearanceRange(config.fontWeight, 300, 700, 400) ?? 400,
         shadowIntensity: clampAppearanceRange(config.shadowIntensity, 0, 200, 100) ?? 100,
+        sidebarPosition: (config.sidebarPosition === 'left' || config.sidebarPosition === 'top')
+          ? config.sidebarPosition
+          : 'left',
       };
-      showAdGlobal.value = settings.value.showAd;
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err);
       console.error('加载设置失败:', err);
@@ -122,7 +121,6 @@ export const useSettingsStore = defineStore('settings', () => {
         autoStartTunnels: settings.value.autoStartTunnels,
         startupDelay: settings.value.startupDelay,
         minimizeToTray: settings.value.minimizeToTray,
-        showAd: settings.value.showAd,
         hideWebuiEntry: settings.value.hideWebuiEntry,
         enableAi: settings.value.enableAi,
         backgroundImagePath: settings.value.backgroundImagePath || undefined,
@@ -132,6 +130,7 @@ export const useSettingsStore = defineStore('settings', () => {
         contentOpacity: clampAppearanceOpacity(settings.value.contentOpacity, 100) ?? 100,
         fontWeight: clampAppearanceRange(settings.value.fontWeight, 300, 700, 400) ?? 400,
         shadowIntensity: clampAppearanceRange(settings.value.shadowIntensity, 0, 200, 100) ?? 100,
+        sidebarPosition: settings.value.sidebarPosition,
       });
       localStorage.setItem('mefrp_theme', settings.value.theme);
     } catch (err) {
@@ -146,8 +145,6 @@ export const useSettingsStore = defineStore('settings', () => {
   /**
    * Update a single setting item
    * Calls saveSettings to persist the change
-   * Syncs showAd to eventBus if updated
-   * 
    * @param key - Setting key to update
    * @param value - New value for the setting
    */
@@ -156,12 +153,7 @@ export const useSettingsStore = defineStore('settings', () => {
     value: AppSettings[K]
   ): Promise<void> {
     settings.value[key] = value;
-    
-    // Sync showAd to eventBus
-    if (key === 'showAd') {
-      showAdGlobal.value = value as boolean;
-    }
-    
+
     await saveSettings();
   }
 

@@ -11,19 +11,25 @@
           <h3 class="tunnel-name">{{ tunnel.proxyName }}</h3>
           <div class="status-tags">
             <n-tag
+              v-if="tunnel.isBanned"
+              type="error"
+              :bordered="false"
+              size="small"
+            >
+              已封禁
+            </n-tag>
+            <n-tag
               v-if="tunnel.isDisabled"
               type="warning"
               :bordered="false"
               size="small"
-              class="disabled-tag"
             >
               已禁用
             </n-tag>
             <n-tag
-              :type="tunnel.isOnline ? 'success' : 'default'"
+              :type="tunnel.isOnline ? 'success' : 'warning'"
               :bordered="false"
               size="small"
-              class="status-tag"
             >
               {{ tunnel.isOnline ? "在线" : "离线" }}
             </n-tag>
@@ -42,10 +48,10 @@
           </n-tag>
         </div>
         <div class="info-row">
-          <span class="info-label">协议:</span>
-          <span class="info-value">{{
-            tunnel.proxyType.toUpperCase()
-          }}</span>
+          <span class="info-label">类型:</span>
+          <n-tag :type="protocolTagType" :bordered="false" size="small">
+            {{ tunnel.proxyType.toUpperCase() }}
+          </n-tag>
         </div>
         <div
           class="info-row"
@@ -180,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { h } from "vue";
+import { h, computed } from "vue";
 import { useDialog, NRadioGroup, NRadio, NSpace } from "naive-ui";
 import {
   Play,
@@ -214,6 +220,16 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const dialog = useDialog();
+
+const protocolTagType = computed(() => {
+  const typeMap: Record<string, "info" | "success" | "warning" | "error"> = {
+    tcp: "info",
+    udp: "warning",
+    http: "success",
+    https: "success",
+  };
+  return typeMap[props.tunnel.proxyType] || "default";
+});
 
 function createDomainRadioGroup(domains: string[], selectedDomain: { value: string }) {
   return h(NSpace, { vertical: true, size: 'large', style: 'width: 100%;' }, {
@@ -322,15 +338,6 @@ function handleMoreAction(action: string, tunnelId: number) {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.disabled-tag {
-  background-color: #faad14 !important;
-  color: white !important;
-}
-
-.status-tag {
-  margin-left: 0;
 }
 
 .tunnel-info {

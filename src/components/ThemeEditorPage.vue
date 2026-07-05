@@ -68,6 +68,21 @@
               @update:value="handleSidebarCollapsibleChange"
             />
           </div>
+
+          <div class="setting-item">
+            <div class="setting-info">
+              <h4>导航位置</h4>
+              <p>选择导航栏显示在左侧或顶部，切换后即时生效。</p>
+            </div>
+            <n-radio-group
+              :value="settings.sidebarPosition"
+              size="small"
+              @update:value="handleSidebarPositionChange"
+            >
+              <n-radio-button value="left" label="左侧" />
+              <n-radio-button value="top" label="顶部" />
+            </n-radio-group>
+          </div>
         </n-space>
       </n-card>
 
@@ -165,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { NButton, NCard, NInput, NSpace, NSwitch, useMessage } from "naive-ui";
+import { NButton, NCard, NInput, NSpace, NSwitch, NRadioGroup, NRadioButton, useMessage } from "naive-ui";
 import { useRouter } from "vue-router";
 import { Image as ImageIcon, Palette, SwatchBook } from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
@@ -196,6 +211,7 @@ const {
   handleShadowIntensityChange,
   handleSidebarWidthChange,
   handleSidebarCollapsibleChange,
+  handleSidebarPositionChange,
 } = useAppearanceSettings();
 
 function findPreset(presetId: string) {

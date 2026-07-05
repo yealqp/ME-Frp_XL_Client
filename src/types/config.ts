@@ -17,7 +17,6 @@ export interface UnifiedConfig {
   autoStartTunnels: number[];
   startupDelay: number;
   minimizeToTray: boolean;
-  showAd: boolean;
   enableAi?: boolean;
   
   // UI 设置
@@ -31,6 +30,7 @@ export interface UnifiedConfig {
   contentOpacity?: number;
   fontWeight?: number;
   shadowIntensity?: number;
+  sidebarPosition?: 'left' | 'top';
   
   // WebUI 设置
   webuiAddr?: string;
@@ -46,10 +46,11 @@ export interface UnifiedConfig {
 // 应用设置类型（派生自 UnifiedConfig 以消除字段重复）
 type AppSettingKeys =
   | 'autoStart' | 'alwaysOnTop' | 'autoUpdate' | 'autoStartTunnels'
-  | 'startupDelay' | 'minimizeToTray' | 'showAd' | 'enableAi'
+  | 'startupDelay' | 'minimizeToTray' | 'enableAi'
   | 'sidebarWidth' | 'sidebarCollapsible' | 'sidebarCollapsed'
   | 'backgroundImagePath' | 'backgroundImageOpacity' | 'backgroundBlur'
   | 'sidebarOpacity' | 'contentOpacity' | 'fontWeight' | 'shadowIntensity'
+  | 'sidebarPosition'
   | 'webuiAddr' | 'webuiPort' | 'webuiPass' | 'hideWebuiEntry';
 
 export interface AppSettings extends Pick<UnifiedConfig, AppSettingKeys> {

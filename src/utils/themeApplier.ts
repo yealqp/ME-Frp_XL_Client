@@ -147,10 +147,6 @@ export function applyCSSVariables(config: ThemeConfig, theme: Theme = "light"): 
     root.style.setProperty("--app-log-path-color", c.successColor);
     root.style.setProperty("--app-log-highlight-color", c.errorColor);
 
-    // 广告横幅
-    root.style.setProperty("--ad-banner-bg", c.primaryColor);
-    root.style.setProperty("--ad-banner-bg-hover", c.primaryColorHover);
-
   } catch (error) {
     console.error("应用 CSS 变量失败:", error);
   }

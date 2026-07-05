@@ -1,7 +1,7 @@
 {
   "name": "me-frp_xl_client",
   "private": true,
-  "version": "2.2.3",
+  "version": "2.2.4-dev",
   "type": "module",
   "scripts": {
     "dev": "vite",

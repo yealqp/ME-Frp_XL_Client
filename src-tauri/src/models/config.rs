@@ -37,8 +37,6 @@ pub struct UnifiedConfig {
     pub startup_delay: i32,
     #[serde(rename = "minimizeToTray")]
     pub minimize_to_tray: bool,
-    #[serde(rename = "showAd")]
-    pub show_ad: bool,
     #[serde(rename = "hideWebuiEntry")]
     pub hide_webui_entry: bool,
     #[serde(rename = "enableAi", default)]
@@ -71,6 +69,8 @@ pub struct UnifiedConfig {
     pub font_weight: Option<u16>,
     #[serde(rename = "shadowIntensity", skip_serializing_if = "Option::is_none")]
     pub shadow_intensity: Option<u8>,
+    #[serde(rename = "sidebarPosition", skip_serializing_if = "Option::is_none")]
+    pub sidebar_position: Option<String>,
 
     // WebUI 设置
     #[serde(rename = "webuiAddr", skip_serializing_if = "Option::is_none")]
@@ -103,7 +103,6 @@ impl Default for UnifiedConfig {
             auto_start_tunnels: Vec::new(),
             startup_delay: 5,
             minimize_to_tray: true,
-            show_ad: true,
             hide_webui_entry: false,
             enable_ai: false,
 
@@ -118,6 +117,7 @@ impl Default for UnifiedConfig {
             content_opacity: Some(100),
             font_weight: Some(400),
             shadow_intensity: Some(100),
+            sidebar_position: Some("left".to_string()),
 
             // WebUI 设置默认值
             webui_addr: Some("localhost".to_string()),

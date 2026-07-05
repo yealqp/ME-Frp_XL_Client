@@ -13,6 +13,7 @@ import {
   NNotificationProvider,
   NLayout,
   NLayoutContent,
+  NLayoutHeader,
   type DialogProviderInst,
   type LoadingBarProviderInst,
   type MessageProviderInst,
@@ -26,6 +27,7 @@ import { useThemeStore } from "./stores/theme";
 import { useUIStore } from "./stores/ui";
 import { setLoadingBar } from "./composables/useLoadingBar";
 import Sidebar from "./components/Sidebar.vue";
+import TopNav from "./components/TopNav.vue";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import type { UnifiedConfig } from "@/types/config";
 import { ChevronLeft, ChevronRight } from "@lucide/vue";
@@ -141,31 +143,31 @@ const message = {
   },
 };
 
-// 鑺傜偣閫夋嫨瀹屾垚锛岃繘鍏ラ毀閬撻厤缃〉闈?
+// 节点选择完成，进入隧道配置页面
 function handleNodeSelected(node: any) {
   createTunnelStore.selectNode(node);
   router.push("/tunnel-config");
 }
 
-// 杩斿洖鑺傜偣閫夋嫨椤甸潰
+// 返回节点选择页面
 function handleGoBackToNodeSelection() {
   createTunnelStore.goBackToNodeSelection();
   router.push("/create-tunnel");
 }
 
-// 璺宠浆鍒板垱寤洪毀閬撻〉闈?
+// 跳转到创建隧道页面
 function handleGoToCreateTunnel() {
   createTunnelStore.resetCreateFlow();
   router.push("/create-tunnel");
 }
 
-// 鏍规嵁缁勪欢绫诲瀷杩斿洖鐩稿簲鐨?props
+// 根据组件类型返回相应的 props
 function getComponentProps(component: any) {
   if (!component) return {};
 
   const componentName = component.__name || component.name;
 
-  // 鍙负闇€瑕佽繖浜?props 鐨勭粍浠朵紶閫?
+  // 只为需要这些 props 的组件传递
   if (componentName === "CreateTunnel" || componentName === "TunnelConfig") {
     return {
       selectedNode: selectedNode.value,
@@ -176,13 +178,13 @@ function getComponentProps(component: any) {
   return {};
 }
 
-// 鏍规嵁缁勪欢绫诲瀷杩斿洖鐩稿簲鐨勪簨浠剁洃鍚櫒
+// 根据组件类型返回相应的事件监听器
 function getComponentListeners(component: any) {
   if (!component) return {};
 
   const componentName = component.__name || component.name;
 
-  // 鍙负闇€瑕佽繖浜涗簨浠剁殑缁勪欢浼犻€?
+  // 只为需要这些事件的组件传递
   if (componentName === "CreateTunnel") {
     return {
       onNodeSelected: handleNodeSelected,
@@ -351,18 +353,19 @@ watch(
         <n-message-provider ref="messageProvider" :container-style="{ zIndex: 100000 }">
           <n-dialog-provider ref="dialogProvider">
             <n-notification-provider ref="notificationProvider">
-            <!-- 鍔犺浇鐘舵€?-->
+            <!-- 加载状态 -->
             <div v-if="!shellReady" class="loading-container"></div>
 
-            <!-- 鐧诲綍/娉ㄥ唽椤甸潰 -->
+            <!-- 登录/注册页面 -->
             <div v-else-if="showLoginScreen" class="login-fullscreen">
               <router-view v-slot="{ Component }">
                 <component :is="Component" @login-success="handleLoginSuccess" />
               </router-view>
             </div>
 
-            <!-- 涓诲簲鐢ㄧ晫闈?- 浣跨敤 NLayout -->
-            <n-layout v-else-if="showAppShell" has-sider position="absolute" class="main-layout">
+            <!-- 主应用界面 - 左侧导航模式 -->
+            <template v-else-if="showAppShell && settings.sidebarPosition !== 'top'">
+              <n-layout has-sider position="absolute" class="main-layout">
               <button
                 v-if="sidebarCollapsible"
                 type="button"
@@ -374,10 +377,10 @@ watch(
                 <component :is="sidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
               </button>
 
-              <!-- 宸︿晶瀵艰埅鏍?-->
+              <!-- 左侧导航栏 -->
               <Sidebar @logout="handleLogout" />
 
-              <!-- 鍙充晶鍐呭鍖哄煙 -->
+              <!-- 右侧内容区域 -->
               <n-layout class="content-layout">
                 <n-layout-content class="content-body">
                   <router-view v-slot="{ Component, route }">
@@ -410,6 +413,45 @@ watch(
                 </n-layout-content>
               </n-layout>
             </n-layout>
+            </template>
+
+            <!-- 主应用界面 - 顶部导航模式 -->
+            <template v-else-if="showAppShell">
+              <n-layout position="absolute" class="main-layout main-layout--top">
+                <n-layout-header bordered class="top-layout-header">
+                  <TopNav @logout="handleLogout" />
+                </n-layout-header>
+                <n-layout-content class="content-body content-body--top">
+                  <router-view v-slot="{ Component, route }">
+                    <transition :name="(route.meta.transition as string) || 'fade-slide'" mode="out-in">
+                      <div v-if="Component" :key="route.path" class="route-container">
+                        <Suspense>
+                          <template #default>
+                            <component
+                              :is="Component"
+                              v-bind="{
+                                ...getComponentProps(Component),
+                                ...getComponentListeners(Component),
+                              }"
+                            />
+                          </template>
+                          <template #fallback>
+                            <div class="route-loading">
+                              <n-spin size="medium" />
+                            </div>
+                          </template>
+                        </Suspense>
+                      </div>
+                      <div v-else :key="'empty-' + route.path" class="route-container">
+                        <div class="route-loading">
+                          <n-spin size="medium" />
+                        </div>
+                      </div>
+                    </transition>
+                  </router-view>
+                </n-layout-content>
+              </n-layout>
+            </template>
             </n-notification-provider>
           </n-dialog-provider>
         </n-message-provider>
@@ -534,6 +576,25 @@ body {
   overflow-y: auto;
 }
 
+/* 顶部导航布局 */
+.main-layout--top {
+  flex-direction: column !important;
+}
+
+.main-layout--top .n-layout-scroll-container {
+  flex-direction: column !important;
+}
+
+.top-layout-header {
+  background: transparent !important;
+  --n-header-border-color: var(--app-border-color);
+  flex-shrink: 0;
+}
+
+.content-body--top {
+  padding: 20px 30px 30px;
+}
+
 /* 内容区透明度 — 统一由 .content-layout::before 控制底色 */
 .content-layout .n-card {
   background-color: transparent !important;
@@ -622,7 +683,7 @@ body {
   }
 }
 
-/* 鑷畾涔夋粴鍔ㄦ潯鏍峰紡 */
+/* 自定义滚动条样式 */
 * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--app-text-color-3) 58%, transparent) var(--app-card-color);
@@ -656,7 +717,7 @@ body {
   background: var(--app-card-color);
 }
 
-/* Naive UI 缁勪欢婊氬姩鏉℃牱寮?*/
+/* Naive UI 组件滚动条样式 */
 .n-scrollbar-rail {
   background: var(--app-card-color) !important;
 }
@@ -705,8 +766,8 @@ body {
   background: color-mix(in srgb, var(--app-text-color-2) 68%, transparent);
 }
 
-/* 璺敱杩囨浮鍔ㄧ敾 */
-/* 娣″叆娣″嚭 + 婊戝姩鏁堟灉 */
+/* 路由过渡动画 */
+/* 淡入淡出 + 滑动效果 */
 .fade-slide-enter-active {
   transition: all 0.3s ease-out;
 }
@@ -725,7 +786,7 @@ body {
   transform: translateX(-20px);
 }
 
-/* 娣″叆娣″嚭鏁堟灉 */
+/* 淡入淡出效果 */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -736,7 +797,7 @@ body {
   opacity: 0;
 }
 
-/* 鍝嶅簲寮忚璁?*/
+/* 响应式设计 */
 @media (max-width: 768px) {
   .content-body {
     padding: 20px;
@@ -750,7 +811,7 @@ body {
     font-size: 14px;
   }
   
-  /* 绉诲姩绔娇鐢ㄦ洿蹇殑鍔ㄧ敾 */
+  /* 移动端使用更快的动画 */
   .fade-slide-enter-active,
   .fade-slide-leave-active {
     transition: all 0.2s ease;

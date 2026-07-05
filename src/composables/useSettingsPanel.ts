@@ -108,15 +108,6 @@ export function useSettingsPanel() {
     }
   }
 
-  async function handleShowAdChange(value: boolean) {
-    try {
-      await settingsStore.updateSetting("showAd", value);
-      message.success(value ? "已开启侧边栏广告" : "已关闭侧边栏广告");
-    } catch {
-      message.error("保存广告显示设置失败");
-    }
-  }
-
   async function handleHideWebuiEntryChange(value: boolean) {
     try {
       await settingsStore.updateSetting("hideWebuiEntry", value);
@@ -217,7 +208,6 @@ export function useSettingsPanel() {
     handleAutoStartChange,
     handleAlwaysOnTopChange,
     handleMinimizeToTrayChange,
-    handleShowAdChange,
     handleHideWebuiEntryChange,
     handleEnableAiChange,
     handleTunnelAutoStartChange,

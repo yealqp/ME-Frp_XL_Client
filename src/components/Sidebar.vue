@@ -18,7 +18,7 @@
             alt="logo" 
             class="logo"
           />
-          <span v-show="!sidebarCollapsed" class="title-text">ME-Frp</span>
+          <span v-show="!sidebarCollapsed" class="title-text">XL Client</span>
         </h2>
       </div>
 
@@ -36,29 +36,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <!-- 仙林云计算广告 -->
-        <a
-          v-if="showAd && !sidebarCollapsed"
-          href="https://www.idcxl.cn"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="ad-banner"
-        >
-          <div class="ad-content">
-            <div class="ad-icon">
-              <img
-                src="../assets/xly.ico"
-                alt="仙林云计算"
-                class="ad-logo"
-              />
-            </div>
-            <div class="ad-text">
-              <div class="ad-title">仙林云</div>
-              <div class="ad-subtitle">推荐服务商 价格低廉</div>
-            </div>
-          </div>
-      </a>
-    </div>
+      </div>
   </n-layout-sider>
 </template>
 
@@ -72,18 +50,8 @@ import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
 import { useThemeStore } from "../stores/theme";
 import { useUIStore } from "../stores/ui";
-import {
-  Home,
-  PlusCircle,
-  Settings as SettingsIcon,
-  User,
-  Gift,
-  HelpCircle,
-  Info,
-  LogOut,
-  Activity,
-  Globe,
-} from "@lucide/vue";
+import { LogOut } from "@lucide/vue";
+import { navItems, pathToNav, navToPath } from "../config/navigation";
 
 const router = useRouter();
 const route = useRoute();
@@ -112,7 +80,6 @@ const handleExpand = async () => {
 // 使用 Settings store 中的广告显示状态
 const settingsStore = useSettingsStore();
 const { settings } = storeToRefs(settingsStore);
-const showAd = computed(() => settings.value.showAd);
 
 const emit = defineEmits<{
   logout: [];
@@ -121,38 +88,8 @@ const emit = defineEmits<{
 
 // 从路由计算当前激活的导航项
 const activeNav = computed(() => {
-  const pathToNav: Record<string, string> = {
-    "/dashboard": "dashboard",
-    "/create-tunnel": "create-tunnel",
-    "/tunnel-config": "create-tunnel",
-    "/tunnel-management": "tunnel-management",
-    "/node-status": "node-status",
-    "/mefrp-webui": "mefrp-webui",
-    "/user-center": "user-center",
-    "/luckydraw": "luckydraw",
-      "/operation-log": "", // 操作日志页面不高亮任何菜单项
-      "/settings": "settings",
-      "/theme-editor": "settings",
-      "/help-center": "help-center",
-    "/about": "about",
-  };
-  // 如果路径在映射中，返回对应的值；否则返回 null（不高亮任何项）
   return pathToNav.hasOwnProperty(route.path) ? pathToNav[route.path] : null;
 });
-
-// 导航项配置
-const navItems = [
-  { id: "dashboard", name: "面板首页", icon: Home },
-  { id: "create-tunnel", name: "创建隧道", icon: PlusCircle },
-  { id: "tunnel-management", name: "隧道管理", icon: SettingsIcon },
-  { id: "mefrp-webui", name: "WebUI", icon: Globe },
-  { id: "node-status", name: "节点监控", icon: Activity },
-  { id: "user-center", name: "用户中心", icon: User },
-  { id: "luckydraw", name: "每日抽奖", icon: Gift },
-  { id: "help-center", name: "帮助中心", icon: HelpCircle },
-  { id: "settings", name: "选项设置", icon: SettingsIcon },
-  { id: "about", name: "关于面板", icon: Info },
-];
 
 // 根据设置过滤导航项
 const filteredNavItems = computed(() => {
@@ -208,20 +145,6 @@ function handleMenuSelect(key: string) {
     });
     return;
   }
-
-  // 路由映射
-  const navToPath: Record<string, string> = {
-    dashboard: "/dashboard",
-    "create-tunnel": "/create-tunnel",
-    "tunnel-management": "/tunnel-management",
-    "node-status": "/node-status",
-    "mefrp-webui": "/mefrp-webui",
-    "user-center": "/user-center",
-    luckydraw: "/luckydraw",
-    settings: "/settings",
-    "help-center": "/help-center",
-    about: "/about",
-  };
 
   const path = navToPath[key];
   if (path) {
@@ -373,74 +296,6 @@ function handleMenuSelect(key: string) {
 /* 收缩状态下调整 footer padding */
 :deep(.n-layout-sider--collapsed) .sidebar-footer {
   padding: 20px 8px;
-}
-
-/* 广告横幅样式 */
-/* 广告背景使用反向的颜色：浅色模式用浅蓝，深色模式用深蓝 */
-.ad-banner {
-  display: block;
-  padding: 16px;
-  background: var(--ad-banner-bg, var(--app-primary-color));
-  border-radius: 8px;
-  text-decoration: none;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--ad-banner-bg, var(--app-primary-color)) 30%, transparent);
-  opacity: 1;
-}
-
-/* 收缩状态下隐藏广告 */
-:deep(.n-layout-sider--collapsed) .ad-banner {
-  opacity: 0;
-  height: 0;
-  padding: 0;
-  margin: 0;
-  overflow: hidden;
-}
-
-.ad-banner:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--ad-banner-bg, var(--app-primary-color)) 40%, transparent);
-  background: var(--ad-banner-bg-hover, var(--app-primary-color-hover));
-}
-
-.ad-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.ad-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-
-.ad-logo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.ad-text {
-  flex: 1;
-}
-
-.ad-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: #ffffff;
-}
-
-.ad-subtitle {
-  font-size: 12px;
-  opacity: 0.9;
-  color: #ffffff;
 }
 
 /* 自定义Naive UI Menu样式 */

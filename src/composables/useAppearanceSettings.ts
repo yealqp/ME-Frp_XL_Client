@@ -221,6 +221,17 @@ export function useAppearanceSettings() {
     );
   }
 
+  async function handleSidebarPositionChange(value: 'left' | 'top') {
+    try {
+      await settingsStore.updateSetting('sidebarPosition', value);
+      message.success(`导航位置已切换为${value === 'left' ? '左侧' : '顶部'}`);
+    } catch (error) {
+      console.error('保存导航位置失败:', error);
+      message.error('保存导航位置失败');
+      await settingsStore.loadSettings();
+    }
+  }
+
   onUnmounted(() => {
     for (const timer of [
       backgroundOpacityDebounceTimer,
@@ -251,5 +262,6 @@ export function useAppearanceSettings() {
     handleShadowIntensityChange,
     handleSidebarWidthChange,
     handleSidebarCollapsibleChange,
+    handleSidebarPositionChange,
   };
 }

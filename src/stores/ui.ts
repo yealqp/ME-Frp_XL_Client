@@ -9,7 +9,6 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { invoke } from '@tauri-apps/api/core';
-import { showAdGlobal } from '@/utils/eventBus';
 import type { NotificationReactive } from 'naive-ui';
 import { loadUnifiedConfig, mergeUnifiedConfig } from '@/utils/unifiedConfig';
 
@@ -17,8 +16,6 @@ export const useUIStore = defineStore('ui', () => {
   // State
   const theme = ref<'light' | 'dark'>('light');
   const customTheme = ref<any>(null);
-  const showAd = ref<boolean>(true);
-  
   // Sidebar settings
   const sidebarWidth = ref<number>(200); // 默认宽度 200px
   const sidebarCollapsible = ref<boolean>(true); // 默认开启收缩功能
@@ -49,15 +46,6 @@ export const useUIStore = defineStore('ui', () => {
   function toggleTheme() {
     theme.value = theme.value === 'light' ? 'dark' : 'light';
     localStorage.setItem('theme', theme.value);
-  }
-
-  /**
-   * Update showAd state and sync to eventBus
-   * @param value - New showAd value
-   */
-  function updateShowAd(value: boolean) {
-    showAd.value = value;
-    showAdGlobal.value = value;
   }
 
   /**
@@ -222,7 +210,6 @@ export const useUIStore = defineStore('ui', () => {
     // State
     theme,
     customTheme,
-    showAd,
     sidebarWidth,
     sidebarCollapsible,
     sidebarCollapsed,
@@ -234,7 +221,6 @@ export const useUIStore = defineStore('ui', () => {
     // Actions
     initTheme,
     toggleTheme,
-    updateShowAd,
     loadSidebarSettings,
     saveSidebarSettings,
     updateSidebarWidth,
