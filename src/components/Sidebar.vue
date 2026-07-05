@@ -26,7 +26,7 @@
         <n-menu
           :options="menuOptions"
           :value="activeNav"
-          inverted
+          :inverted="!isLightMode"
           @update:value="handleMenuSelect"
           :collapsed="sidebarCollapsed"
           :collapsed-width="64"
@@ -70,6 +70,7 @@ import { NIcon, NLayoutSider, useDialog } from "naive-ui";
 import type { MenuOption } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useSettingsStore } from "../stores/settings";
+import { useThemeStore } from "../stores/theme";
 import { useUIStore } from "../stores/ui";
 import {
   Home,
@@ -91,6 +92,10 @@ const dialog = useDialog();
 // UI Store
 const uiStore = useUIStore();
 const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
+
+// Theme Store
+const themeStore = useThemeStore();
+const { isLightMode } = storeToRefs(themeStore);
 
 // 处理收缩
 const handleCollapse = async () => {
