@@ -13,6 +13,7 @@ import {
   NNotificationProvider,
   NLayout,
   NLayoutContent,
+  NLayoutFooter,
   NLayoutHeader,
   type DialogProviderInst,
   type LoadingBarProviderInst,
@@ -364,7 +365,7 @@ watch(
             </div>
 
             <!-- 主应用界面 - 左侧导航模式 -->
-            <template v-else-if="showAppShell && settings.sidebarPosition !== 'top'">
+            <template v-else-if="showAppShell && settings.sidebarPosition !== 'top' && settings.sidebarPosition !== 'bottom'">
               <n-layout has-sider position="absolute" class="main-layout">
               <button
                 v-if="sidebarCollapsible"
@@ -383,6 +384,7 @@ watch(
               <!-- 右侧内容区域 -->
               <n-layout class="content-layout">
                 <n-layout-content class="content-body">
+                  <div class="content-inner">
                   <router-view v-slot="{ Component, route }">
                     <transition :name="(route.meta.transition as string) || 'fade-slide'" mode="out-in">
                       <div v-if="Component" :key="route.path" class="route-container">
@@ -410,18 +412,20 @@ watch(
                       </div>
                     </transition>
                   </router-view>
+                  </div>
                 </n-layout-content>
               </n-layout>
             </n-layout>
             </template>
 
             <!-- 主应用界面 - 顶部导航模式 -->
-            <template v-else-if="showAppShell">
+            <template v-else-if="showAppShell && settings.sidebarPosition === 'top'">
               <n-layout position="absolute" class="main-layout main-layout--top">
                 <n-layout-header bordered class="top-layout-header">
                   <TopNav @logout="handleLogout" />
                 </n-layout-header>
                 <n-layout-content class="content-body content-body--top">
+                  <div class="content-inner">
                   <router-view v-slot="{ Component, route }">
                     <transition :name="(route.meta.transition as string) || 'fade-slide'" mode="out-in">
                       <div v-if="Component" :key="route.path" class="route-container">
@@ -449,7 +453,48 @@ watch(
                       </div>
                     </transition>
                   </router-view>
+                  </div>
                 </n-layout-content>
+              </n-layout>
+            </template>
+
+            <!-- 主应用界面 - 底部导航模式 -->
+            <template v-else-if="showAppShell && settings.sidebarPosition === 'bottom'">
+              <n-layout position="absolute" class="main-layout main-layout--top">
+                <n-layout-content class="content-body content-body--bottom">
+                  <div class="content-inner">
+                  <router-view v-slot="{ Component, route }">
+                    <transition :name="(route.meta.transition as string) || 'fade-slide'" mode="out-in">
+                      <div v-if="Component" :key="route.path" class="route-container">
+                        <Suspense>
+                          <template #default>
+                            <component
+                              :is="Component"
+                              v-bind="{
+                                ...getComponentProps(Component),
+                                ...getComponentListeners(Component),
+                              }"
+                            />
+                          </template>
+                          <template #fallback>
+                            <div class="route-loading">
+                              <n-spin size="medium" />
+                            </div>
+                          </template>
+                        </Suspense>
+                      </div>
+                      <div v-else :key="'empty-' + route.path" class="route-container">
+                        <div class="route-loading">
+                          <n-spin size="medium" />
+                        </div>
+                      </div>
+                    </transition>
+                  </router-view>
+                  </div>
+                </n-layout-content>
+                <n-layout-footer bordered class="top-layout-header bottom-layout-footer">
+                  <TopNav position="bottom" @logout="handleLogout" />
+                </n-layout-footer>
               </n-layout>
             </template>
             </n-notification-provider>
@@ -570,29 +615,47 @@ body {
 .content-body {
   position: relative;
   z-index: 1;
-  padding: 30px;
   background: transparent !important;
-  min-height: 100%;
-  overflow-y: auto;
 }
 
-/* 顶部导航布局 */
+.content-inner {
+  padding: 30px;
+}
+
+/* 顶部/底部导航布局 */
 .main-layout--top {
   flex-direction: column !important;
 }
 
 .main-layout--top .n-layout-scroll-container {
   flex-direction: column !important;
+  display: flex !important;
 }
 
 .top-layout-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 14;
   background: transparent !important;
   --n-header-border-color: var(--app-border-color);
   flex-shrink: 0;
 }
 
-.content-body--top {
+.bottom-layout-footer {
+  position: sticky !important;
+  bottom: 0;
+  z-index: 14;
+  background: transparent !important;
+  --n-footer-border-color: var(--app-border-color);
+  flex-shrink: 0;
+}
+
+.content-body--top .content-inner {
   padding: 20px 30px 30px;
+}
+
+.content-body--bottom .content-inner {
+  padding: 30px 30px 20px;
 }
 
 /* 内容区透明度 — 统一由 .content-layout::before 控制底色 */

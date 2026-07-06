@@ -11,15 +11,8 @@
     @collapse="handleCollapse"
     @expand="handleExpand"
   >
-      <div class="sidebar-header" @click="handleLogoClick">
-        <h2 class="app-title">
-          <img 
-            src="../assets/icon.png" 
-            alt="logo" 
-            class="logo"
-          />
-          <span v-show="!sidebarCollapsed" class="title-text">XL Client</span>
-        </h2>
+      <div class="sidebar-header">
+        <NavLogo :hide-text="sidebarCollapsed" @click="handleLogoClick" />
       </div>
 
       <div class="nav-content">
@@ -27,7 +20,7 @@
           :options="menuOptions"
           :value="activeNav"
           :inverted="!isLightMode"
-          @update:value="handleMenuSelect"
+          @update:value="onMenuSelect"
           :collapsed="sidebarCollapsed"
           :collapsed-width="64"
           :collapsed-icon-size="20"
@@ -42,67 +35,56 @@
 
 <script setup lang="ts">
 import { h, computed } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import { invoke } from "@tauri-apps/api/core";
 import { NIcon, NLayoutSider, useDialog } from "naive-ui";
 import type { MenuOption } from "naive-ui";
 import { storeToRefs } from "pinia";
-import { useSettingsStore } from "../stores/settings";
-import { useThemeStore } from "../stores/theme";
-import { useUIStore } from "../stores/ui";
 import { LogOut } from "@lucide/vue";
-import { navItems, pathToNav, navToPath } from "../config/navigation";
-
-const router = useRouter();
-const route = useRoute();
-const dialog = useDialog();
-
-// UI Store
-const uiStore = useUIStore();
-const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
-
-// Theme Store
-const themeStore = useThemeStore();
-const { isLightMode } = storeToRefs(themeStore);
-
-// 处理收缩
-const handleCollapse = async () => {
-  await uiStore.setSidebarCollapsed(true);
-  emit('toggle-sidebar', true);
-};
-
-// 处理展开
-const handleExpand = async () => {
-  await uiStore.setSidebarCollapsed(false);
-  emit('toggle-sidebar', false);
-};
-
-// 使用 Settings store 中的广告显示状态
-const settingsStore = useSettingsStore();
-const { settings } = storeToRefs(settingsStore);
+import { useUIStore } from "@/stores/ui";
+import { useThemeStore } from "@/stores/theme";
+import { useNav } from "@/composables/useNav";
+import NavLogo from "@/components/common/NavLogo.vue";
 
 const emit = defineEmits<{
   logout: [];
-  'toggle-sidebar': [collapsed: boolean];
+  "toggle-sidebar": [collapsed: boolean];
 }>();
 
-// 从路由计算当前激活的导航项
-const activeNav = computed(() => {
-  return pathToNav.hasOwnProperty(route.path) ? pathToNav[route.path] : null;
-});
+const dialog = useDialog();
 
-// 根据设置过滤导航项
-const filteredNavItems = computed(() => {
-  return navItems.filter(item => {
-    // 如果开启了隐藏 WebUI 入口，则过滤掉 WebUI 项
-    if (item.id === 'mefrp-webui' && settings.value.hideWebuiEntry) {
-      return false;
-    }
-    return true;
-  });
-});
+const uiStore = useUIStore();
+const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
 
-// 创建菜单选项 - 使用 NIcon 包裹图标以支持 Naive UI 的收缩功能
+const themeStore = useThemeStore();
+const { isLightMode } = storeToRefs(themeStore);
+
+const { activeNav, filteredNavItems, handleMenuSelect, handleLogoClick } = useNav();
+
+function handleCollapse() {
+  uiStore.setSidebarCollapsed(true);
+  emit("toggle-sidebar", true);
+}
+
+function handleExpand() {
+  uiStore.setSidebarCollapsed(false);
+  emit("toggle-sidebar", false);
+}
+
+function onMenuSelect(key: string) {
+  if (key === "logout") {
+    dialog.error({
+      title: "退出登录",
+      content: "确定要退出登录吗？",
+      positiveText: "确定",
+      negativeText: "取消",
+      onPositiveClick: () => {
+        emit("logout");
+      },
+    });
+    return;
+  }
+  handleMenuSelect(key);
+}
+
 const menuOptions = computed<MenuOption[]>(() => [
   ...filteredNavItems.value.map((item) => ({
     label: item.name,
@@ -110,48 +92,25 @@ const menuOptions = computed<MenuOption[]>(() => [
     icon: () => h(NIcon, { size: 18 }, { default: () => h(item.icon) }),
   })),
   {
-    type: 'divider',
-    key: 'divider-before-logout',
+    type: "divider",
+    key: "divider-before-logout",
   },
   {
-    label: () => h('span', { style: { color: 'var(--app-error-color)' } }, '退出登录'),
-    key: 'logout',
-    icon: () => h(NIcon, { size: 18, color: 'var(--app-error-color)' }, { default: () => h(LogOut) }),
+    label: () =>
+      h(
+        "span",
+        { style: { color: "var(--app-error-color)" } },
+        "退出登录",
+      ),
+    key: "logout",
+    icon: () =>
+      h(
+        NIcon,
+        { size: 18, color: "var(--app-error-color)" },
+        { default: () => h(LogOut) },
+      ),
   },
 ]);
-
-// 点击 Logo 在浏览器中打开官网首页
-async function handleLogoClick() {
-  try {
-    await invoke('open_url', {
-      url: 'https://www.mefrp.com/dashboard/home'
-    });
-  } catch (error) {
-    console.error('打开官网失败:', error);
-  }
-}
-
-function handleMenuSelect(key: string) {
-  if (key === 'logout') {
-    // 显示二次确认对话框
-    dialog.error({
-      title: '退出登录',
-      content: '确定要退出登录吗？',
-      positiveText: '确定',
-      negativeText: '取消',
-      onPositiveClick: () => {
-        emit('logout');
-      }
-    });
-    return;
-  }
-
-  const path = navToPath[key];
-  if (path) {
-    router.push(path);
-  }
-}
-
 </script>
 
 <style scoped>
@@ -217,59 +176,11 @@ function handleMenuSelect(key: string) {
   justify-content: center;
   min-height: 68px;
   overflow: hidden;
-  cursor: pointer;
-}
-
-.sidebar-header:hover {
-  background-color: transparent;
-}
-
-.sidebar-header:active {
-  background-color: transparent;
 }
 
 /* 收缩状态下调整 header padding */
 :deep(.n-layout-sider--collapsed) .sidebar-header {
   padding: 20px 8px;
-}
-
-.app-title {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 0;
-  color: var(--app-primary-color);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  white-space: nowrap;
-  justify-content: center;
-  width: 100%;
-}
-
-.title-text {
-  opacity: 1;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 1;
-  min-width: 0;
-}
-
-/* 收缩状态下隐藏文字 */
-:deep(.n-layout-sider--collapsed) .title-text {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
-}
-
-.logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-/* 收缩状态下 logo 保持居中 */
-:deep(.n-layout-sider--collapsed) .logo {
-  margin: 0 auto;
 }
 
 .nav-content {

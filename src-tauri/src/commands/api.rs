@@ -50,8 +50,15 @@ pub async fn api_report_analysis(
 pub async fn api_analyze_log(
     log_content: String,
     custom_prompt: Option<String>,
+    tunnel_name: Option<String>,
+    tunnel_type: Option<String>,
 ) -> Result<String, String> {
-    api::ai_analysis::analyze_log(&log_content, custom_prompt.as_deref()).await
+    api::ai_analysis::analyze_log(
+        &log_content,
+        custom_prompt.as_deref(),
+        tunnel_name.as_deref(),
+        tunnel_type.as_deref(),
+    ).await
 }
 
 #[tauri::command]

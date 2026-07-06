@@ -1,13 +1,8 @@
 <template>
-  <div :class="['top-nav', { 'top-nav--compact': compact }]">
+  <div :class="['top-nav', position === 'bottom' ? 'top-nav--bottom' : '', { 'top-nav--compact': compact }]">
     <div class="top-nav-inner">
-      <div class="top-nav-brand" @click="handleLogoClick">
-        <img
-          src="../assets/icon.png"
-          alt="logo"
-          class="top-nav-logo"
-        />
-        <span class="top-nav-brand-text">XL Client</span>
+      <div class="top-nav-brand">
+        <NavLogo size="sm" @click="handleLogoClick" />
       </div>
 
       <nav class="top-nav-menu">
@@ -40,7 +35,7 @@
           @click="toggleCompact"
         >
           <NIcon :size="16">
-            <component :is="compact ? ChevronDown : ChevronUp" />
+            <component :is="compact ? (position === 'bottom' ? ChevronUp : ChevronDown) : (position === 'bottom' ? ChevronDown : ChevronUp)" />
           </NIcon>
         </button>
       </div>
@@ -49,75 +44,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import { invoke } from "@tauri-apps/api/core";
+import { ref } from "vue";
 import { NIcon, useDialog } from "naive-ui";
-import { storeToRefs } from "pinia";
 import { LogOut, ChevronDown, ChevronUp } from "@lucide/vue";
-import { useSettingsStore } from "../stores/settings";
-import { navItems, pathToNav, navToPath } from "../config/navigation";
+import { useNav } from "@/composables/useNav";
+import NavLogo from "@/components/common/NavLogo.vue";
 
-const router = useRouter();
-const route = useRoute();
-const dialog = useDialog();
-
-const settingsStore = useSettingsStore();
-const { settings } = storeToRefs(settingsStore);
-
-const compact = ref(false);
+const props = withDefaults(defineProps<{
+  position?: "top" | "bottom";
+}>(), {
+  position: "top",
+});
 
 const emit = defineEmits<{
   logout: [];
 }>();
 
-const activeNav = computed(() => {
-  return pathToNav.hasOwnProperty(route.path) ? pathToNav[route.path] : null;
-});
+const dialog = useDialog();
+const compact = ref(false);
 
-const filteredNavItems = computed(() => {
-  return navItems.filter(item => {
-    if (item.id === 'mefrp-webui' && settings.value.hideWebuiEntry) {
-      return false;
-    }
-    return true;
-  });
-});
+const { activeNav, filteredNavItems, handleMenuSelect, handleLogoClick } = useNav();
 
 function toggleCompact() {
   compact.value = !compact.value;
 }
 
-async function handleLogoClick() {
-  try {
-    await invoke('open_url', {
-      url: 'https://www.mefrp.com/dashboard/home'
-    });
-  } catch (error) {
-    console.error('打开官网失败:', error);
-  }
-}
-
-function handleMenuSelect(key: string) {
-  if (key === 'logout') {
-    return;
-  }
-
-  const path = navToPath[key];
-  if (path) {
-    router.push(path);
-  }
-}
-
 function handleLogoutClick() {
   dialog.error({
-    title: '退出登录',
-    content: '确定要退出登录吗？',
-    positiveText: '确定',
-    negativeText: '取消',
+    title: "退出登录",
+    content: "确定要退出登录吗？",
+    positiveText: "确定",
+    negativeText: "取消",
     onPositiveClick: () => {
-      emit('logout');
-    }
+      emit("logout");
+    },
   });
 }
 </script>
@@ -130,6 +90,11 @@ function handleLogoutClick() {
   border-bottom: 1px solid var(--app-border-color);
   position: relative;
   z-index: 13;
+}
+
+.top-nav--bottom {
+  border-bottom: none;
+  border-top: 1px solid var(--app-border-color);
 }
 
 .top-nav::before {
@@ -152,34 +117,7 @@ function handleLogoutClick() {
 }
 
 .top-nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
   flex-shrink: 0;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background-color 0.2s ease;
-}
-
-.top-nav-brand:hover {
-  background-color: color-mix(in srgb, var(--app-primary-color) 6%, transparent);
-}
-
-.top-nav-logo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.top-nav-brand-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--app-primary-color);
-  white-space: nowrap;
-  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 

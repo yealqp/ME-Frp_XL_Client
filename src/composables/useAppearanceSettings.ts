@@ -221,10 +221,11 @@ export function useAppearanceSettings() {
     );
   }
 
-  async function handleSidebarPositionChange(value: 'left' | 'top') {
+  async function handleSidebarPositionChange(value: 'left' | 'top' | 'bottom') {
     try {
       await settingsStore.updateSetting('sidebarPosition', value);
-      message.success(`导航位置已切换为${value === 'left' ? '左侧' : '顶部'}`);
+      const label = { left: '左侧', top: '顶部', bottom: '底部' }[value];
+      message.success(`导航位置已切换为${label}`);
     } catch (error) {
       console.error('保存导航位置失败:', error);
       message.error('保存导航位置失败');

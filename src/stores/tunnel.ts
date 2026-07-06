@@ -196,9 +196,14 @@ export const useTunnelStore = defineStore('tunnel', () => {
       await executeTunnelCommand<{ proxyId: number }>('api_start_tunnel', {
         proxyId,
       }, '启动隧道失败');
-      
-      // Update running tunnels set
+
       runningTunnels.value.add(proxyId);
+
+      // Update isOnline on the tunnel object
+      const tunnel = tunnels.value.find(t => t.proxyId === proxyId);
+      if (tunnel) {
+        tunnel.isOnline = true;
+      }
     });
   }
 
@@ -207,9 +212,14 @@ export const useTunnelStore = defineStore('tunnel', () => {
       await executeTunnelCommand<{ proxyId: number }>('api_stop_tunnel', {
         proxyId,
       }, '停止隧道失败');
-      
-      // Update running tunnels set
+
       runningTunnels.value.delete(proxyId);
+
+      // Update isOnline on the tunnel object
+      const tunnel = tunnels.value.find(t => t.proxyId === proxyId);
+      if (tunnel) {
+        tunnel.isOnline = false;
+      }
     });
   }
 

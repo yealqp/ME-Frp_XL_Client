@@ -62,6 +62,16 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            // 程序化创建主窗口，注入"回到软件"按钮脚本
+            // 当 webview 导航到外部页面时，脚本会检测并显示回退按钮
+            let script = include_str!("../../public/webview_back_button.js");
+            let main_config = &app.config().app.windows[0];
+            tauri::WebviewWindowBuilder::from_config(app.handle(), main_config)
+                .expect("读取主窗口配置失败")
+                .initialization_script(script)
+                .build()
+                .expect("创建主窗口失败");
+
             // 在应用启动时同步加载配置（如果需要则迁移旧配置）
             // 使用 block_on 确保配置在应用启动前加载完成
             tauri::async_runtime::block_on(async move {

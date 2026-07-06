@@ -4,9 +4,9 @@
 
 use serde::{Deserialize, Serialize};
 
-const API_URL: &str = "https://ai.yealqp.cn/v1/chat/completions";
+const API_URL: &str = "https://apihub.agnes-ai.com/v1/chat/completions";
 const API_KEY: &str = "REDACTED_AI_API_KEY";
-const DEFAULT_MODEL: &str = "xlc-analysis";
+const DEFAULT_MODEL: &str = "agnes-2.0-flash";
 
 /// 系统提示词 (编译时嵌入)
 static SYSTEM_PROMPT: &str = include_str!("../../../public/system.md");
@@ -43,17 +43,29 @@ struct ResponseMessage {
 ///
 /// * `log_content` - 日志原始内容
 /// * `custom_prompt` - 用户自定义额外提示 (可选)
+/// * `tunnel_name` - 隧道名称 (可选)
+/// * `tunnel_type` - 隧道类型 (可选)
 pub async fn analyze_log(
     log_content: &str,
     custom_prompt: Option<&str>,
+    tunnel_name: Option<&str>,
+    tunnel_type: Option<&str>,
 ) -> Result<String, String> {
+    // 构建隧道信息前缀
+    let tunnel_info = match (tunnel_name, tunnel_type) {
+        (Some(name), Some(tp)) => format!("隧道名称：{}\n隧道类型：{}\n\n", name, tp.to_uppercase()),
+        (Some(name), None) => format!("隧道名称：{}\n\n", name),
+        (None, Some(tp)) => format!("隧道类型：{}\n\n", tp.to_uppercase()),
+        _ => String::new(),
+    };
+
     // 构建用户消息
     let user_content = match custom_prompt {
         Some(prompt) if !prompt.trim().is_empty() => {
-            format!("{}\n\n以下是隧道日志内容，请根据以上要求进行分析：\n\n{}", prompt, log_content)
+            format!("{}{}\n\n以下是隧道日志内容，请根据以上要求进行分析：\n\n{}", tunnel_info, prompt, log_content)
         }
         _ => {
-            format!("请分析以下隧道日志，指出可能的问题或优化建议：\n\n{}", log_content)
+            format!("{}请分析以下隧道日志，指出可能的问题或优化建议：\n\n{}", tunnel_info, log_content)
         }
     };
 

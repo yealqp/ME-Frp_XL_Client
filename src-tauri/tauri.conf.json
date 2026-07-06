@@ -12,13 +12,15 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "ME-Frp XL Client",
         "width": 1250,
         "height": 720,
         "minWidth": 960,
         "minHeight": 720,
         "visible": true,
-        "closable": true
+        "closable": true,
+        "create": false
       }
     ],
 

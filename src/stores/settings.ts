@@ -35,7 +35,7 @@ export const useSettingsStore = defineStore('settings', () => {
     contentOpacity: 100,
     fontWeight: 400,
     shadowIntensity: 100,
-    sidebarPosition: 'left' as 'left' | 'top',
+    sidebarPosition: 'left' as 'left' | 'top' | 'bottom',
   });
 
   const loading = ref(false);
@@ -92,7 +92,7 @@ export const useSettingsStore = defineStore('settings', () => {
         contentOpacity: clampAppearanceOpacity(config.contentOpacity, 100) ?? 100,
         fontWeight: clampAppearanceRange(config.fontWeight, 300, 700, 400) ?? 400,
         shadowIntensity: clampAppearanceRange(config.shadowIntensity, 0, 200, 100) ?? 100,
-        sidebarPosition: (config.sidebarPosition === 'left' || config.sidebarPosition === 'top')
+        sidebarPosition: (config.sidebarPosition === 'left' || config.sidebarPosition === 'top' || config.sidebarPosition === 'bottom')
           ? config.sidebarPosition
           : 'left',
       };

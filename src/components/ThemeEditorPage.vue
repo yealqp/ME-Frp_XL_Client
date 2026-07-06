@@ -72,7 +72,7 @@
           <div class="setting-item">
             <div class="setting-info">
               <h4>导航位置</h4>
-              <p>选择导航栏显示在左侧或顶部，切换后即时生效。</p>
+              <p>选择导航栏显示在左侧、顶部或底部，切换后即时生效。</p>
             </div>
             <n-radio-group
               :value="settings.sidebarPosition"
@@ -81,6 +81,7 @@
             >
               <n-radio-button value="left" label="左侧" />
               <n-radio-button value="top" label="顶部" />
+              <n-radio-button value="bottom" label="底部" />
             </n-radio-group>
           </div>
         </n-space>

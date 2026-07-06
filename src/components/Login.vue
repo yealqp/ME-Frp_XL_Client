@@ -36,17 +36,7 @@
           </n-form-item>
 
           <n-alert type="warning" :show-icon="false" class="auth-inline-alert">
-            如果无法点击或输入，请重装 webview 运行时（
-            <n-button
-              text
-              type="primary"
-              size="small"
-              class="auth-inline-link inline-link-btn"
-              @click="openWebWievPage"
-            >
-              Openlist
-            </n-button>
-            内有安装包）后重启应用。
+            如果无法点击或输入，请重装 webview 运行时。
           </n-alert>
         </template>
 

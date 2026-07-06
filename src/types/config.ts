@@ -30,7 +30,7 @@ export interface UnifiedConfig {
   contentOpacity?: number;
   fontWeight?: number;
   shadowIntensity?: number;
-  sidebarPosition?: 'left' | 'top';
+  sidebarPosition?: 'left' | 'top' | 'bottom';
   
   // WebUI 设置
   webuiAddr?: string;

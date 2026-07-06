@@ -173,6 +173,8 @@
     :tunnel-id="currentTunnelId"
     :logs="currentLogs"
     :loading="loadingLogs"
+    :tunnel-name="currentTunnelName"
+    :tunnel-type="currentTunnelType"
     @refresh="viewLogs"
   />
 
@@ -210,6 +212,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { NDataTable, NAlert, useMessage } from "naive-ui";
 import type { Tunnel } from "@/types/tunnel";
 import { useUserStore } from "@/stores/user";
@@ -417,6 +420,18 @@ const {
 } = useTunnelDialogs({
   tunnels,
   runningTunnels,
+});
+
+const currentTunnelName = computed(() => {
+  if (currentTunnelId.value == null) return undefined;
+  const t = tunnels.value.find(item => item.proxyId === currentTunnelId.value);
+  return t?.proxyName;
+});
+
+const currentTunnelType = computed(() => {
+  if (currentTunnelId.value == null) return undefined;
+  const t = tunnels.value.find(item => item.proxyId === currentTunnelId.value);
+  return t?.proxyType;
 });
 
 const {

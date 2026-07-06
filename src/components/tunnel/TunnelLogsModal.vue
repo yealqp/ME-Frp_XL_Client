@@ -58,6 +58,8 @@ interface TunnelLogsModalProps {
   tunnelId: number | null
   logs: string[]
   loading: boolean
+  tunnelName?: string
+  tunnelType?: string
 }
 
 interface TunnelLogsModalEmits {
@@ -72,7 +74,12 @@ const message = useMessage()
 // Local state
 const logLinesRef = ref<HTMLElement | null>(null)
 const autoRefreshTimer = ref<number | null>(null)
-const { aiAnalyzing, analysisResult, showAnalysisModal, handleAIAnalyze } = useAIAnalysis(computed(() => props.logs), message)
+const { aiAnalyzing, analysisResult, showAnalysisModal, handleAIAnalyze } = useAIAnalysis(
+  computed(() => props.logs),
+  message,
+  computed(() => props.tunnelName),
+  computed(() => props.tunnelType),
+)
 
 // Computed v-model
 const localShow = computed({
