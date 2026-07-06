@@ -1,6 +1,6 @@
 [package]
 name = "xl-client"
-version = "2.2.4-dev"
+version = "2.2.4"
 description = "ME-FrpXLDesktop"
 authors = ["yealqp"]
 edition = "2021"
