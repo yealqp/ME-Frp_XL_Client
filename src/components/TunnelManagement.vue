@@ -422,17 +422,13 @@ const {
   runningTunnels,
 });
 
-const currentTunnelName = computed(() => {
+const currentTunnel = computed(() => {
   if (currentTunnelId.value == null) return undefined;
-  const t = tunnels.value.find(item => item.proxyId === currentTunnelId.value);
-  return t?.proxyName;
+  return tunnels.value.find(item => item.proxyId === currentTunnelId.value);
 });
 
-const currentTunnelType = computed(() => {
-  if (currentTunnelId.value == null) return undefined;
-  const t = tunnels.value.find(item => item.proxyId === currentTunnelId.value);
-  return t?.proxyType;
-});
+const currentTunnelName = computed(() => currentTunnel.value?.proxyName);
+const currentTunnelType = computed(() => currentTunnel.value?.proxyType);
 
 const {
   copyRemoteAddress,

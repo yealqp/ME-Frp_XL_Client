@@ -7,6 +7,7 @@
 //! - 退出应用
 
 use crate::tunnel::ProcessManager;
+use crate::utils::process::stop_child;
 use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{Menu, MenuItem},
@@ -15,22 +16,19 @@ use tauri::{
 };
 
 fn stop_all_tunnels(process_manager: &ProcessManager) {
-    if let Ok(manager) = process_manager.lock() {
-        let running_tunnels: Vec<i32> = manager.keys().cloned().collect();
-        drop(manager);
+    let running_tunnels = match process_manager.lock() {
+        Ok(manager) => manager.keys().cloned().collect::<Vec<_>>(),
+        Err(_) => return,
+    };
 
-        for proxy_id in running_tunnels {
-            if let Ok(mut manager) = process_manager.lock() {
-                if let Some(tunnel_process) = manager.get_mut(&proxy_id) {
-                    if let Ok(mut child_opt) = tunnel_process.child.lock() {
-                        if let Some(ref mut child) = *child_opt {
-                            let _ = child.kill();
-                            let _ = child.wait();
-                        }
-                    }
-                }
-                manager.remove(&proxy_id);
-            }
+    for proxy_id in running_tunnels {
+        let tunnel_process = match process_manager.lock() {
+            Ok(mut manager) => manager.remove(&proxy_id),
+            Err(_) => None,
+        };
+
+        if let Some(tunnel_process) = tunnel_process {
+            let _ = stop_child(&tunnel_process.child);
         }
     }
 }
@@ -70,13 +68,6 @@ pub async fn open_webview_window(
     .visible(false)
     .build()
     .map_err(|e| format!("创建窗口失败: {}", e))?;
-
-    let window_id_clone = window_id.clone();
-    window.on_window_event(move |event| {
-        if let tauri::WindowEvent::Destroyed = event {
-            println!("WebView 窗口 {} 已销毁", window_id_clone);
-        }
-    });
 
     window.show().map_err(|e| format!("显示窗口失败: {}", e))?;
     window.set_focus().map_err(|e| format!("聚焦窗口失败: {}", e))?;

@@ -9,7 +9,7 @@ const API_KEY: &str = "REDACTED_AI_API_KEY";
 const DEFAULT_MODEL: &str = "agnes-2.0-flash";
 
 /// 系统提示词 (编译时嵌入)
-static SYSTEM_PROMPT: &str = include_str!("../../../public/system.md");
+static SYSTEM_PROMPT: &str = include_str!("../../assets/system.md");
 
 #[derive(Debug, Serialize)]
 struct ChatMessage {

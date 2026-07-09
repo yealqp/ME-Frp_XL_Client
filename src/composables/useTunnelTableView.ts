@@ -4,6 +4,7 @@ import { Copy, FileText, Play, Square } from "@lucide/vue";
 import type { Tunnel } from "@/types/tunnel";
 import TunnelMoreMenu from "@/components/tunnel/TunnelMoreMenu.vue";
 import { parseDomainArray } from "@/utils/domainUtils";
+import { getTunnelProtocolTagType } from "@/utils/tunnelDisplay";
 
 interface UseTunnelTableViewOptions {
   batchMode: Ref<boolean>;
@@ -124,19 +125,12 @@ export function useTunnelTableView({
       title: "类型",
       key: "proxyType",
       width: 80,
-      render: (row: Tunnel) => {
-        const typeMap: Record<string, "info" | "success" | "warning" | "error"> = {
-          tcp: "info",
-          udp: "warning",
-          http: "success",
-          https: "success",
-        };
-        return h(
+      render: (row: Tunnel) =>
+        h(
           NTag,
-          { type: typeMap[row.proxyType] || "default", bordered: false, size: "small" },
+          { type: getTunnelProtocolTagType(row.proxyType), bordered: false, size: "small" },
           { default: () => row.proxyType.toUpperCase() },
-        );
-      },
+        ),
     },
     {
       title: "节点",

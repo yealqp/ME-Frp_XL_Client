@@ -1,16 +1,13 @@
 //! 背景图片管理模块
 
+use crate::utils::process::exe_dir;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn managed_background_dir() -> Result<PathBuf, String> {
-    let exe_path = std::env::current_exe().map_err(|e| format!("获取可执行文件路径失败: {e}"))?;
-    let exe_dir = exe_path
-        .parent()
-        .ok_or_else(|| "获取可执行文件目录失败".to_string())?;
-    Ok(exe_dir.join("temp"))
+    Ok(exe_dir()?.join("temp"))
 }
 
 fn managed_background_relative_path(file_name: &str) -> String {

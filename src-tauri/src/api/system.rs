@@ -108,18 +108,11 @@ pub async fn get_system_notification() -> Result<String, String> {
 pub async fn fetch_privacy_policy() -> Result<String, String> {
     let client = create_http_client();
 
-    let response = client
-        .get("https://xlc.mefrp.yealqp.cn/privacy.md")
-        .send()
-        .await
-        .map_err(|e| format!("请求隐私政策失败: {}", e))?;
-
-    if !response.status().is_success() {
-        return Err(format!("获取隐私政策失败，状态码: {}", response.status()));
-    }
-
-    response
-        .text()
-        .await
-        .map_err(|e| format!("读取隐私政策内容失败: {}", e))
+    send_text_request(
+        client.get("https://xlc.mefrp.yealqp.cn/privacy.md"),
+        "请求隐私政策失败",
+        "获取隐私政策失败",
+        "读取隐私政策内容失败",
+    )
+    .await
 }

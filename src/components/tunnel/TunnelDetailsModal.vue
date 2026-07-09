@@ -91,6 +91,7 @@
 import { ref, computed, watch } from "vue";
 import { NModal, NDescriptions, NDescriptionsItem, NTag, NButton, NAlert, NSelect, NQrCode, useMessage } from "naive-ui";
 import { parseDomainArray } from "@/utils/domainUtils";
+import { getTunnelProtocolTagType } from "@/utils/tunnelDisplay";
 import type { Tunnel } from "@/types/tunnel";
 
 // Props 接口
@@ -112,16 +113,9 @@ const message = useMessage();
 
 const selectedDomain = ref<string>("");
 
-const protocolTagType = computed(() => {
-  if (!props.tunnel) return "default";
-  const typeMap: Record<string, "info" | "success" | "warning" | "error"> = {
-    tcp: "info",
-    udp: "warning",
-    http: "success",
-    https: "success",
-  };
-  return typeMap[props.tunnel.proxyType] || "default";
-});
+const protocolTagType = computed(() =>
+  props.tunnel ? getTunnelProtocolTagType(props.tunnel.proxyType) : "default",
+);
 
 const domainOptions = computed(() => {
   if (!props.tunnel || !props.tunnel.domain) return [];

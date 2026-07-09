@@ -198,6 +198,7 @@ import {
 import TunnelMoreMenu from "./TunnelMoreMenu.vue";
 import type { Tunnel } from "@/types/tunnel";
 import { parseDomainArray } from "@/utils/domainUtils";
+import { getTunnelProtocolTagType } from "@/utils/tunnelDisplay";
 
 interface Props {
   tunnel: Tunnel;
@@ -221,15 +222,7 @@ const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 const dialog = useDialog();
 
-const protocolTagType = computed(() => {
-  const typeMap: Record<string, "info" | "success" | "warning" | "error"> = {
-    tcp: "info",
-    udp: "warning",
-    http: "success",
-    https: "success",
-  };
-  return typeMap[props.tunnel.proxyType] || "default";
-});
+const protocolTagType = computed(() => getTunnelProtocolTagType(props.tunnel.proxyType));
 
 function createDomainRadioGroup(domains: string[], selectedDomain: { value: string }) {
   return h(NSpace, { vertical: true, size: 'large', style: 'width: 100%;' }, {
