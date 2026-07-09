@@ -150,6 +150,7 @@
 <script setup lang="ts">
 import { useMessage, NCard, NButton, NTag, NButtonGroup } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { copyToClipboard } from "@/utils/clipboard";
 
 const message = useMessage();
 
@@ -163,16 +164,16 @@ const joinQQGroup1 = async () => {
   }
 };
 
-const copyQQGroup1 = () => {
-  navigator.clipboard
-    .writeText("1019501085")
-    .then(() => {
-      message.success("QQ群号已复制到剪贴板");
-    })
-    .catch(() => {
-      message.error("复制失败，请手动复制群号：1019501085");
-    });
-};
+async function copyQQGroup(groupNumber: string) {
+  const copied = await copyToClipboard(groupNumber);
+  if (copied) {
+    message.success("QQ群号已复制到剪贴板");
+  } else {
+    message.error(`复制失败，请手动复制群号：${groupNumber}`);
+  }
+}
+
+const copyQQGroup1 = () => copyQQGroup("1019501085");
 
 // QQ群相关
 const joinQQGroup2 = async () => {
@@ -184,16 +185,7 @@ const joinQQGroup2 = async () => {
   }
 };
 
-const copyQQGroup2 = () => {
-  navigator.clipboard
-    .writeText("708797546")
-    .then(() => {
-      message.success("QQ群号已复制到剪贴板");
-    })
-    .catch(() => {
-      message.error("复制失败，请手动复制群号：708797546");
-    });
-};
+const copyQQGroup2 = () => copyQQGroup("708797546");
 
 // 邮箱支持
 const sendEmail = async () => {

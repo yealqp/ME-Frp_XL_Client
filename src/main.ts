@@ -28,12 +28,10 @@ import {
   NSkeleton,
   NMenu,
   NIcon,
-  NAvatar,
   NDropdown,
   NPopover,
   NTooltip,
   NTag,
-  NBadge,
   NDivider,
   NSelect,
   NCheckbox,
@@ -41,26 +39,16 @@ import {
   NRadioGroup,
   NInputNumber,
   NDatePicker,
-  NTimePicker,
-  NUpload,
   NProgress,
   NCollapse,
   NCollapseItem,
   NTabs,
   NTabPane,
-  NDrawer,
-  NScrollbar,
 } from "naive-ui";
 
 // 全局样式
 import "@/styles/markdown.css";
 import "@/styles/theme-transitions.css";
-
-// Add FontAwesome via CDN to avoid font loading issues
-const link = document.createElement("link");
-link.rel = "stylesheet";
-link.crossOrigin = "anonymous";
-document.head.appendChild(link);
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -90,12 +78,10 @@ const components = {
   NSkeleton,
   NMenu,
   NIcon,
-  NAvatar,
   NDropdown,
   NPopover,
   NTooltip,
   NTag,
-  NBadge,
   NDivider,
   NSelect,
   NCheckbox,
@@ -103,15 +89,11 @@ const components = {
   NRadioGroup,
   NInputNumber,
   NDatePicker,
-  NTimePicker,
-  NUpload,
   NProgress,
   NCollapse,
   NCollapseItem,
   NTabs,
   NTabPane,
-  NDrawer,
-  NScrollbar,
 };
 
 Object.entries(components).forEach(([name, component]) => {

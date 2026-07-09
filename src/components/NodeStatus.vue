@@ -68,6 +68,7 @@ import { h, onMounted, computed } from 'vue';
 import { NTag, NProgress, NSpace, NIcon, NStatistic, NDataTable } from 'naive-ui';
 import { ArrowDown, ArrowUp, Search, RefreshCw } from '@lucide/vue';
 import { useNodeStore } from '../stores/node';
+import { formatBytes } from '@/utils/timeFormatter';
 import type { NodeStatusData } from '@/types/node';
 
 const nodeStore = useNodeStore();
@@ -95,15 +96,6 @@ const totalOnlineUsers = computed(() => nodeStore.totalOnlineUsers);
 const totalOnlineProxies = computed(() => nodeStore.totalOnlineProxies);
 const totalTrafficIn = computed(() => nodeStore.totalTrafficIn);
 const totalTrafficOut = computed(() => nodeStore.totalTrafficOut);
-
-// 格式化字节
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-};
 
 // 格式化运行时长或离线时长
 const formatUptime = (seconds: number, isOnline: boolean): string => {

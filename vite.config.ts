@@ -112,10 +112,6 @@ export default defineConfig({
           if (id.includes('node_modules/lucide-vue-next/')) {
             return 'icons';
           }
-          // 将 markdown-it 分离
-          if (id.includes('node_modules/markdown-it/')) {
-            return 'markdown';
-          }
         },
         // 资源文件命名
         assetFileNames: (assetInfo) => {

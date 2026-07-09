@@ -49,7 +49,7 @@
           </div>
           <div class="stat-content">
             <n-text depth="3" class="stat-label">已承载流量</n-text>
-            <n-text strong class="stat-value">{{ formatTrafficInTB(statistics.traffic) }}</n-text>
+            <n-text strong class="stat-value">{{ formatBytesAsTB(statistics.traffic) }}</n-text>
           </div>
         </div>
       </div>
@@ -61,6 +61,7 @@
 import { ref, onMounted } from 'vue';
 import { NCard, NSkeleton, NText, NIcon, useMessage } from 'naive-ui';
 import { Users, Server, Network, HardDrive } from '@lucide/vue';
+import { formatBytesAsTB } from '@/utils/timeFormatter';
 
 interface Statistics {
   users: number;
@@ -85,13 +86,6 @@ const message = useMessage();
 // 格式化数字（添加千位分隔符）
 const formatNumber = (num: number): string => {
   return num.toLocaleString('zh-CN');
-};
-
-// 格式化流量（以 TB 为单位）
-const formatTrafficInTB = (value: number): string => {
-  // value 是字节数，转换为 TB
-  const tb = value / (1024 * 1024 * 1024 * 1024);
-  return `${tb.toFixed(2)} TB`;
 };
 
 // 获取统计信息
