@@ -260,7 +260,7 @@ const themeClass = computed(() =>
 .auth-shell__panel-card {
   width: min(100%, 460px);
   padding: clamp(24px, 3vw, 32px);
-  border-radius: 24px;
+  border-radius: 4px;
   border: 1px solid var(--auth-panel-border);
   background: var(--auth-panel-bg);
   box-shadow: var(--auth-panel-shadow);
@@ -353,7 +353,7 @@ const themeClass = computed(() =>
   --n-text-color: var(--auth-alert-base-text) !important;
   --n-title-text-color: var(--auth-alert-base-title) !important;
   --n-icon-color: currentColor !important;
-  border-radius: 14px;
+  border-radius: 4px;
   backdrop-filter: blur(10px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -388,7 +388,7 @@ const themeClass = computed(() =>
 
 :deep(.auth-submit-btn.n-button) {
   height: 46px;
-  border-radius: 14px;
+  border-radius: 4px;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -475,7 +475,7 @@ const themeClass = computed(() =>
   .auth-shell__panel-card {
     width: 100%;
     padding: 22px 18px;
-    border-radius: 20px;
+    border-radius: 4px;
   }
 }
 
