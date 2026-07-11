@@ -34,8 +34,8 @@ import type { UnifiedConfig } from "@/types/config";
 import { ChevronLeft, ChevronRight } from "@lucide/vue";
 import { useBackgroundImage } from "@/composables/useBackgroundImage";
 import { useAutoStartTunnels } from "@/composables/useAutoStartTunnels";
-import { useAutoUpdate } from "@/composables/useAutoUpdate";
 import { hljs } from "@/utils/markdownParser";
+import GlobalUpdateChecker from "./components/GlobalUpdateChecker.vue";
 
 interface TunnelSummary {
   proxyId: number;
@@ -67,7 +67,6 @@ const hasStoredSession = ref(false);
 
 const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, withOpacity, clampOpacity } = useBackgroundImage();
 const { startAutoStartTunnels } = useAutoStartTunnels();
-const { checkForUpdatesOnStart } = useAutoUpdate();
 
 const appAppearanceStyle = computed(() => {
   const contentOpacity = clampOpacity(settings.value.contentOpacity);
@@ -243,7 +242,6 @@ const handleLogout = async (): Promise<void> => {
 let loginPollingTimer: number | null = null;
 let loginPollingRetries = 0;
 const MAX_LOGIN_POLL_RETRIES = 60;
-let checkForUpdatesOnStartTimer: number | null = null;
 
 onMounted(async () => {
   const persistedConfigPromise: Promise<UnifiedConfig | null> = loadUnifiedConfig().catch((error) => {
@@ -290,9 +288,6 @@ onMounted(async () => {
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
       startAutoStartTunnels(message);
-      checkForUpdatesOnStartTimer = window.setTimeout(() => {
-        checkForUpdatesOnStart(message);
-      }, 3000);
     } else if (loginPollingRetries < MAX_LOGIN_POLL_RETRIES) {
       loginPollingRetries++;
       loginPollingTimer = window.setTimeout(waitForLogin, 500);
@@ -308,10 +303,6 @@ onUnmounted(() => {
   if (loginPollingTimer !== null) {
     clearTimeout(loginPollingTimer);
     loginPollingTimer = null;
-  }
-  if (checkForUpdatesOnStartTimer !== null) {
-    clearTimeout(checkForUpdatesOnStartTimer);
-    checkForUpdatesOnStartTimer = null;
   }
 });
 
@@ -354,6 +345,7 @@ watch(
         <n-message-provider ref="messageProvider" :container-style="{ zIndex: 100000 }">
           <n-dialog-provider ref="dialogProvider">
             <n-notification-provider ref="notificationProvider">
+            <GlobalUpdateChecker />
             <!-- 加载状态 -->
             <div v-if="!shellReady" class="loading-container"></div>
 
@@ -589,9 +581,9 @@ body {
   padding: 30px 30px 20px;
 }
 
-/* 内容区透明度 — 统一由 .content-layout::before 控制底色 */
+/* 卡片保留 Naive 默认 card-color，与顶部/底部导航布局保持一致 */
 .content-layout .n-card {
-  background-color: transparent !important;
+  background-color: var(--app-card-color) !important;
 }
 
 .content-layout .n-card > .n-card-header,

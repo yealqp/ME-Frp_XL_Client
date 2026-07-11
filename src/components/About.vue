@@ -234,70 +234,16 @@
     </div>
 
     <!-- 更新提示模态框 -->
-    <n-modal
+    <UpdateAvailableModal
       v-model:show="showUpdateModal"
-      preset="card"
-      :style="{ width: '600px', maxHeight: '85vh' }"
-      title="发现新版本"
-      :segmented="{
-        content: true,
-        footer: 'soft'
-      }"
-    >
-      <div class="update-modal-content">
-        <div class="version-info">
-          <n-space align="center" :size="16">
-            <n-tag type="info" :bordered="false" size="large">
-              v{{ currentVersion }}
-            </n-tag>
-            <ArrowRight :size="18" />
-            <n-tag type="success" :bordered="false" size="large">
-              v{{ latestVersion }}
-            </n-tag>
-          </n-space>
-        </div>
-
-        <!-- 显示差异版本的更新日志 -->
-        <div v-if="Object.keys(changelog).length > 0" class="update-changelog">
-          <p class="update-info-title">更新内容：</p>
-          <div class="changelog-info">
-            <div v-for="version in sortedChangelog" :key="version" class="changelog-version">
-              <div class="version-header">
-                <span class="version-badge">v{{ version }}</span>
-              </div>
-              <ul class="changelog-list">
-                <li v-for="(change, index) in changelog[version]" :key="index" class="changelog-item">
-                  <span class="changelog-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
-                      <path d="M5 8L7 10L11 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                  </span>
-                  <span class="changelog-text">{{ change }}</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <!-- 如果没有 changelog，显示 updateInfo -->
-        <div v-else-if="updateInfo.length > 0" class="update-info">
-          <p class="update-info-title">更新内容：</p>
-          <div class="markdown-content update-content-markdown" v-html="parseUpdateInfo(updateInfo)"></div>
-        </div>
-      </div>
-
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="handleCancelUpdate">稍后提醒</n-button>
-          <n-button type="primary" @click="handleUpdate">
-            <template #icon>
-              <Download :size="16" />
-            </template>
-            立即更新
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
+      :current-version="currentVersion"
+      :latest-version="latestVersion"
+      :update-info="updateInfo"
+      :changelog="changelog"
+      :sorted-changelog="sortedChangelog"
+      @confirm="handleUpdate"
+      @cancel="handleCancelUpdate"
+    />
 
     <!-- 更新历史模态框 -->
     <n-modal
@@ -400,19 +346,20 @@ import {
   NFormItem,
   NInput,
   NDivider,
+  NEmpty,
 } from "naive-ui";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeTauriText } from "@/utils/tauriResponse";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAppUpdate } from "@/composables/useAppUpdate";
 import { useHitokoto } from "@/composables/useHitokoto";
+import UpdateAvailableModal from "@/components/UpdateAvailableModal.vue";
 import {
   MessageCircle,
   MessageSquare,
   Edit,
   Mail,
   Download,
-  ArrowRight,
   RefreshCw,
   Quote,
   FileText,
@@ -916,338 +863,7 @@ const submitFeedback = async () => {
   flex-wrap: wrap;
 }
 
-/* 更新模态框样式 */
-.update-modal-content {
-  padding: 0;
-  max-height: 65vh;
-  overflow-y: auto;
-}
-
-.update-modal-content .version-info {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-  background: var(--app-card-color);
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.update-modal-content .version-info :deep(svg) {
-  color: var(--app-primary-color);
-}
-
-.update-changelog {
-  margin-top: 0;
-}
-
-.update-changelog .update-info-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--app-text-color-1);
-  margin-bottom: 12px;
-  padding: 0 4px;
-}
-
-.update-changelog .changelog-info {
-  margin-top: 0;
-  padding: 0 4px;
-}
-
-.update-info {
-  margin-top: 20px;
-}
-
-.update-info-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--app-text-color-1);
-  margin-bottom: 12px;
-}
-
-.update-content-markdown,
-.changelog-content-markdown {
-  padding: 12px 0;
-  line-height: 1.8;
-  font-size: 14px;
-  color: var(--app-text-color-2);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-/* Markdown 标题样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(h1),
-.update-content-markdown,
-.changelog-content-markdown :deep(h2),
-.update-content-markdown,
-.changelog-content-markdown :deep(h3),
-.update-content-markdown,
-.changelog-content-markdown :deep(h4),
-.update-content-markdown,
-.changelog-content-markdown :deep(h5),
-.update-content-markdown,
-.changelog-content-markdown :deep(h6) {
-  margin: 16px 0 10px 0;
-  font-weight: 600;
-  line-height: 1.4;
-  color: var(--app-text-color);
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(h1) {
-  font-size: 20px;
-  border-bottom: 1px solid var(--app-divider-color);
-  padding-bottom: 8px;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(h2) {
-  font-size: 18px;
-  margin-bottom: 4px;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(h3) {
-  font-size: 16px;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(h4) {
-  font-size: 15px;
-}
-
-/* h2下的分割线 */
-.update-content-markdown,
-.changelog-content-markdown :deep(.h2-divider) {
-  border: none;
-  border-top: 1px solid var(--app-divider-color);
-  margin: 0 0 12px 0;
-}
-
-/* 段落样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(p) {
-  margin: 10px 0;
-  line-height: 1.8;
-  color: var(--app-text-color-2);
-}
-
-/* 列表样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(ul),
-.update-content-markdown,
-.changelog-content-markdown :deep(ol) {
-  margin: 12px 0;
-  padding-left: 24px;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(li) {
-  margin: 0;
-  line-height: 1.8;
-  padding-left: 8px;
-  color: var(--app-text-color-2);
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(ul li) {
-  list-style-type: disc;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(ul li::marker) {
-  font-size: 0.8em;
-  color: #4da8f5;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(ol li) {
-  list-style-type: decimal;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(ol li::marker) {
-  font-weight: 600;
-  color: #4da8f5;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(ul ul),
-.update-content-markdown,
-.changelog-content-markdown :deep(ol ol),
-.update-content-markdown,
-.changelog-content-markdown :deep(ul ol),
-.update-content-markdown,
-.changelog-content-markdown :deep(ol ul) {
-  margin: 0;
-  padding-left: 24px;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(li p) {
-  margin: 2px 0;
-}
-
-/* 行内代码样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(code.inline-code) {
-  background: var(--app-card-color);
-  color: #ff6b6b;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  border: 1px solid var(--app-border-color);
-}
-
-/* 代码块样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(pre) {
-  background: var(--app-card-color);
-  padding: 12px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 12px 0;
-  border: 1px solid var(--app-border-color);
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(pre code) {
-  background: transparent;
-  padding: 0;
-  border: none;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--app-text-color-2);
-}
-
-/* 引用块样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(blockquote.custom-blockquote) {
-  border-left: 4px solid #4da8f5;
-  margin: 12px 0;
-  padding: 10px 14px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 0 4px 4px 0;
-}
-
-.update-content-markdown,
-.changelog-content-markdown :deep(blockquote.custom-blockquote p) {
-  margin: 4px 0;
-}
-
-/* 链接样式 */
-.update-content-markdown,
-.changelog-content-markdown :deep(a) {
-  color: #4da8f5;
-  text-decoration: none;
-  transition: color 0.2s;
-  font-weight: 500;
-  position: relative;
-}
-
-.update-content-markdown :deep(a::after),
-.changelog-content-markdown :deep(a::after) {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 0;
-  height: 1px;
-  background-color: #6bb8f7;
-  transition: width 0.3s ease;
-}
-
-.update-content-markdown :deep(a:hover),
-.changelog-content-markdown :deep(a:hover) {
-  color: #6bb8f7;
-}
-
-.update-content-markdown :deep(a:hover::after),
-.changelog-content-markdown :deep(a:hover::after) {
-  width: 100%;
-}
-
-/* 强调文本 */
-.update-content-markdown :deep(strong),
-.changelog-content-markdown :deep(strong) {
-  font-weight: 600;
-  color: var(--app-text-color);
-}
-
-.update-content-markdown :deep(em),
-.changelog-content-markdown :deep(em) {
-  font-style: italic;
-}
-
-/* 删除线 */
-.update-content-markdown :deep(del),
-.changelog-content-markdown :deep(del) {
-  text-decoration: line-through;
-}
-
-/* 水平分割线 */
-.update-content-markdown :deep(hr),
-.changelog-content-markdown :deep(hr) {
-  border: none;
-  border-top: 1px solid var(--app-divider-color);
-  margin: 16px 0;
-}
-
-/* changelog-content-markdown 差异覆盖 */
-.changelog-content-markdown {
-  padding: 16px;
-}
-
-.changelog-content-markdown :deep(h1),
-.changelog-content-markdown :deep(h2),
-.changelog-content-markdown :deep(h3),
-.changelog-content-markdown :deep(h4),
-.changelog-content-markdown :deep(h5),
-.changelog-content-markdown :deep(h6) {
-  margin: 20px 0 12px 0;
-}
-
-.changelog-content-markdown :deep(h1) {
-  font-size: 22px;
-  border-bottom: 2px solid var(--app-divider-color);
-  padding-bottom: 10px;
-}
-
-.changelog-content-markdown :deep(h2) {
-  font-size: 19px;
-  margin-bottom: 8px;
-}
-
-.changelog-content-markdown :deep(p) {
-  margin: 12px 0;
-}
-
-.changelog-content-markdown :deep(ul),
-.changelog-content-markdown :deep(ol) {
-  padding-left: 28px;
-}
-
-.changelog-content-markdown :deep(li) {
-  margin: 6px 0;
-}
-
-.changelog-content-markdown :deep(ul ul),
-.changelog-content-markdown :deep(ol ol),
-.changelog-content-markdown :deep(ul ol),
-.changelog-content-markdown :deep(ol ul) {
-  margin: 4px 0;
-}
-
-.changelog-content-markdown :deep(li p) {
-  margin: 4px 0;
-}
-
-.changelog-content-markdown :deep(hr) {
-  margin: 20px 0;
-}
-
+/* 更新历史模态框样式 */
 .no-changelog {
   text-align: center;
   padding: 60px 20px;
@@ -1272,14 +888,14 @@ const submitFeedback = async () => {
   left: 0;
   width: 4px;
   height: 100%;
-  background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-color-hover) 100%);
+  background: linear-gradient(180deg, var(--app-primary-color) 0%, color-mix(in srgb, var(--app-primary-color) 70%, white) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .changelog-version:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
+  border-color: var(--app-primary-color);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--app-primary-color) 12%, transparent);
   transform: translateY(-2px);
 }
 
@@ -1317,12 +933,6 @@ const submitFeedback = async () => {
   border-radius: 6px;
 }
 
-.version-date {
-  font-size: 13px;
-  color: var(--app-text-color-3);
-  font-weight: 500;
-}
-
 .changelog-list {
   margin: 0;
   padding: 0;
@@ -1347,7 +957,7 @@ const submitFeedback = async () => {
 }
 
 .changelog-item:hover {
-  background: rgba(24, 144, 255, 0.05);
+  background: color-mix(in srgb, var(--app-primary-color) 6%, transparent);
   padding-left: 12px;
   padding-right: 12px;
 }
@@ -1359,7 +969,7 @@ const submitFeedback = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-color);
+  color: var(--app-primary-color);
   margin-top: 2px;
 }
 
@@ -1373,7 +983,6 @@ const submitFeedback = async () => {
   word-break: break-word;
 }
 
-/* 滚动条样式 */
 .changelog-modal-content::-webkit-scrollbar {
   width: 8px;
 }
@@ -1389,5 +998,70 @@ const submitFeedback = async () => {
 
 .changelog-modal-content::-webkit-scrollbar-thumb:hover {
   background: var(--app-text-color-3);
+}
+
+.changelog-content-markdown {
+  padding: 16px;
+  line-height: 1.8;
+  font-size: 14px;
+  color: var(--app-text-color-2);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.changelog-content-markdown :deep(h1),
+.changelog-content-markdown :deep(h2),
+.changelog-content-markdown :deep(h3),
+.changelog-content-markdown :deep(h4),
+.changelog-content-markdown :deep(h5),
+.changelog-content-markdown :deep(h6) {
+  margin: 20px 0 12px 0;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--app-text-color);
+}
+
+.changelog-content-markdown :deep(h1) {
+  font-size: 22px;
+  border-bottom: 2px solid var(--app-divider-color);
+  padding-bottom: 10px;
+}
+
+.changelog-content-markdown :deep(h2) {
+  font-size: 19px;
+  margin-bottom: 8px;
+}
+
+.changelog-content-markdown :deep(p) {
+  margin: 12px 0;
+}
+
+.changelog-content-markdown :deep(ul),
+.changelog-content-markdown :deep(ol) {
+  margin: 12px 0;
+  padding-left: 28px;
+}
+
+.changelog-content-markdown :deep(li) {
+  margin: 6px 0;
+  line-height: 1.8;
+  color: var(--app-text-color-2);
+}
+
+.changelog-content-markdown :deep(a) {
+  color: var(--app-primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.changelog-content-markdown :deep(strong) {
+  font-weight: 600;
+  color: var(--app-text-color);
+}
+
+.changelog-content-markdown :deep(hr) {
+  border: none;
+  border-top: 1px solid var(--app-divider-color);
+  margin: 20px 0;
 }
 </style>

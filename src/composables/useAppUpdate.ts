@@ -4,8 +4,9 @@ import { useMessage } from "naive-ui";
 import type { UpdateCheckResult } from "@/types/update";
 import { parseMarkdown } from "@/utils/markdownParser";
 
-export function useAppUpdate() {
+export function useAppUpdate(options?: { silent?: boolean }) {
   const message = useMessage();
+  const silent = options?.silent ?? false;
 
   const updateChecking = ref(false);
   const showUpdateModal = ref(false);
@@ -30,21 +31,31 @@ export function useAppUpdate() {
     });
   });
 
-  const checkForUpdates = async () => {
+  const applyUpdateResult = (result: UpdateCheckResult) => {
+    latestVersion.value = result.latest_version;
+    currentVersion.value = result.current_version;
+    updateInfo.value = result.update_info || [];
+    changelog.value = result.changelog || {};
+  };
+
+  const checkForUpdates = async (opts?: { silent?: boolean }) => {
+    const isSilent = opts?.silent ?? silent;
     updateChecking.value = true;
     try {
       const result = (await invoke("check_for_updates")) as UpdateCheckResult;
+      applyUpdateResult(result);
+
       if (result.has_update) {
-        latestVersion.value = result.latest_version;
-        currentVersion.value = result.current_version;
-        updateInfo.value = result.update_info || [];
-        changelog.value = result.changelog || {};
         showUpdateModal.value = true;
-      } else {
+      } else if (!isSilent) {
         message.success(`当前已是最新版本 ${result.current_version}`);
       }
     } catch (error) {
-      message.error(`检查更新失败: ${error}`);
+      if (!isSilent) {
+        message.error(`检查更新失败: ${error}`);
+      } else {
+        console.error("检查更新失败:", error);
+      }
     } finally {
       updateChecking.value = false;
     }
@@ -64,10 +75,7 @@ export function useAppUpdate() {
     changelogLoading.value = true;
     try {
       const result = (await invoke("get_update_history")) as UpdateCheckResult;
-      latestVersion.value = result.latest_version;
-      currentVersion.value = result.current_version;
-      updateInfo.value = result.update_info || [];
-      changelog.value = result.changelog || {};
+      applyUpdateResult(result);
       showChangelogModal.value = true;
     } catch (error) {
       message.error(`获取更新历史失败: ${error}`);
@@ -99,7 +107,9 @@ export function useAppUpdate() {
 
   const handleCancelUpdate = () => {
     showUpdateModal.value = false;
-    message.info("已取消更新，下次启动时会再次检查");
+    if (!silent) {
+      message.info("已取消更新，下次启动时会再次检查");
+    }
   };
 
   return {
