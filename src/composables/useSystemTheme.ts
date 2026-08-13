@@ -2,7 +2,10 @@
  * System Theme Listener Composable
  * 
  * 监听操作系统主题变化的 Composable
- * 使用 Tauri 的 theme API 而不是 window.matchMedia，因为后者在 Tauri 中有 bug
+ * 系统主题通过 Rust 端 `get_system_theme` 命令读取（Windows 注册表），
+ * 不使用 window.theme() / matchMedia / onThemeChanged 的取值：
+ * 应用自身调用 setTheme 会固定窗口主题，导致这些来源全部返回
+ * "窗口主题"而非"系统主题"（被应用自身的设置污染）。
  * 
  * Requirements: 4.1, 4.2, 4.3
  * 
@@ -23,6 +26,7 @@
 
 import { ref, onUnmounted, type Ref } from 'vue';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { invoke } from '@tauri-apps/api/core';
 import type { Theme } from '@/types/theme';
 
 /**
@@ -37,18 +41,19 @@ export interface UseSystemThemeReturn {
   startListening: () => void;
   /** 停止监听系统主题变化 */
   stopListening: () => void;
+  /** 主动刷新系统主题（异步检测并更新状态），返回最新主题或 null */
+  refreshSystemTheme: () => Promise<Theme | null>;
 }
 
 /**
- * 使用 Tauri API 检测系统主题
- * 注意：这个方法会读取操作系统的实际主题设置，而不是窗口主题
+ * 通过 Rust 端读取操作系统真实主题
+ * （Windows 注册表 AppsUseLightTheme，不受窗口 setTheme 污染）
  * @returns 系统主题 ('light' | 'dark') 或 null（如果检测失败）
  */
-async function detectSystemThemeViaTauri(): Promise<Theme | null> {
+async function detectSystemThemeViaRust(): Promise<Theme | null> {
   try {
-    const appWindow = getCurrentWindow();
-    const theme = await appWindow.theme();
-    
+    const theme = await invoke<string>('get_system_theme');
+
     if (theme === 'light' || theme === 'dark') {
       return theme;
     }
@@ -60,11 +65,10 @@ async function detectSystemThemeViaTauri(): Promise<Theme | null> {
 
 /**
  * 检测当前系统主题
- * 优先使用 Tauri API，因为 window.matchMedia 在 Tauri 中有 bug
  * @returns 系统主题 ('light' | 'dark') 或 null（如果不支持或检测失败）
  */
 async function detectSystemTheme(): Promise<Theme | null> {
-  return await detectSystemThemeViaTauri();
+  return await detectSystemThemeViaRust();
 }
 
 /**
@@ -96,10 +100,32 @@ export function useSystemTheme(): UseSystemThemeReturn {
   }
 
   /**
+   * 主动刷新系统主题（异步检测并更新状态）
+   *
+   * 返回最新检测结果；检测失败返回 null。
+   * 供"跟随系统"模式切换等需要立即拿到准确系统主题的场景使用，
+   * 避免读取到过期的 systemTheme 缓存值。
+   */
+  async function refreshSystemTheme(): Promise<Theme | null> {
+    try {
+      const theme = await detectSystemTheme();
+      if (theme === "light" || theme === "dark") {
+        updateTheme(theme);
+        return theme;
+      }
+    } catch {
+      // 检测失败，保留现有状态
+    }
+    return null;
+  }
+
+  /**
    * 开始监听系统主题变化
-   * 
-   * 使用 Tauri 的 onThemeChanged 事件
-   * 
+   *
+   * 事件 payload 不可信（应用自身 setTheme 也会触发 onThemeChanged，
+   * 且 payload 为窗口主题），因此事件仅作为"系统主题可能变化"的信号，
+   * 实际主题一律以 Rust 端注册表检测结果为准。
+   *
    * Requirements: 4.1, 4.2, 4.3
    */
   function startListening(): void {
@@ -109,22 +135,18 @@ export function useSystemTheme(): UseSystemThemeReturn {
     }
     
     // 先异步获取当前系统主题
-    detectSystemTheme().then(theme => {
-      if (theme) {
-        updateTheme(theme);
-      } else {
+    void refreshSystemTheme().then(theme => {
+      if (!theme) {
         // 无法检测系统主题，使用深色作为默认
         updateTheme('dark');
       }
     });
     
-    // 监听系统主题变化
+    // 监听系统主题变化（仅作触发器，值以 refreshSystemTheme 为准）
     try {
       const appWindow = getCurrentWindow();
-      appWindow.onThemeChanged(({ payload: theme }) => {
-        if (theme === 'light' || theme === 'dark') {
-          updateTheme(theme);
-        }
+      appWindow.onThemeChanged(() => {
+        void refreshSystemTheme();
       }).then(unlisten => {
         tauriUnlisten = unlisten;
       }).catch(() => {
@@ -160,6 +182,7 @@ export function useSystemTheme(): UseSystemThemeReturn {
     isSupported,
     startListening,
     stopListening,
+    refreshSystemTheme,
   };
 }
 

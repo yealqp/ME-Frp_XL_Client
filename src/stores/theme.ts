@@ -1,6 +1,5 @@
 import { computed, ref, watch } from "vue";
 import { defineStore } from "pinia";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import type {
   Theme,
   ThemeCommonConfig,
@@ -8,7 +7,6 @@ import type {
   ThemeFieldKey,
   ThemeMode,
   ThemePreset,
-  ThemePreference,
   ThemeValidationIssue,
   ThemeVariant,
 } from "@/types/theme";
@@ -29,70 +27,11 @@ import {
   serializeThemeCustomization,
   validateThemeCustomization,
 } from "@/utils/themeConfig";
-
-const THEME_PREFERENCE_KEY = "theme-preference";
-
-async function setWindowTheme(theme: Theme): Promise<void> {
-  try {
-    const appWindow = getCurrentWindow();
-    await appWindow.setTheme(theme);
-  } catch (error) {
-    console.error("设置窗口主题失败:", error);
-  }
-}
-
-function saveThemePreference(preference: ThemePreference): void {
-  try {
-    localStorage.setItem(THEME_PREFERENCE_KEY, JSON.stringify(preference));
-  } catch (error) {
-    console.error("保存主题偏好失败:", error);
-  }
-}
-
-function loadThemePreference(): ThemePreference | null {
-  try {
-    const data = localStorage.getItem(THEME_PREFERENCE_KEY);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error("读取主题偏好失败:", error);
-    return null;
-  }
-}
-
-function createOverlay(currentTheme: Theme, targetTheme: Theme): HTMLDivElement {
-  const overlay = document.createElement("div");
-  overlay.className = "theme-overlay";
-
-  const content = document.createElement("div");
-  content.className = "theme-overlay-content";
-
-  const gearContainer = document.createElement("div");
-  gearContainer.className = "theme-overlay-gear";
-
-  const gear = document.createElement("div");
-  gear.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-      <circle cx="12" cy="12" r="3"/>
-    </svg>
-  `;
-
-  const text = document.createElement("div");
-  text.className = "theme-overlay-text";
-  text.textContent = `正在切换到${targetTheme === "light" ? "浅色" : "深色"}模式`;
-
-  gearContainer.appendChild(gear);
-  content.appendChild(gearContainer);
-  content.appendChild(text);
-  overlay.appendChild(content);
-  overlay.classList.add(currentTheme);
-
-  return overlay;
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import {
+  playThemeSwitchAnimation,
+  setWindowTheme,
+} from "@/utils/themeWindow";
+import { loadThemePreference, saveThemePreference } from "@/utils/themePreference";
 
 export const useThemeStore = defineStore("theme", () => {
   const mode = ref<ThemeMode>("system");
@@ -150,13 +89,21 @@ export const useThemeStore = defineStore("theme", () => {
     }
   }
 
-  function resolveTargetTheme(newMode: ThemeMode): Theme {
+  /**
+   * 解析目标主题
+   *
+   * "system" 模式：等待系统主题检测完成后再返回，避免读取到过期的
+   * systemTheme 缓存（此前是同步返回旧值，导致从浅色切到跟随系统时
+   * 动画错误显示"切换到浅色"，且切完后短暂停留在错误主题）。
+   */
+  async function resolveTargetTheme(newMode: ThemeMode): Promise<Theme> {
     if (newMode !== "system") {
       return newMode;
     }
 
     syncSystemThemeState();
-    return systemTheme.value || "dark";
+    const latestSystemTheme = await systemThemeListener.refreshSystemTheme();
+    return latestSystemTheme || "dark";
   }
 
   function commitThemeModeChange(newMode: ThemeMode): void {
@@ -223,7 +170,8 @@ export const useThemeStore = defineStore("theme", () => {
 
       if (mode.value === "system" && systemThemeListener.isSupported.value) {
         syncSystemThemeState();
-        await wait(150);
+        // 等待系统主题检测完成（替代固定 150ms 延时，保证首次加载即为准确主题）
+        await systemThemeListener.refreshSystemTheme();
       }
 
       updateActiveTheme();
@@ -238,39 +186,33 @@ export const useThemeStore = defineStore("theme", () => {
     }
   }
 
+  // 主题切换互斥标志：切换动画进行中忽略并发请求，避免多个 overlay 叠加到 body
+  let switchingTheme = false;
+
   async function setThemeMode(newMode: ThemeMode): Promise<void> {
+    if (switchingTheme) {
+      return;
+    }
+
+    switchingTheme = true;
     try {
       const current = activeTheme.value;
-      const targetTheme = resolveTargetTheme(newMode);
+      const targetTheme = await resolveTargetTheme(newMode);
 
       if (current === targetTheme && mode.value === newMode) {
         return;
       }
 
-      const overlay = createOverlay(current, targetTheme);
-      document.body.appendChild(overlay);
-
-      requestAnimationFrame(() => {
-        overlay.classList.add("active");
+      await playThemeSwitchAnimation(current, targetTheme, () => {
+        commitThemeModeChange(newMode);
       });
-
-      await wait(500);
-
-      overlay.classList.remove(current);
-      overlay.classList.add(targetTheme);
-
-      commitThemeModeChange(newMode);
-
-      await wait(500);
-
-      overlay.classList.remove("active");
-      await wait(150);
-      document.body.removeChild(overlay);
 
       await savePreference();
     } catch (error) {
       console.error("设置主题模式失败:", error);
       throw error;
+    } finally {
+      switchingTheme = false;
     }
   }
 

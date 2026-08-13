@@ -1,5 +1,11 @@
 use crate::{system, tunnel};
 
+/// 获取操作系统真实主题（读取 Windows 注册表，不受窗口 setTheme 影响）
+#[tauri::command]
+pub fn get_system_theme() -> Result<String, String> {
+    system::theme::get_system_theme()
+}
+
 #[tauri::command]
 pub async fn copy_background_image_to_temp(source_path: String) -> Result<String, String> {
     system::background::copy_background_image_to_temp(source_path).await

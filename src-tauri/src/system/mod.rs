@@ -4,9 +4,11 @@
 //! - window: 窗口管理
 //! - startup: 自动启动设置
 //! - update: 版本更新检查
+//! - theme: 系统主题检测
 
 pub mod background;
 pub mod startup;
+pub mod theme;
 pub mod update;
 pub mod window;
 

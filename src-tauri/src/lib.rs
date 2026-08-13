@@ -121,6 +121,7 @@ pub fn run() {
             commands::system::set_minimize_to_tray,
             commands::system::quit_app,
             commands::system::get_app_version,
+            commands::system::get_system_theme,
             commands::api::check_for_updates,
             commands::api::get_update_history,
             commands::system::download_and_install_update,
