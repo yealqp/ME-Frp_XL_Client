@@ -1,42 +1,74 @@
-//! AI 分析模块 (OpenAI 兼容 API)
+//! AI 分析模块
 //!
-//! 提供日志分析功能，调用远程 LLM API
+//! 将隧道日志发送到 XL 服务端 `ai_analysis.php`，由服务端注入系统提示词并
+//! 以 OpenAI completions 格式转发到 AI 服务。
+//!
+//! 安全设计：
+//! - 客户端不持有任何 AI 服务密钥（服务端配置 AI_API_KEY）
+//! - 系统提示词迁移到服务端维护（`server/ai_analysis.php` 中 SYSTEM_PROMPT）
+//! - 使用带超时的统一 HTTP 客户端，避免网络挂起导致请求永久 pending
+//! - 日志/提示词在客户端侧截断，与服务端限长保持一致
 
+use crate::api::client::create_http_client;
 use serde::{Deserialize, Serialize};
 
-const API_URL: &str = "https://apihub.agnes-ai.com/v1/chat/completions";
-const API_KEY: &str = "REDACTED_AI_API_KEY";
-const DEFAULT_MODEL: &str = "agnes-2.0-flash";
+const AI_ANALYSIS_API_URL: &str = "https://xlc.mefrp.yealqp.cn/ai_analysis.php";
+const AI_ANALYSIS_API_TOKEN: &str = "yealqpxlclientaianalysissecret";
 
-/// 系统提示词 (编译时嵌入)
-static SYSTEM_PROMPT: &str = include_str!("../../assets/system.md");
+/// 与 server/ai_analysis.php 的 MAX_LOG_LENGTH / MAX_PROMPT_LENGTH 保持一致
+const MAX_LOG_CHARS: usize = 20_000;
+const MAX_PROMPT_CHARS: usize = 2_000;
 
-#[derive(Debug, Serialize)]
-struct ChatMessage {
-    role: String,
+/// 发送到分析服务端的请求体
+#[derive(Serialize, Debug)]
+struct AnalysisRequest {
+    log_content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    custom_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tunnel_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tunnel_type: Option<String>,
+}
+
+/// 分析服务端成功响应（{ ok: true, data: { content } }）
+#[derive(Deserialize, Debug)]
+struct AnalysisSuccessResponse {
+    ok: bool,
+    data: Option<AnalysisData>,
+}
+
+#[derive(Deserialize, Debug)]
+struct AnalysisData {
     content: String,
 }
 
-#[derive(Debug, Serialize)]
-struct ChatCompletionRequest {
-    model: String,
-    messages: Vec<ChatMessage>,
-    stream: bool,
+/// 分析服务端错误响应（{ error: "..." }）
+#[derive(Deserialize, Debug)]
+struct AnalysisErrorResponse {
+    error: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct ChatCompletionResponse {
-    choices: Vec<Choice>,
+/// 截断字符串到指定字符数，超出时附加截断提示
+fn truncate_chars(input: &str, max_chars: usize) -> String {
+    if input.chars().count() <= max_chars {
+        return input.to_string();
+    }
+
+    let mut truncated: String = input.chars().take(max_chars).collect();
+    truncated.push_str("\n...（内容过长，已截断）");
+    truncated
 }
 
-#[derive(Debug, Deserialize)]
-struct Choice {
-    message: ResponseMessage,
-}
-
-#[derive(Debug, Deserialize)]
-struct ResponseMessage {
-    content: String,
+/// 截断响应文本用于错误提示
+fn truncate_response(text: &str) -> String {
+    if text.chars().count() <= 300 {
+        text.to_string()
+    } else {
+        let mut truncated: String = text.chars().take(300).collect();
+        truncated.push_str("…");
+        truncated
+    }
 }
 
 /// 调用 AI 分析日志
@@ -51,69 +83,52 @@ pub async fn analyze_log(
     tunnel_name: Option<&str>,
     tunnel_type: Option<&str>,
 ) -> Result<String, String> {
-    // 构建隧道信息前缀
-    let tunnel_info = match (tunnel_name, tunnel_type) {
-        (Some(name), Some(tp)) => format!("隧道名称：{}\n隧道类型：{}\n\n", name, tp.to_uppercase()),
-        (Some(name), None) => format!("隧道名称：{}\n\n", name),
-        (None, Some(tp)) => format!("隧道类型：{}\n\n", tp.to_uppercase()),
-        _ => String::new(),
+    let request_body = AnalysisRequest {
+        log_content: truncate_chars(log_content, MAX_LOG_CHARS),
+        custom_prompt: custom_prompt
+            .map(|p| truncate_chars(p, MAX_PROMPT_CHARS))
+            .filter(|p| !p.trim().is_empty()),
+        tunnel_name: tunnel_name.map(str::to_string),
+        tunnel_type: tunnel_type.map(str::to_string),
     };
 
-    // 构建用户消息
-    let user_content = match custom_prompt {
-        Some(prompt) if !prompt.trim().is_empty() => {
-            format!("{}{}\n\n以下是隧道日志内容，请根据以上要求进行分析：\n\n{}", tunnel_info, prompt, log_content)
-        }
-        _ => {
-            format!("{}请分析以下隧道日志，指出可能的问题或优化建议：\n\n{}", tunnel_info, log_content)
-        }
-    };
-
-    let messages = vec![
-        ChatMessage {
-            role: "system".to_string(),
-            content: SYSTEM_PROMPT.to_string(),
-        },
-        ChatMessage {
-            role: "user".to_string(),
-            content: user_content,
-        },
-    ];
-
-    let request_body = ChatCompletionRequest {
-        model: DEFAULT_MODEL.to_string(),
-        messages,
-        stream: false,
-    };
-
-    let client = reqwest::Client::new();
+    let client = create_http_client();
     let response = client
-        .post(API_URL)
-        .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {}", API_KEY))
+        .post(AI_ANALYSIS_API_URL)
+        .header("Authorization", format!("Bearer {AI_ANALYSIS_API_TOKEN}"))
         .json(&request_body)
         .send()
         .await
-        .map_err(|e| format!("请求 AI 服务失败: {}", e))?;
+        .map_err(|e| format!("请求 AI 分析服务失败: {e}"))?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "无法读取错误正文".to_string());
-        return Err(format!("AI 服务返回错误 ({}): {}", status, error_text));
+    let status = response.status();
+    let response_text = response
+        .text()
+        .await
+        .map_err(|e| format!("读取 AI 分析响应失败: {e}"))?;
+
+    if status.is_success() {
+        let parsed: AnalysisSuccessResponse = serde_json::from_str(&response_text).map_err(|e| {
+            format!(
+                "解析 AI 分析响应失败: {}，原始响应: {}",
+                e,
+                truncate_response(&response_text)
+            )
+        })?;
+
+        if parsed.ok {
+            if let Some(content) = parsed.data.map(|d| d.content).filter(|c| !c.trim().is_empty()) {
+                return Ok(content);
+            }
+            return Err("AI 分析服务返回了空内容".to_string());
+        }
+
+        return Err("AI 分析服务返回失败".to_string());
     }
 
-    let resp_data: ChatCompletionResponse = response
-        .json()
-        .await
-        .map_err(|e| format!("解析 AI 响应失败: {}", e))?;
-
-    resp_data
-        .choices
-        .into_iter()
-        .next()
-        .map(|choice| choice.message.content)
-        .ok_or_else(|| "AI 响应中没有有效的内容".to_string())
+    // 尝试提取结构化错误信息，回退到原始响应
+    let error_msg = serde_json::from_str::<AnalysisErrorResponse>(&response_text)
+        .map(|e| e.error)
+        .unwrap_or_else(|_| format!("HTTP {}: {}", status, truncate_response(&response_text)));
+    Err(format!("AI 分析服务错误: {error_msg}"))
 }
