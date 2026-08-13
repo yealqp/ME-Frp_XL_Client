@@ -4,34 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/src/assets/icon-32x32.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Umami Analytics（统计 + 会话录制） -->
+    <script
+      defer
+      src="https://umami.yealqp.cn/script.js"
+      data-website-id="bb0a7ec3-5786-4011-954c-2e5a769e13c9"
+    ></script>
+    <script
+      defer
+      src="https://umami.yealqp.cn/recorder.js"
+      data-website-id="bb0a7ec3-5786-4011-954c-2e5a769e13c9"
+      data-sample-rate="0.5"
+      data-mask-level="moderate"
+      data-max-duration="300000"
+    ></script>
   </head>
-  <!-- Microsoft Clarity -->
-  <script type="text/javascript">
-    (function (c, l, a, r, i, t, y) {
-      try {
-        c[a] =
-          c[a] ||
-          function () {
-            (c[a].q = c[a].q || []).push(arguments);
-          };
-        t = l.createElement(r);
-        t.async = 1;
-        t.src = "https://www.clarity.ms/tag/" + i;
-        t.onerror = function () {
-          console.warn("Microsoft Clarity failed to load");
-        };
-        y = l.getElementsByTagName(r)[0];
-        y.parentNode.insertBefore(t, y);
-      } catch (e) {
-        console.warn("Microsoft Clarity initialization failed:", e);
-      }
-    })(window, document, "clarity", "script", "v60u1elg7d");
-  </script>
-  <script
-    defer
-    src="https://umami.yealqp.cn/script.js"
-    data-website-id="bb0a7ec3-5786-4011-954c-2e5a769e13c9"
-  ></script>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
