@@ -21,7 +21,6 @@ import {
 } from "naive-ui";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "./stores/auth";
-import { useCreateTunnelStore } from "./stores/createTunnel";
 import { useSettingsStore } from "./stores/settings";
 import { useThemeStore } from "./stores/theme";
 import { useUIStore } from "./stores/ui";
@@ -37,16 +36,11 @@ import { useAutoStartTunnels } from "@/composables/useAutoStartTunnels";
 import { hljs } from "@/utils/markdownParser";
 import GlobalUpdateChecker from "./components/GlobalUpdateChecker.vue";
 
-interface TunnelSummary {
-  proxyId: number;
-}
-
 const router = useRouter();
 const route = useRoute();
 
 // Initialize stores
 const authStore = useAuthStore();
-const createTunnelStore = useCreateTunnelStore();
 const settingsStore = useSettingsStore();
 const themeStore = useThemeStore();
 const uiStore = useUIStore();
@@ -59,14 +53,13 @@ const notificationProvider = useTemplateRef<NotificationProviderInst>("notificat
 
 // Use storeToRefs for state/getters to maintain reactivity
 const { isLoggedIn, isCheckingAuth } = storeToRefs(authStore);
-const { currentPage, selectedNode } = storeToRefs(createTunnelStore);
 const { settings } = storeToRefs(settingsStore);
 const { sidebarCollapsed, sidebarCollapsible, currentSidebarWidth } = storeToRefs(uiStore);
 const shellReady = ref(false);
 const hasStoredSession = ref(false);
 
 const { backgroundImageUrl, syncBackgroundImage, revokeBackgroundImageUrl, withOpacity, clampOpacity } = useBackgroundImage();
-const { startAutoStartTunnels } = useAutoStartTunnels();
+const { startAutoStartTunnels, cancelAutoStartTunnels } = useAutoStartTunnels();
 
 const appAppearanceStyle = computed(() => {
   const contentOpacity = clampOpacity(settings.value.contentOpacity);
@@ -142,70 +135,6 @@ const message = {
     return appProviders.value.message?.info(content, options);
   },
 };
-
-// 节点选择完成，进入隧道配置页面
-function handleNodeSelected(node: any) {
-  createTunnelStore.selectNode(node);
-  router.push("/tunnel-config");
-}
-
-// 返回节点选择页面
-function handleGoBackToNodeSelection() {
-  createTunnelStore.goBackToNodeSelection();
-  router.push("/create-tunnel");
-}
-
-// 跳转到创建隧道页面
-function handleGoToCreateTunnel() {
-  createTunnelStore.resetCreateFlow();
-  router.push("/create-tunnel");
-}
-
-// 根据组件类型返回相应的 props
-function getComponentProps(component: any) {
-  if (!component) return {};
-
-  const componentName = component.__name || component.name;
-
-  // 只为需要这些 props 的组件传递
-  if (componentName === "CreateTunnel" || componentName === "TunnelConfig") {
-    return {
-      selectedNode: selectedNode.value,
-      currentPage: currentPage.value,
-    };
-  }
-
-  return {};
-}
-
-// 根据组件类型返回相应的事件监听器
-function getComponentListeners(component: any) {
-  if (!component) return {};
-
-  const componentName = component.__name || component.name;
-
-  // 只为需要这些事件的组件传递
-  if (componentName === "CreateTunnel") {
-    return {
-      onNodeSelected: handleNodeSelected,
-      onGoToCreate: handleGoToCreateTunnel,
-    };
-  }
-
-  if (componentName === "TunnelConfig") {
-    return {
-      onGoBack: handleGoBackToNodeSelection,
-    };
-  }
-
-  if (componentName === "TunnelManagement") {
-    return {
-      onGoToCreate: handleGoToCreateTunnel,
-    };
-  }
-
-  return {};
-}
 
 // 配置相关函数
 const checkAuthStatus = async (retryCount = 0): Promise<void> => {
@@ -287,7 +216,7 @@ onMounted(async () => {
 
   const waitForLogin = () => {
     if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
-      startAutoStartTunnels(message);
+      tryStartAutoStartTunnels();
     } else if (loginPollingRetries < MAX_LOGIN_POLL_RETRIES) {
       loginPollingRetries++;
       loginPollingTimer = window.setTimeout(waitForLogin, 500);
@@ -304,12 +233,28 @@ onUnmounted(() => {
     clearTimeout(loginPollingTimer);
     loginPollingTimer = null;
   }
+  cancelAutoStartTunnels();
 });
 
-// 检测到登录态时从 /login 跳转 dashboard
+// 检测到登录态时从 /login 跳转 dashboard，并确保自启动隧道被触发
+// （轮询超时后登录成功时也能兜底触发，且只执行一次）
+let autostartAttempted = false;
+function tryStartAutoStartTunnels(): void {
+  if (autostartAttempted) {
+    return;
+  }
+  if (authStore.isLoggedIn && !authStore.isCheckingAuth) {
+    autostartAttempted = true;
+    startAutoStartTunnels(message);
+  }
+}
+
 watch(isLoggedIn, (loggedIn) => {
   if (loggedIn && route.path === "/login") {
     router.push("/dashboard");
+  }
+  if (loggedIn) {
+    tryStartAutoStartTunnels();
   }
 });
 
@@ -377,10 +322,7 @@ watch(
               <n-layout class="content-layout">
                 <n-layout-content class="content-body">
                   <div class="content-inner">
-                  <RouteContent
-                    :get-component-props="getComponentProps"
-                    :get-component-listeners="getComponentListeners"
-                  />
+                  <RouteContent />
                   </div>
                 </n-layout-content>
               </n-layout>
@@ -395,10 +337,7 @@ watch(
                 </n-layout-header>
                 <n-layout-content class="content-body content-body--top">
                   <div class="content-inner">
-                  <RouteContent
-                    :get-component-props="getComponentProps"
-                    :get-component-listeners="getComponentListeners"
-                  />
+                  <RouteContent />
                   </div>
                 </n-layout-content>
               </n-layout>
@@ -409,10 +348,7 @@ watch(
               <n-layout position="absolute" class="main-layout main-layout--top">
                 <n-layout-content class="content-body content-body--bottom">
                   <div class="content-inner">
-                  <RouteContent
-                    :get-component-props="getComponentProps"
-                    :get-component-listeners="getComponentListeners"
-                  />
+                  <RouteContent />
                   </div>
                 </n-layout-content>
                 <n-layout-footer bordered class="top-layout-header bottom-layout-footer">

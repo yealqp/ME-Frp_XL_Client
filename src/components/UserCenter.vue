@@ -49,7 +49,6 @@
           ref="chartContainer"
           class="chart-container"
           :style="{ opacity: trafficStatsLoading ? 0 : 1 }"
-          @mouseenter="handleChartMouseEnter"
           @mousemove="handleChartMouseMove"
           @mouseleave="handleChartMouseLeave"
         >
@@ -390,7 +389,6 @@ const {
   activePoint,
   CHART_PADDING,
   loadTrafficStats,
-  handleChartMouseEnter,
   handleChartMouseMove,
   handleChartMouseLeave,
   changeDatePeriod,

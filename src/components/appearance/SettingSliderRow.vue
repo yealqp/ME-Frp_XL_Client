@@ -10,6 +10,7 @@ defineProps<{
   step: number;
   width?: number;
   suffix?: string;
+  disabled?: boolean;
   formatTooltip: (value: number) => string;
 }>();
 
@@ -30,6 +31,7 @@ const emit = defineEmits<{
         :min="min"
         :max="max"
         :step="step"
+        :disabled="disabled"
         :format-tooltip="formatTooltip"
         :style="{ width: `${width ?? 220}px` }"
         @update:value="(nextValue) => emit('update:value', nextValue)"
@@ -39,6 +41,7 @@ const emit = defineEmits<{
         :min="min"
         :max="max"
         :step="step"
+        :disabled="disabled"
         :show-button="false"
         style="width: 88px"
         size="small"

@@ -36,8 +36,20 @@ export function useCdkRedeem() {
   };
 
   const performCdkRedeem = async () => {
-    if (!cdkCode.value.trim()) {
+    const code = cdkCode.value.trim();
+
+    if (!code) {
       message.error("请输入CDK兑换码");
+      return;
+    }
+
+    // 本地格式预检：限制长度与字符集，避免超大/异常输入直达服务端
+    if (code.length > 64) {
+      message.error("CDK兑换码格式不正确（长度超限）");
+      return;
+    }
+    if (!/^[A-Za-z0-9-]+$/.test(code)) {
+      message.error("CDK兑换码格式不正确（仅允许字母、数字和连字符）");
       return;
     }
 
@@ -55,7 +67,7 @@ export function useCdkRedeem() {
       message.destroyAll();
       message.loading("正在兑换中...", { duration: 0 });
 
-      const result = await redeemCdk(authStore.userToken, cdkCode.value.trim(), cdkCaptchaToken.value);
+      const result = await redeemCdk(authStore.userToken, code, cdkCaptchaToken.value);
       message.destroyAll();
 
       const redeemData = result.data;

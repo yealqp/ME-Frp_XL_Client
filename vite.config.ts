@@ -108,8 +108,8 @@ export default defineConfig({
           if (id.includes('node_modules/@tauri-apps/')) {
             return 'tauri';
           }
-          // 将图标库分离
-          if (id.includes('node_modules/lucide-vue-next/')) {
+          // 将图标库分离（项目实际使用 @lucide/vue）
+          if (id.includes('node_modules/@lucide/vue/')) {
             return 'icons';
           }
         },

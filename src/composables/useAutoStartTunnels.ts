@@ -8,6 +8,8 @@ interface AutoStartMessageApi {
 }
 
 export function useAutoStartTunnels() {
+  let startupTimer: ReturnType<typeof setTimeout> | null = null;
+
   async function startAutoStartTunnels(message?: AutoStartMessageApi): Promise<void> {
     try {
       const unifiedConfig = await loadUnifiedConfig();
@@ -59,7 +61,9 @@ export function useAutoStartTunnels() {
 
       const startupDelay = (unifiedConfig.startupDelay || 5) * 1000;
 
-      setTimeout(() => {
+      // 记录定时器句柄，支持 cancelAutoStartTunnels 在组件卸载时取消
+      startupTimer = setTimeout(() => {
+        startupTimer = null;
         (async () => {
           for (let i = 0; i < validTunnelIds.length; i++) {
             const tunnelId = validTunnelIds[i];
@@ -93,5 +97,13 @@ export function useAutoStartTunnels() {
     }
   }
 
-  return { startAutoStartTunnels };
+  /** 取消尚未执行的延迟自启动（组件卸载时调用，避免定时器泄漏） */
+  function cancelAutoStartTunnels(): void {
+    if (startupTimer !== null) {
+      clearTimeout(startupTimer);
+      startupTimer = null;
+    }
+  }
+
+  return { startAutoStartTunnels, cancelAutoStartTunnels };
 }

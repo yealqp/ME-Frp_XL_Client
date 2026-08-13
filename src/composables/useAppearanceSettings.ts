@@ -1,4 +1,4 @@
-﻿import { computed, onUnmounted } from "vue";
+import { computed, onUnmounted } from "vue";
 import { storeToRefs } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -7,6 +7,7 @@ import { useSettingsStore } from "@/stores/settings";
 import { useUIStore } from "@/stores/ui";
 import { useSidebarSettingsHandlers } from "@/composables/useSidebarSettingsHandlers";
 import { clampAppearanceOpacity, clampAppearanceRange } from "@/utils/appearanceSettings";
+import { extractErrorMessage } from "@/utils/errorHandler";
 
 export const BACKGROUND_IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "jfif", "webp", "avif", "bmp", "gif", "svg", "ico"];
 
@@ -87,7 +88,7 @@ export function useAppearanceSettings() {
       message.success("背景图片已更新");
     } catch (error) {
       console.error("选择背景图片失败:", error);
-      message.error(`选择背景图片失败: ${error}`);
+      message.error(extractErrorMessage(error, "选择背景图片失败"));
     }
   }
 

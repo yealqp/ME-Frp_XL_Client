@@ -52,7 +52,7 @@ const emit = defineEmits<{
 const dialog = useDialog();
 
 const uiStore = useUIStore();
-const { sidebarWidth, sidebarCollapsible, sidebarCollapsed } = storeToRefs(uiStore);
+const { sidebarWidth, sidebarCollapsed } = storeToRefs(uiStore);
 
 const themeStore = useThemeStore();
 const { isLightMode } = storeToRefs(themeStore);

@@ -54,9 +54,11 @@ export function finishLoading() {
 
 /**
  * Error state for loading bar
+ *
+ * 仅在存在未完成请求时清零并显示错误，避免误清其它组件的进行中计数
  */
 export function errorLoading() {
-  if (loadingBarInstance) {
+  if (loadingBarInstance && activeRequests > 0) {
     activeRequests = 0;
     loadingBarInstance.error();
   }

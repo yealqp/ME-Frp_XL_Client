@@ -143,8 +143,51 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   /**
+   * 防抖保存：滑块等高频更新的设置项合并为一次写入
+   *
+   * 连续调用共享同一个 promise：防抖窗口（250ms）内多次 updateSetting
+   * 只触发一次 saveSettings，所有调用方一起 await 到同一个结果，
+   * 避免高频拖动滑块导致大量全量 YAML 读写与配置竞态
+   */
+  let saveSettingsTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingSavePromise: Promise<void> | null = null;
+  let resolvePendingSave: (() => void) | null = null;
+  let rejectPendingSave: ((reason?: unknown) => void) | null = null;
+
+  function scheduleSaveSettings(): Promise<void> {
+    if (!pendingSavePromise) {
+      pendingSavePromise = new Promise<void>((resolve, reject) => {
+        resolvePendingSave = resolve;
+        rejectPendingSave = reject;
+      });
+    }
+
+    if (saveSettingsTimer !== null) {
+      clearTimeout(saveSettingsTimer);
+    }
+
+    saveSettingsTimer = setTimeout(() => {
+      saveSettingsTimer = null;
+
+      const promise = pendingSavePromise;
+      const resolve = resolvePendingSave;
+      const reject = rejectPendingSave;
+      pendingSavePromise = null;
+      resolvePendingSave = null;
+      rejectPendingSave = null;
+
+      saveSettings().then(
+        () => resolve?.(),
+        (err) => reject?.(err),
+      );
+    }, 250);
+
+    return pendingSavePromise;
+  }
+
+  /**
    * Update a single setting item
-   * Calls saveSettings to persist the change
+   * Persists the change with debounce (250ms)
    * @param key - Setting key to update
    * @param value - New value for the setting
    */
@@ -154,7 +197,7 @@ export const useSettingsStore = defineStore('settings', () => {
   ): Promise<void> {
     settings.value[key] = value;
 
-    await saveSettings();
+    await scheduleSaveSettings();
   }
 
   /**

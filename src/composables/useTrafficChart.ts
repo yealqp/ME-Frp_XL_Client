@@ -198,9 +198,6 @@ export function useTrafficChart() {
     };
   }
 
-  // TODO: Reserved for future tooltip-related mouse enter behavior
-  const handleChartMouseEnter = () => undefined;
-
   const handleChartMouseMove = (event: MouseEvent) => {
     if (trafficStatsLoading.value || !chartModel.value) {
       showCustomTooltip.value = false;
@@ -321,7 +318,6 @@ export function useTrafficChart() {
     CHART_PADDING,
     syncChartBounds,
     loadTrafficStats,
-    handleChartMouseEnter,
     handleChartMouseMove,
     handleChartMouseLeave,
     changeDatePeriod,

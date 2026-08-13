@@ -243,6 +243,12 @@ export const useTunnelStore = defineStore('tunnel', () => {
     });
   }
 
+  /**
+   * 启用/禁用隧道
+   *
+   * 注意：本方法参数 `enable` 表示"是否启用"（客户端语义）；
+   * 底层 API 的参数是 `isDisabled`（是否禁用），语义相反，故传入 `!enable`。
+   */
   async function toggleTunnel(
     proxyId: number,
     enable: boolean,

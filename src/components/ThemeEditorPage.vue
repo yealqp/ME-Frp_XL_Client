@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="theme-editor-page">
     <div class="page-header">
       <div>
@@ -49,11 +49,14 @@
           <SettingSliderRow
             :value="sidebarWidth"
             title="侧边栏宽度"
-            description="调整导航侧栏的宽度，便于适配更宽或更紧凑的布局。"
+            :description="isSidebarMode
+              ? '调整导航侧栏的宽度，便于适配更宽或更紧凑的布局。'
+              : '仅在左侧导航模式下生效，当前导航位置为顶部/底部。'"
             :min="150"
             :max="300"
             :step="1"
             suffix="px"
+            :disabled="!isSidebarMode"
             :format-tooltip="formatPixelTooltip"
             @update:value="handleSidebarWidthChange"
           />
@@ -61,10 +64,13 @@
           <div class="setting-item">
             <div class="setting-info">
               <h4>侧边栏收缩功能</h4>
-              <p>开启后，可以通过侧栏顶部按钮快速收起和展开导航区。</p>
+              <p>{{ isSidebarMode
+                ? '开启后，可以通过侧栏顶部按钮快速收起和展开导航区。'
+                : '仅在左侧导航模式下生效，当前导航位置为顶部/底部。' }}</p>
             </div>
             <n-switch
               v-model:value="sidebarCollapsible"
+              :disabled="!isSidebarMode"
               @update:value="handleSidebarCollapsibleChange"
             />
           </div>
@@ -182,6 +188,7 @@
 
 <script setup lang="ts">
 import { NButton, NCard, NInput, NSpace, NSwitch, NRadioGroup, NRadioButton, useMessage } from "naive-ui";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { Image as ImageIcon, Palette, SwatchBook } from "@lucide/vue";
 import SectionHeader from "@/components/common/SectionHeader.vue";
@@ -214,6 +221,13 @@ const {
   handleSidebarCollapsibleChange,
   handleSidebarPositionChange,
 } = useAppearanceSettings();
+
+// 侧边栏相关设置仅在左侧导航模式下有意义（顶部/底部导航无侧边栏）
+const isSidebarMode = computed(
+  () =>
+    settings.value.sidebarPosition !== "top" &&
+    settings.value.sidebarPosition !== "bottom",
+);
 
 function findPreset(presetId: string) {
   return themePresets.find((item) => item.id === presetId);

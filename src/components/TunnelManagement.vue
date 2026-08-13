@@ -329,7 +329,12 @@ function exportConnectionImage() {
 
   const text = lines.join("\n");
   const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    console.error("生成图片失败：当前环境不支持 Canvas 2D");
+    message.error("生成图片失败，请重试");
+    return;
+  }
   const scale = 4;
   const fontSize = 14;
   const lineHeight = fontSize * 1.8;

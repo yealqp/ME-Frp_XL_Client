@@ -1,10 +1,5 @@
 <script setup lang="ts">
 import { NSpin } from "naive-ui";
-
-defineProps<{
-  getComponentProps: (component: any) => Record<string, unknown>;
-  getComponentListeners: (component: any) => Record<string, unknown>;
-}>();
 </script>
 
 <template>
@@ -13,13 +8,7 @@ defineProps<{
       <div v-if="Component" :key="route.path" class="route-container">
         <Suspense>
           <template #default>
-            <component
-              :is="Component"
-              v-bind="{
-                ...getComponentProps(Component),
-                ...getComponentListeners(Component),
-              }"
-            />
+            <component :is="Component" />
           </template>
           <template #fallback>
             <div class="route-loading">

@@ -40,7 +40,6 @@ export const navToPath: Record<string, string> = {
 export const pathToNav: Record<string, string> = {
   "/dashboard": "dashboard",
   "/create-tunnel": "create-tunnel",
-  "/tunnel-config": "create-tunnel",
   "/tunnel-management": "tunnel-management",
   "/node-status": "node-status",
   "/mefrp-webui": "mefrp-webui",

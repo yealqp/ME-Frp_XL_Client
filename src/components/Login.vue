@@ -100,7 +100,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef } from "vue";
-import { useMessage } from "naive-ui";
+import { useMessage, type FormInst } from "naive-ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useAuthStore } from "../stores/auth";
 import type { UnifiedConfig } from "../types/config";
@@ -143,7 +143,7 @@ const loginForm = ref<LoginForm>(createEmptyLoginForm());
 const isTokenMode = ref(false);
 
 // 表单引用
-const formRef = useTemplateRef<any>("formRef");
+const formRef = useTemplateRef<FormInst>("formRef");
 
 // 表单验证规则
 const rules = computed(() => {

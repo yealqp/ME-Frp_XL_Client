@@ -273,7 +273,12 @@ const formatDateForApi = (timestamp: number): string => {
 };
 
 // 加载日志
+// 请求序号防护：快速翻页/切换筛选时，仅最新的请求允许写入结果，
+// 避免慢的旧响应晚到覆盖新数据
+let logRequestId = 0;
+
 const loadLogs = async () => {
+  const requestId = ++logRequestId;
   loading.value = true;
   try {
     // 构建查询参数
@@ -307,6 +312,11 @@ const loadLogs = async () => {
 
     const result = await getOperationLogs(authStore.userToken, params);
 
+    // 已发起更新的请求，丢弃本次过期响应
+    if (requestId !== logRequestId) {
+      return;
+    }
+
     if (result.code === 200) {
       logs.value = result.data.data;
       pagination.itemCount = result.data.total;
@@ -338,10 +348,16 @@ const loadLogs = async () => {
       throw new Error(result.message || "获取操作日志失败");
     }
   } catch (err) {
+    // 过期请求的错误不提示（已有更新的请求在途）
+    if (requestId !== logRequestId) {
+      return;
+    }
     console.error("加载操作日志失败:", err);
     message.error(extractErrorMessage(err, "加载操作日志失败"));
   } finally {
-    loading.value = false;
+    if (requestId === logRequestId) {
+      loading.value = false;
+    }
   }
 };
 

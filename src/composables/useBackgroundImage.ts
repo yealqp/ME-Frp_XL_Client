@@ -78,16 +78,10 @@ export function useBackgroundImage() {
     }
 
     const isManagedPath = !/^[a-zA-Z]:[\\/]/.test(path) && !path.startsWith("/") && !path.startsWith("\\");
-    if (!isManagedPath) {
-      return;
-    }
 
-    try {
-      const bytes = await readFile(path, {
-        baseDir: BaseDirectory.Resource,
-      });
+    const applyImage = (bytes: Uint8Array<ArrayBuffer>, filePath: string) => {
       const blob = new Blob([bytes], {
-        type: backgroundImageMime(path),
+        type: backgroundImageMime(filePath),
       });
 
       const objectUrl = URL.createObjectURL(blob);
@@ -97,8 +91,29 @@ export function useBackgroundImage() {
       }
 
       backgroundImageUrl.value = objectUrl;
+    };
+
+    if (isManagedPath) {
+      // 受管路径：读取 $RESOURCE/temp 下的文件
+      try {
+        const bytes = await readFile(path, {
+          baseDir: BaseDirectory.Resource,
+        });
+        applyImage(bytes, path);
+      } catch (error) {
+        console.error("加载背景图片失败:", error);
+      }
+      return;
+    }
+
+    // 旧版绝对路径配置（如 C:\...）：尝试直接读取（受 fs 权限 scope 限制），
+    // 避免升级后背景图无声丢失；读取失败时给出可操作的提示
+    console.warn("检测到旧版绝对路径背景图配置，请在设置中重新选择背景图片:", path);
+    try {
+      const bytes = await readFile(path);
+      applyImage(bytes, path);
     } catch (error) {
-      console.error("加载背景图片失败:", error);
+      console.error("加载旧版背景图片失败（文件不存在或权限受限）:", error);
     }
   }
 

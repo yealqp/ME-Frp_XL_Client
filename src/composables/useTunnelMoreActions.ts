@@ -31,13 +31,19 @@ export function useTunnelMoreActions({
   const dialog = useDialog();
   const tunnelStore = useTunnelStore();
 
-  function getNodeAddress(proxyId: number): string {
+  /**
+   * 获取节点主机名地址
+   *
+   * 注意：找不到隧道或节点映射缺失时返回 `null`（而非占位字符串），
+   * 便于调用方用 `if (!nodeAddress)` 正确拦截，避免复制出 "未知:端口"
+   */
+  function getNodeAddress(proxyId: number): string | null {
     const tunnel = tunnels.value.find((item) => item.proxyId === proxyId);
     if (!tunnel) {
-      return "未知";
+      return null;
     }
 
-    return nodeHostnameMap.value?.[tunnel.nodeId] || "未知";
+    return nodeHostnameMap.value?.[tunnel.nodeId] || null;
   }
 
   async function kickTunnel(tunnelId: number) {
@@ -92,7 +98,7 @@ export function useTunnelMoreActions({
       } else {
         const nodeAddress = getNodeAddress(tunnelId);
         if (!nodeAddress) {
-          message.error("无法获取节点地址");
+          message.error("无法获取节点地址，请刷新隧道列表后重试");
           return;
         }
         remoteAddress = `${nodeAddress}:${tunnel.remotePort}`;

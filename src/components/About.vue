@@ -103,7 +103,7 @@
                 :bordered="false"
                 type="error"
                 style="cursor: pointer"
-                @click="openLink('https://www.rust-lang.org/')"
+                @click="openLink('https://rust-lang.org/')"
               >
                 Rust
               </n-tag>
@@ -220,7 +220,7 @@
             </p>
             <n-button 
               type="primary" 
-              @click="checkForUpdates" 
+              @click="() => checkForUpdates()" 
               :loading="updateChecking"
             >
               <template #icon>

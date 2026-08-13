@@ -26,6 +26,9 @@
         <n-text depth="3" style="margin-top: 8px; display: block;">
           您的定位信息仅会在本地进行匹配处理，不会进行任何形式的收集或上传。
         </n-text>
+        <n-text depth="3" style="margin-top: 8px; display: block;">
+          点击允许后您的窗口左上角会出现授权提示，请务必正确点击。
+        </n-text>
       </div>
       <template #action>
         <n-button size="small" @click="showGeoConsent = false">暂不授权</n-button>

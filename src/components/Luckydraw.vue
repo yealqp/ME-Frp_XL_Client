@@ -223,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { Gift, Dices, Sparkles } from "@lucide/vue";
 import { NIcon, NStatistic, NDataTable, NInputGroup } from "naive-ui";
 import confetti from "canvas-confetti";
@@ -240,6 +240,8 @@ const userTraffic = ref<number | null>(null);
 
 const animSlotIndex = ref(0);
 let animTimer: ReturnType<typeof setInterval> | null = null;
+let resultTimeout: ReturnType<typeof setTimeout> | null = null;
+const batchCancelled = ref(false);
 
 const showResultModal = ref(false);
 const resultModalStatus = ref<"success" | "warning">("success");
@@ -323,6 +325,14 @@ function fireConfetti(count = 100) {
 }
 
 function showSingleResult(prize: { type: string; prize: string }) {
+  // 先重置弹窗状态，避免未知奖品类型时残留上一次结果
+  resultModalTitle.value = "";
+  resultModalDesc.value = "";
+  resultModalCouponCode.value = "";
+  resultModalIcon.value = Gift;
+  resultModalIconColor.value = "";
+  resultModalStatus.value = "warning";
+
   if (prize.type === "traffic") {
     fireConfetti(100);
     resultModalStatus.value = "success";
@@ -330,7 +340,6 @@ function showSingleResult(prize: { type: string; prize: string }) {
     resultModalDesc.value = "流量已发放至您的账户";
     resultModalIcon.value = Gift;
     resultModalIconColor.value = "#18a058";
-    resultModalCouponCode.value = "";
   } else if (prize.type === "coupon") {
     fireConfetti(100);
     const codeMatch = String(prize.prize).match(/[A-Z0-9]{6,}/);
@@ -348,7 +357,11 @@ function showSingleResult(prize: { type: string; prize: string }) {
     resultModalDesc.value = "会员时长已延长至您的账户";
     resultModalIcon.value = Gift;
     resultModalIconColor.value = "#f0a020";
-    resultModalCouponCode.value = "";
+  } else {
+    // 未知奖品类型：给出兜底文案而非残留旧结果
+    resultModalStatus.value = "warning";
+    resultModalTitle.value = "抽奖完成";
+    resultModalDesc.value = String(prize.prize || "获得奖励，详情请查看账户");
   }
   showResultModal.value = true;
 }
@@ -405,8 +418,10 @@ async function handleDraw() {
     isDrawing.value = false;
     animSlotIndex.value = 0;
 
-    setTimeout(() => showSingleResult(prize), 300);
+    // 记录句柄，支持卸载时取消
+    resultTimeout = setTimeout(() => showSingleResult(prize), 300);
   } catch (e: any) {
+    stopAnimation();
     isDrawing.value = false;
     animSlotIndex.value = 0;
     const msg = e?.message || String(e);
@@ -428,6 +443,7 @@ async function handleBatchDraw() {
   }
 
   batchDrawing.value = true;
+  batchCancelled.value = false; // 每次开始重置取消标志
   batchTotalCount.value = 0;
   batchTotalTraffic.value = 0;
   batchVipDays.value = 0;
@@ -444,8 +460,15 @@ async function handleBatchDraw() {
 
   try {
     for (let i = 0; i < remaining; i++) {
+      if (batchCancelled.value) {
+        break;
+      }
+
       if (i > 0) {
         await new Promise(r => setTimeout(r, 1500));
+        if (batchCancelled.value) {
+          break;
+        }
       }
 
       drawProgress.value = `正在抽奖 (${i + 1}/${remaining})...`;
@@ -495,9 +518,30 @@ async function handleBatchDraw() {
   }
 }
 
+/**
+ * 取消进行中的批量抽奖
+ *
+ * 批量抽奖每次消耗流量，用户离开页面或主动取消时应停止后续请求。
+ * 正在进行的单次请求无法中断，但会跳过剩余轮次。
+ */
+function cancelBatchDraw() {
+  batchCancelled.value = true;
+}
+
 onMounted(() => {
   fetchDrawInfo();
   fetchUserTraffic();
+});
+
+onUnmounted(() => {
+  // 清理所有定时器，避免卸载后动画/弹窗继续触发
+  stopAnimation();
+  if (resultTimeout !== null) {
+    clearTimeout(resultTimeout);
+    resultTimeout = null;
+  }
+  // 取消进行中的批量抽奖（防止卸载后继续消耗流量的请求）
+  batchCancelled.value = true;
 });
 </script>
 

@@ -287,13 +287,15 @@ export function useDashboardState() {
       console.error("Notification error:", err)
     );
 
-    // 加载用户信息（失败不阻塞后续流程，autoSign 内部会自行处理）
-    userStore.loadUserInfo().catch(err =>
-      console.error("加载用户信息失败:", err),
-    );
-
-    // 自动签到后台执行，不阻塞其它初始化流程
-    autoSign().catch(err => console.error("Auto sign error:", err));
+    // 先加载用户信息，再自动签到：
+    // autoSign 内部依赖 userInfo.todaySigned 判断是否已签到，
+    // 串行执行避免两个请求并发重复拉取用户信息
+    (async () => {
+      await userStore.loadUserInfo().catch(err =>
+        console.error("加载用户信息失败:", err),
+      );
+      await autoSign().catch(err => console.error("Auto sign error:", err));
+    })();
   }
 
   return {

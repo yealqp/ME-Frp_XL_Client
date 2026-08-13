@@ -24,7 +24,6 @@ export const useUIStore = defineStore('ui', () => {
   // System notification (单实例)
   const systemNotification = ref<NotificationReactive | null>(null);
   const notificationTimer = ref<number | null>(null); // 定时器引用
-  let notificationApiInstance: any = null; // 保存 notification API 实例
   let notificationRequestInFlight = false;
 
   // Getters
@@ -148,11 +147,6 @@ export const useUIStore = defineStore('ui', () => {
    * @param notificationApi - Naive UI notification API instance
    */
   async function fetchAndShowNotification(notificationApi: any) {
-    // 保存 notification API 实例供后续使用
-    if (!notificationApiInstance) {
-      notificationApiInstance = notificationApi;
-    }
-
     // 如果已有通知实例正在显示，不重复请求
     if (systemNotification.value || notificationRequestInFlight) {
       return;
