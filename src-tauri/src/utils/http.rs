@@ -13,6 +13,7 @@ pub const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// User-Agent 格式: MeFrp-XL/{version}
 /// 
 /// 自动启用 gzip 和 brotli 解压缩
+/// 设置 30 秒总超时与 10 秒连接超时，避免网络挂起导致请求永久 pending
 pub fn create_http_client() -> reqwest::Client {
     let user_agent = format!("MeFrp-XL/{CURRENT_VERSION}");
     reqwest::Client::builder()
@@ -20,6 +21,10 @@ pub fn create_http_client() -> reqwest::Client {
         .gzip(true)
         .brotli(true)
         .deflate(true)
+        .timeout(std::time::Duration::from_secs(30))
+        .connect_timeout(std::time::Duration::from_secs(10))
         .build()
-        .expect("Failed to create HTTP client")
+        // ClientBuilder 构建失败仅在系统资源严重不足时发生（构建期不可达），
+        // 此时静默回退会丢失超时/UA/压缩配置，掩盖问题，故直接 panic 暴露
+        .expect("创建 HTTP 客户端失败（系统资源不足）")
 }

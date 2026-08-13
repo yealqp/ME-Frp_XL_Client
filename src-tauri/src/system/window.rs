@@ -6,25 +6,43 @@
 //! - 设置最小化到托盘行为
 //! - 退出应用
 
+use crate::models::tunnel::TunnelProcess;
 use crate::tunnel::ProcessManager;
 use crate::utils::process::stop_child;
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, MutexGuard};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager,
 };
 
+/// 获取进程管理器锁，短暂争用（最多 3 次 × 100ms）后放弃
+///
+/// 退出路径上锁失败不应静默跳过清理，先重试再放弃并记录日志
+fn lock_process_manager(
+    process_manager: &ProcessManager,
+) -> Option<MutexGuard<'_, HashMap<i32, TunnelProcess>>> {
+    for _ in 0..3 {
+        if let Ok(guard) = process_manager.lock() {
+            return Some(guard);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    eprintln!("获取进程管理器锁失败，跳过隧道清理");
+    None
+}
+
 fn stop_all_tunnels(process_manager: &ProcessManager) {
-    let running_tunnels = match process_manager.lock() {
-        Ok(manager) => manager.keys().cloned().collect::<Vec<_>>(),
-        Err(_) => return,
+    let running_tunnels = match lock_process_manager(process_manager) {
+        Some(manager) => manager.keys().cloned().collect::<Vec<_>>(),
+        None => return,
     };
 
     for proxy_id in running_tunnels {
-        let tunnel_process = match process_manager.lock() {
-            Ok(mut manager) => manager.remove(&proxy_id),
-            Err(_) => None,
+        let tunnel_process = match lock_process_manager(process_manager) {
+            Some(mut manager) => manager.remove(&proxy_id),
+            None => None,
         };
 
         if let Some(tunnel_process) = tunnel_process {
@@ -233,11 +251,17 @@ pub fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                 }
             }
             "quit" => {
+                // 先同步清理所有隧道进程，避免前端无响应（webview 卡死等）时残留 mefrpc 进程
+                if let Some(manager) = app.try_state::<ProcessManager>() {
+                    stop_all_tunnels(manager.inner());
+                }
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.emit("quit-app", ());
                 }
+                // 给前端处理 quit-app 事件（调用 quit_app 优雅退出）留出时间，
+                // 若前端无响应则 3 秒后兜底退出
                 std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(500));
+                    std::thread::sleep(std::time::Duration::from_secs(3));
                     std::process::exit(0);
                 });
             }

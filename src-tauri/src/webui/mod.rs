@@ -2,8 +2,10 @@
 //!
 //! 本模块负责 MEFrp WebUI 进程的启动、停止和状态管理
 
+use std::collections::VecDeque;
 use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use crate::utils::process::{exe_dir, spawn_and_capture, stop_child};
 
@@ -11,7 +13,8 @@ use crate::utils::process::{exe_dir, spawn_and_capture, stop_child};
 #[derive(Debug)]
 pub struct WebUIProcess {
     pub child: Arc<Mutex<Option<Child>>>,
-    pub logs: Arc<Mutex<Vec<String>>>,
+    /// 环形日志缓冲（上限由写入方控制），VecDeque 保证队首弹出为 O(1)
+    pub logs: Arc<Mutex<VecDeque<String>>>,
     pub addr: String,
     pub port: u16,
 }
@@ -79,12 +82,59 @@ pub async fn start_webui(
         port,
     };
 
-    // 将进程添加到管理器
+    // 将进程添加到管理器（持锁时二次检查，防止并发 start 双启动）
+    let child_for_watch = Arc::clone(&webui_process.child);
     {
         let mut manager = webui_manager
             .lock()
             .map_err(|e| format!("获取 WebUI 管理器锁失败: {}", e))?;
+
+        if manager.is_some() {
+            // 并发启动：终止刚 spawn 的进程，避免产生孤儿进程
+            drop(manager);
+            let _ = stop_child(&child_for_watch);
+            return Err("WebUI 已经在运行中".to_string());
+        }
+
         *manager = Some(webui_process);
+    }
+
+    // 后台监控：mefrpc WebUI 进程意外退出/崩溃时自动清空管理器，
+    // 避免 UI 一直显示"运行中"且无法重新启动
+    {
+        let manager_clone = Arc::clone(webui_manager);
+        tokio::task::spawn_blocking(move || {
+            loop {
+                let exited = {
+                    let mut guard = match child_for_watch.lock() {
+                        Ok(guard) => guard,
+                        Err(_) => return,
+                    };
+                    match guard.as_mut() {
+                        Some(child) => match child.try_wait() {
+                            Ok(Some(_)) => true,
+                            Ok(None) => false,
+                            Err(_) => true,
+                        },
+                        // 已被 stop_webui 显式停止并清空，无需再处理
+                        None => return,
+                    }
+                };
+
+                if exited {
+                    if let Ok(mut manager) = manager_clone.lock() {
+                        if let Some(process) = manager.as_ref() {
+                            if Arc::ptr_eq(&process.child, &child_for_watch) {
+                                *manager = None;
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                std::thread::sleep(Duration::from_secs(1));
+            }
+        });
     }
 
     Ok(format!(
@@ -113,7 +163,7 @@ pub async fn stop_webui(webui_manager: &WebUIManager) -> Result<String, String> 
 
     match webui_process {
         Some(process) => {
-            stop_child(&process.child).map_err(|e| format!("{}", e))?;
+            stop_child(&process.child)?;
             Ok("{\"code\": 200, \"message\": \"WebUI 停止成功\", \"data\": null}"
                 .to_string())
         }
@@ -157,7 +207,7 @@ pub async fn get_webui_logs(webui_manager: &WebUIManager) -> Result<Vec<String>,
                 .logs
                 .lock()
                 .map_err(|e| format!("获取日志锁失败: {}", e))?;
-            Ok(logs.clone())
+            Ok(logs.iter().cloned().collect())
         }
         None => Err("未找到运行中的 WebUI 进程".to_string()),
     }
@@ -369,6 +419,11 @@ pub async fn webui_stop_tunnel(
 /// # 返回
 ///
 /// 成功返回日志内容，失败返回错误信息
+///
+/// # 说明
+///
+/// `/api/core/logs` 是 text/event-stream 持续推送的 SSE 流，不会自然关闭。
+/// 不能使用 `.text()` 等待 EOF（会永久挂起），这里改为有限时间收集日志后返回。
 pub async fn webui_get_logs(
     session: String,
     frp_token: String,
@@ -387,7 +442,7 @@ pub async fn webui_get_logs(
     let url = format!("http://{}:{}/api/core/logs?token={}", addr, port, frp_token);
 
     let client = reqwest::Client::new();
-    let response = client
+    let mut response = client
         .get(&url)
         .header("Cookie", format!("mefrp_webui_session={}", session))
         .header("Connection", "keep-alive")
@@ -396,10 +451,28 @@ pub async fn webui_get_logs(
         .await
         .map_err(|e| format!("获取日志失败: {}", e))?;
 
-    let text = response
-        .text()
-        .await
-        .map_err(|e| format!("读取日志失败: {}", e))?;
+    // SSE 流持续推送：最多收集 3 秒或 200KB 日志后返回，
+    // 每个分块等待上限 800ms，避免无新数据时无限等待
+    const MAX_COLLECT_SECS: u64 = 3;
+    const MAX_LOG_BYTES: usize = 200_000;
 
-    Ok(text)
+    let mut buffer: Vec<u8> = Vec::new();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(MAX_COLLECT_SECS);
+
+    while std::time::Instant::now() < deadline && buffer.len() < MAX_LOG_BYTES {
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(800),
+            response.chunk(),
+        )
+        .await
+        {
+            Ok(Ok(Some(chunk))) => buffer.extend_from_slice(&chunk),
+            Ok(Ok(None)) => break,
+            Ok(Err(e)) => return Err(format!("读取日志失败: {e}")),
+            // 一段时间没有新数据，返回已收集的日志
+            Err(_) => break,
+        }
+    }
+
+    Ok(String::from_utf8_lossy(&buffer).into_owned())
 }

@@ -84,6 +84,7 @@ function formatDateTime(date: Date, locale: string = 'zh-CN'): string {
  * @returns Formatted bandwidth string
  */
 export function formatBandwidth(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '- Mbps';
   if (value === 0) return '0 Mbps';
   const mbps = value / 128;
   return `${parseFloat(mbps.toFixed(2))} Mbps`;
@@ -95,6 +96,7 @@ export function formatBandwidth(value: number): string {
  * @returns Formatted traffic string with appropriate unit
  */
 export function formatTraffic(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '-';
   const units = ["MB", "GB", "TB", "PB", "EB", "ZB"];
   let idx = 0;
   let v = value;
@@ -106,14 +108,18 @@ export function formatTraffic(value: number): string {
 }
 
 export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return '-';
   if (bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+  // 防止越界：极端大值 clamp 到最大单位
+  const clampedIndex = Math.min(i, sizes.length - 1);
+  return `${(bytes / Math.pow(k, clampedIndex)).toFixed(2)} ${sizes[clampedIndex]}`;
 }
 
 export function formatBytesAsTB(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '-';
   const tb = value / (1024 * 1024 * 1024 * 1024);
   return `${tb.toFixed(2)} TB`;
 }

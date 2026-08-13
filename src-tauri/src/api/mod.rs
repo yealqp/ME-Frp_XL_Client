@@ -4,7 +4,7 @@
 //! - client: HTTP客户端创建和配置
 //! - feedback: 反馈相关API（NapCat QQ bot）
 //! - analysis: 用户统计上报 API
-//! - system: 系统相关API（通用请求 + 系统通知）
+//! - system: 系统相关API（系统通知 + 流量统计）
 //! - ai_analysis: AI 日志分析（OpenAI 兼容 API）
 
 pub mod ai_analysis;
@@ -19,4 +19,4 @@ pub mod system;
 pub use client::{create_http_client, CURRENT_VERSION};
 
 // 系统相关
-pub use system::{api_request, get_system_notification, get_traffic_stats};
+pub use system::{get_system_notification, get_traffic_stats};

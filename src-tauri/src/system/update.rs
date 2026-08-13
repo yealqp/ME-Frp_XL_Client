@@ -152,12 +152,25 @@ fn filter_changelog_by_version(
     filtered
 }
 
+/// 校验版本号格式，仅允许 `x.y.z`（三段纯数字）
+fn validate_version_format(version: &str) -> Result<(), String> {
+    let parts: Vec<&str> = version.split('.').collect();
+    if parts.len() != 3
+        || parts
+            .iter()
+            .any(|p| p.is_empty() || !p.chars().all(|c| c.is_ascii_digit()))
+    {
+        return Err("无效的版本号格式".to_string());
+    }
+    Ok(())
+}
+
 /// 下载并安装更新
 ///
 /// 从远程服务器下载指定版本的安装程序并启动安装。
 ///
 /// # 参数
-/// - `version`: 要下载的版本号
+/// - `version`: 要下载的版本号（仅允许 `x.y.z` 格式）
 ///
 /// # 返回
 /// - `Ok(String)`: 安装程序启动成功的消息
@@ -166,7 +179,14 @@ fn filter_changelog_by_version(
 /// # 平台支持
 /// - Windows: 支持
 /// - 其他平台: 暂不支持
+///
+/// # 安全说明
+///
+/// - 版本号强校验，防止任意字符串拼入下载 URL
+/// - 流式下载并限制大小上限（500MB），防止下载异常内容占满磁盘/内存
 pub async fn download_and_install_update(version: String) -> Result<String, String> {
+    validate_version_format(&version)?;
+
     let client = create_http_client();
 
     // 构建下载URL
@@ -179,7 +199,7 @@ pub async fn download_and_install_update(version: String) -> Result<String, Stri
     let installer_path = temp_dir.join(format!("ME-Frp_XL_{version}_setup.exe"));
 
     // 下载文件
-    let response = client
+    let mut response = client
         .get(&download_url)
         .send()
         .await
@@ -189,22 +209,39 @@ pub async fn download_and_install_update(version: String) -> Result<String, Stri
         return Err(format!("下载失败，状态码: {}", response.status()));
     }
 
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| format!("读取下载内容失败: {e}"))?;
+    // 流式写入并限制大小，避免一次性读入内存
+    const MAX_INSTALLER_BYTES: u64 = 500 * 1024 * 1024; // 500MB
 
-    // 保存到临时文件，使用作用域确保文件句柄被关闭
+    let mut downloaded: u64 = 0;
     {
         let mut file =
             fs::File::create(&installer_path).map_err(|e| format!("创建安装文件失败: {e}"))?;
 
-        file.write_all(&bytes)
-            .map_err(|e| format!("写入安装文件失败: {e}"))?;
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|e| format!("读取下载内容失败: {e}"))?
+        {
+            downloaded += chunk.len() as u64;
+            if downloaded > MAX_INSTALLER_BYTES {
+                drop(file);
+                let _ = fs::remove_file(&installer_path);
+                return Err("安装包超过大小限制（500MB），已中止下载".to_string());
+            }
+
+            file.write_all(&chunk)
+                .map_err(|e| format!("写入安装文件失败: {e}"))?;
+        }
 
         // 显式刷新并关闭文件
         file.sync_all().map_err(|e| format!("同步文件失败: {e}"))?;
     } // file 在这里被 drop，确保文件句柄关闭
+
+    // 下载内容为空时视为异常
+    if downloaded == 0 {
+        let _ = fs::remove_file(&installer_path);
+        return Err("下载内容为空，已中止安装".to_string());
+    }
 
     // 执行安装程序
     #[cfg(windows)]
@@ -227,37 +264,57 @@ pub async fn download_and_install_update(version: String) -> Result<String, Stri
 /// 比较两个版本号，判断是否有新版本。
 ///
 /// # 参数
-/// - `current`: 当前版本号（格式: x.y.z）
+/// - `current`: 当前版本号（格式: x.y.z，可带 -dev 等预发布后缀）
 /// - `latest`: 最新版本号（格式: x.y.z）
 ///
 /// # 返回
 /// - `true`: 最新版本号大于当前版本号
 /// - `false`: 最新版本号小于或等于当前版本号
+///
+/// # 说明
+///
+/// 预发布版本（如 `2.2.5-dev`）按语义化版本规则视为低于同数字的正式版（`2.2.5`），
+/// 因此 `2.2.5-dev` 对比 `2.2.5` 判定为"有更新"。
 pub fn compare_versions(current: &str, latest: &str) -> bool {
-    // 简单的版本号比较，假设格式为 x.y.z
-    let current_parts: Vec<u32> = current.split('.').filter_map(|s| s.parse().ok()).collect();
+    fn parse_version(v: &str) -> (Vec<u32>, bool) {
+        let mut parts = Vec::new();
+        let mut prerelease = false;
 
-    let latest_parts: Vec<u32> = latest.split('.').filter_map(|s| s.parse().ok()).collect();
+        for seg in v.split('.') {
+            // 去掉 -dev / -beta 等预发布后缀后再解析数字部分
+            match seg.split('-').next() {
+                Some(num_str) => match num_str.parse::<u32>() {
+                    Ok(n) => {
+                        parts.push(n);
+                        if seg.contains('-') {
+                            prerelease = true;
+                        }
+                    }
+                    // 非数字段（异常输入）按 0 处理并标记为预发布
+                    Err(_) => {
+                        prerelease = true;
+                        parts.push(0);
+                    }
+                },
+                None => parts.push(0),
+            }
+        }
 
-    // 确保两个版本号都有至少3个部分
-    if current_parts.len() < 3 || latest_parts.len() < 3 {
-        return current != latest;
+        (parts, prerelease)
     }
 
-    // 比较主版本号
-    if latest_parts[0] > current_parts[0] {
-        return true;
-    } else if latest_parts[0] < current_parts[0] {
-        return false;
+    let (current_parts, current_prerelease) = parse_version(current);
+    let (latest_parts, latest_prerelease) = parse_version(latest);
+
+    // 逐段比较 major.minor.patch（缺失段按 0 处理）
+    for i in 0..3 {
+        let c = current_parts.get(i).copied().unwrap_or(0);
+        let l = latest_parts.get(i).copied().unwrap_or(0);
+        if l != c {
+            return l > c;
+        }
     }
 
-    // 比较次版本号
-    if latest_parts[1] > current_parts[1] {
-        return true;
-    } else if latest_parts[1] < current_parts[1] {
-        return false;
-    }
-
-    // 比较修订版本号
-    latest_parts[2] > current_parts[2]
+    // 数字部分相同时：预发布版本（如 2.2.5-dev）低于正式版（2.2.5）
+    current_prerelease && !latest_prerelease
 }

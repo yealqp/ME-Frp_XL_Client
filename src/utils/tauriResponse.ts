@@ -2,7 +2,14 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ApiResponse } from "@/types/api";
 
 export function parseTauriResponse<T>(responseText: string): ApiResponse<T> {
-  return JSON.parse(responseText) as ApiResponse<T>;
+  try {
+    return JSON.parse(responseText) as ApiResponse<T>;
+  } catch {
+    // 后端返回了非 JSON 内容（如意外错误信息），抛出带原始内容的可读错误
+    const preview =
+      responseText.length > 120 ? `${responseText.slice(0, 120)}…` : responseText;
+    throw new Error(`后端响应解析失败: ${preview}`);
+  }
 }
 
 export async function invokeTauriResponse<T>(

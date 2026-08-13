@@ -10,6 +10,24 @@
 const CAP_BASE_URL = "https://captcha.mefrp.com";
 const CAP_SITE_ID = "2bf50e050d";
 
+// 挑战参数安全上限：防止异常/恶意服务端返回超大 count 导致客户端 CPU 耗尽
+const MAX_CHALLENGE_COUNT = 50;
+const MAX_SALT_LENGTH = 128;
+const MAX_DIFFICULTY = 16;
+
+// 网络请求超时（毫秒），避免 challenge/redeem 挂起时验证永久 pending
+const CAPTCHA_FETCH_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CAPTCHA_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // ── FNV-1a 伪随机数生成器 ──
 
 function fnv1a(str: string): number {
@@ -86,7 +104,7 @@ interface ChallengeResponse {
 }
 
 async function fetchCapChallenge(apiEndpoint: string): Promise<ChallengeResponse> {
-  const response = await fetch(`${apiEndpoint}challenge`, {
+  const response = await fetchWithTimeout(`${apiEndpoint}challenge`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
@@ -131,6 +149,20 @@ async function fetchCapChallenge(apiEndpoint: string): Promise<ChallengeResponse
     );
   }
 
+  // 安全上限校验：防止超大 count / 难度导致 CPU 耗尽或长时间阻塞
+  if (
+    count <= 0 ||
+    count > MAX_CHALLENGE_COUNT ||
+    saltLength <= 0 ||
+    saltLength > MAX_SALT_LENGTH ||
+    difficulty <= 0 ||
+    difficulty > MAX_DIFFICULTY
+  ) {
+    throw new Error(
+      `挑战参数超出安全范围: count=${count} saltLength=${saltLength} difficulty=${difficulty}`,
+    );
+  }
+
   return { token, count, saltLength, difficulty };
 }
 
@@ -140,7 +172,7 @@ async function redeemCapSolution(
   solutions: number[],
 ): Promise<string> {
   const body = JSON.stringify({ token, solutions });
-  const response = await fetch(`${apiEndpoint}redeem`, {
+  const response = await fetchWithTimeout(`${apiEndpoint}redeem`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body,
@@ -217,9 +249,12 @@ export function createCaptcha(options: CaptchaOptions = {}): CaptchaInstance {
 
       const { token, count, saltLength, difficulty } = challenge;
 
-      // 2. 逐题求解
+      // 2. 逐题求解（每道题前检查是否已销毁，支持中断）
       const solutions: number[] = [];
       for (let i = 1; i <= count; i++) {
+        if (destroyed) {
+          throw new Error("验证已取消");
+        }
         const nonce = await solveSingleChallenge(token, i, saltLength, difficulty);
         solutions.push(nonce);
         onProgress?.(30 + Math.round((i / count) * 40));
