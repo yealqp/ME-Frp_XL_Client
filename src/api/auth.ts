@@ -128,3 +128,10 @@ export async function getLuckydrawInfo(
 ): Promise<ApiResponse<LuckydrawInfo>> {
   return apiGet<LuckydrawInfo>("/api/auth/user/luckydraw", token);
 }
+
+/** 强制下线所有隧道 */
+export async function kickAllProxies(
+  token: string,
+): Promise<ApiResponse<null>> {
+  return apiGet<null>("/api/auth/user/kickAllProxies", token);
+}

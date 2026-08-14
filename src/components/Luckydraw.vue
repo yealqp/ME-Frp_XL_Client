@@ -124,112 +124,40 @@
     </n-card>
 
     <!-- 单抽结果弹窗 -->
-    <n-modal
+    <DrawResultModal
       v-model:show="showResultModal"
-      preset="dialog"
-      title="抽奖结果"
-      :mask-closable="false"
-    >
-      <div class="result-body">
-        <n-result
-          :status="resultModalStatus"
-          :title="resultModalTitle"
-          :description="resultModalDesc"
-        >
-          <template #icon>
-            <n-icon :size="48" :color="resultModalIconColor">
-              <component :is="resultModalIcon" />
-            </n-icon>
-          </template>
-        </n-result>
-
-        <div v-if="resultModalCouponCode" class="coupon-display">
-          <n-input-group style="max-width: 340px; margin: 0 auto;">
-            <n-input
-              :value="resultModalCouponCode"
-              readonly
-              style="text-align: center; font-weight: 700; font-size: 15px; letter-spacing: 1px;"
-            />
-            <n-button type="primary" @click="copyText(resultModalCouponCode)">
-              复制
-            </n-button>
-          </n-input-group>
-          <p class="coupon-hint">优惠码有效期 7 天，请尽快使用</p>
-        </div>
-      </div>
-      <template #action>
-        <n-button type="primary" @click="showResultModal = false">知道了</n-button>
-      </template>
-    </n-modal>
+      :status="resultModalStatus"
+      :title="resultModalTitle"
+      :desc="resultModalDesc"
+      :icon="resultModalIcon"
+      :icon-color="resultModalIconColor"
+      :coupon-code="resultModalCouponCode"
+      @copy="copyText"
+    />
 
     <!-- 全部抽奖结果弹窗 -->
-    <n-modal
+    <BatchResultModal
       v-model:show="showBatchModal"
-      preset="dialog"
-      title="全部抽奖结果"
-      :mask-closable="false"
-      style="width: 480px;"
-    >
-      <div class="result-body">
-        <n-result status="success" title="抽奖完成">
-          <template #icon>
-            <n-icon :size="48" color="#18a058">
-              <Gift :size="28" />
-            </n-icon>
-          </template>
-        </n-result>
-
-        <div v-if="batchTotalCount > 0" class="batch-summary-cards">
-          <n-card size="small" :bordered="true" class="summary-stat-card">
-            <n-statistic label="抽奖次数" :value="batchTotalCount" />
-          </n-card>
-          <n-card v-if="batchTotalTraffic > 0" size="small" :bordered="true" class="summary-stat-card">
-            <n-statistic label="获得流量" :value="batchTotalTraffic" suffix="GB" />
-          </n-card>
-          <n-card v-if="batchVipDays > 0" size="small" :bordered="true" class="summary-stat-card">
-            <n-statistic label="会员延长" :value="batchVipDays" suffix="天" />
-          </n-card>
-        </div>
-
-        <div v-if="batchCoupons.length > 0" class="batch-coupons">
-          <p class="batch-section-title">获得的优惠码</p>
-          <n-card
-            v-for="(code, i) in batchCoupons"
-            :key="i"
-            size="small"
-            :bordered="true"
-            class="coupon-card"
-          >
-            <div class="coupon-card-body">
-              <code class="coupon-code-text">{{ code }}</code>
-              <n-button size="tiny" @click="copyText(code)">复制</n-button>
-            </div>
-          </n-card>
-        </div>
-
-        <div v-if="batchTotalCount === 0">
-          <n-empty description="本次未获得任何奖励" />
-        </div>
-
-        <div v-if="batchSkipped > 0" class="batch-skipped">
-          因流量不足跳过 {{ batchSkipped }} 次抽奖
-        </div>
-      </div>
-      <template #action>
-        <n-button type="primary" @click="showBatchModal = false">知道了</n-button>
-      </template>
-    </n-modal>
+      :total-count="batchTotalCount"
+      :total-traffic="batchTotalTraffic"
+      :vip-days="batchVipDays"
+      :coupons="batchCoupons"
+      :skipped="batchSkipped"
+      @copy="copyText"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, type Component } from "vue";
 import { Gift, Dices, Sparkles } from "@lucide/vue";
 import { NIcon, NStatistic, NDataTable, NInputGroup } from "naive-ui";
 import confetti from "canvas-confetti";
 import { useAuthStore } from "@/stores/auth";
 import { doLuckydraw, getLuckydrawInfo, getUserInfo } from "@/api/auth";
 import { formatTraffic } from "@/utils/timeFormatter";
+import DrawResultModal from "@/components/luckydraw/DrawResultModal.vue";
+import BatchResultModal from "@/components/luckydraw/BatchResultModal.vue";
 
 const authStore = useAuthStore();
 
@@ -247,7 +175,7 @@ const showResultModal = ref(false);
 const resultModalStatus = ref<"success" | "warning">("success");
 const resultModalTitle = ref("");
 const resultModalDesc = ref("");
-const resultModalIcon = ref<any>(Gift);
+const resultModalIcon = ref<Component>(Gift);
 const resultModalIconColor = ref("");
 const resultModalCouponCode = ref("");
 
@@ -651,85 +579,59 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 16px;
   background: color-mix(in srgb, var(--app-primary-color) 8%, transparent);
-  border: 1.5px solid color-mix(in srgb, var(--app-primary-color) 15%, transparent);
-  transition: all 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 2px solid var(--app-border-color);
+  transition: all 0.15s ease;
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .slot-reel.active .reel-inner {
-  background: var(--app-primary-color);
   border-color: var(--app-primary-color);
-  transform: scale(1.18) translateY(-2px);
-  box-shadow:
-    0 8px 24px color-mix(in srgb, var(--app-primary-color) 45%, transparent),
-    0 0 0 4px color-mix(in srgb, var(--app-primary-color) 15%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--app-primary-color) 50%, transparent);
+  transform: scale(1.1);
 }
 
-.slot-reel.active .reel-icon {
-  animation: reelBounce 0.12s ease;
-  color: #fff;
+.reel-icon {
+  color: var(--app-primary-color);
 }
 
-@keyframes reelBounce {
-  0%   { transform: rotate(-15deg) scale(1.1); }
-  50%  { transform: rotate(10deg) scale(1.3); }
-  100% { transform: rotate(0deg) scale(1); }
-}
-
-/* 光晕 */
 .reel-glow {
   position: absolute;
-  inset: -6px;
-  border-radius: 20px;
+  inset: 0;
+  border-radius: 16px;
+  background: var(--app-primary-color);
   opacity: 0;
   transition: opacity 0.15s ease;
-  pointer-events: none;
+  z-index: 1;
 }
 
 .slot-reel.active .reel-glow {
-  opacity: 1;
-  background: radial-gradient(circle, color-mix(in srgb, var(--app-primary-color) 25%, transparent) 0%, transparent 70%);
-  animation: glowPulse 0.6s ease-in-out infinite alternate;
+  opacity: 0.15;
 }
 
-@keyframes glowPulse {
-  0%   { transform: scale(1); opacity: 0.4; }
-  100% { transform: scale(1.3); opacity: 0.8; }
-}
-
-/* reel 之间的连接点 */
 .reel-connector {
   display: flex;
-  gap: 42px;
-  margin-top: 8px;
+  gap: 14px;
+  margin-top: 12px;
 }
 
 .connector-dot {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
+  background: var(--app-border-color);
+}
+
+.connector-dot:nth-child(odd) {
   background: var(--app-primary-color);
-  opacity: 0.25;
-  animation: dotPulse 0.8s ease-in-out infinite alternate;
 }
 
-.connector-dot:nth-child(2) { animation-delay: 0.2s; }
-.connector-dot:nth-child(3) { animation-delay: 0.4s; }
-.connector-dot:nth-child(4) { animation-delay: 0.6s; }
-
-@keyframes dotPulse {
-  0%   { opacity: 0.15; transform: scale(1); }
-  100% { opacity: 0.6; transform: scale(1.5); }
-}
-
-/* 底部提示 */
 .slot-hint {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 8px;
+  margin-top: 16px;
+  color: var(--app-text-color-2);
   font-size: 14px;
 }
 
@@ -738,23 +640,25 @@ onUnmounted(() => {
   height: 8px;
   border-radius: 50%;
   background: var(--app-primary-color);
-  animation: hintBlink 1s ease-in-out infinite;
+  animation: hintBlink 0.8s ease-in-out infinite;
 }
 
 @keyframes hintBlink {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.2; transform: scale(0.6); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.2; }
 }
 
+/* ===== 状态统计栏 ===== */
 .draw-stats {
   display: flex;
   align-items: center;
-  width: 100%;
-  max-width: 500px;
+  justify-content: center;
+  gap: 24px;
+  padding: 8px 0;
+  flex-wrap: wrap;
 }
 
 .stat-item {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -763,83 +667,26 @@ onUnmounted(() => {
 
 .stat-label {
   font-size: 13px;
+  color: var(--app-text-color-3);
 }
 
 .stat-value {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--app-text-color);
 }
 
-.stat-value small {
-  font-size: 13px;
-  font-weight: 400;
+.text-success {
+  color: var(--app-success-color);
 }
 
-.text-success { color: #18a058; }
-.text-danger { color: #d03050; }
+.text-danger {
+  color: var(--app-error-color);
+}
 
 .stat-divider {
   width: 1px;
-  height: 36px;
-  background-color: var(--app-border-color);
-}
-
-.result-body {
-  padding: 8px 0;
-}
-
-.coupon-display {
-  margin-top: 12px;
-  text-align: center;
-}
-
-.coupon-hint {
-  margin-top: 8px;
-  font-size: 13px;
-}
-
-.batch-summary-cards {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.summary-stat-card {
-  flex: 1;
-  min-width: 100px;
-  text-align: center;
-}
-
-.batch-section-title {
-  font-size: 14px;
-  font-weight: 500;
-  margin: 0 0 8px;
-}
-
-.batch-coupons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.coupon-card-body {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.coupon-code-text {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  word-break: break-all;
-}
-
-.batch-skipped {
-  margin-top: 12px;
-  font-size: 13px;
-  text-align: center;
+  height: 32px;
+  background: var(--app-divider-color);
 }
 </style>

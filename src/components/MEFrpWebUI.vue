@@ -2,297 +2,46 @@
   <div class="mefrp-webui">
     <div class="webui-content">
       <!-- WebUI 设置卡片 -->
-      <n-card :bordered="true" class="webui-section">
-        <template #header>
-          <SectionHeader :icon="Settings" title="MEFrpc WebUI 设置" />
-        </template>
-
-        <div class="settings-row">
-          <div class="setting-item-inline">
-            <span class="setting-label">地址</span>
-            <n-input
-              v-model:value="webuiStore.settings.addr"
-              placeholder="localhost"
-              @update:value="handleSaveSettings"
-              size="small"
-              style="width: 120px"
-            />
-          </div>
-
-          <div class="setting-item-inline">
-            <span class="setting-label">端口</span>
-            <n-input-number
-              v-model:value="webuiStore.settings.port"
-              :min="1"
-              :max="65535"
-              :step="1"
-              placeholder="1201"
-              @update:value="handleSaveSettings"
-              size="small"
-              style="width: 100px"
-            />
-          </div>
-
-          <div class="setting-item-inline">
-            <span class="setting-label">密码</span>
-            <n-input
-              v-model:value="webuiStore.settings.pass"
-              type="password"
-              show-password-on="click"
-              placeholder="admin"
-              @update:value="handleSaveSettings"
-              size="small"
-              style="width: 100px"
-            />
-          </div>
-
-          <n-space :size="8" style="margin-left: auto">
-            <n-tooltip v-if="!webuiStore.isRunning">
-              <template #trigger>
-                <n-button
-                  type="primary"
-                  @click="handleStart"
-                  :loading="webuiStore.isStarting"
-                  size="small"
-                >
-                  <template #icon>
-                    <Play :size="14" />
-                  </template>
-                  启动
-                </n-button>
-              </template>
-              启动 WebUI
-            </n-tooltip>
-            <n-tooltip v-else>
-              <template #trigger>
-                <n-button
-                  type="warning"
-                  @click="handleStop"
-                  :loading="webuiStore.isStopping"
-                  size="small"
-                >
-                  <template #icon>
-                    <Square :size="14" />
-                  </template>
-                  停止
-                </n-button>
-              </template>
-              停止 WebUI
-            </n-tooltip>
-
-            <n-tooltip>
-              <template #trigger>
-                <n-button
-                  type="primary"
-                  @click="handleOpenInWindow"
-                  :disabled="!webuiStore.isRunning"
-                  size="small"
-                >
-                  <template #icon>
-                    <ExternalLink :size="14" />
-                  </template>
-                  新窗口
-                </n-button>
-              </template>
-              在新窗口中打开 WebUI
-            </n-tooltip>
-
-            <n-tooltip>
-              <template #trigger>
-                <n-button
-                  type="info"
-                  @click="handleOpenInBrowser"
-                  :disabled="!webuiStore.isRunning"
-                  size="small"
-                >
-                  <template #icon>
-                    <ExternalLink :size="14" />
-                  </template>
-                  浏览器
-                </n-button>
-              </template>
-              在浏览器中打开 WebUI
-            </n-tooltip>
-          </n-space>
-        </div>
-      </n-card>
+      <WebuiSettingsPanel
+        :addr="webuiStore.settings.addr"
+        :port="webuiStore.settings.port"
+        :pass="webuiStore.settings.pass"
+        :is-running="webuiStore.isRunning"
+        :is-starting="webuiStore.isStarting"
+        :is-stopping="webuiStore.isStopping"
+        @update:addr="(value) => (webuiStore.settings.addr = value)"
+        @update:port="(value) => { if (value !== null) webuiStore.settings.port = value }"
+        @update:pass="(value) => (webuiStore.settings.pass = value)"
+        @save="handleSaveSettings"
+        @start="handleStart"
+        @stop="handleStop"
+        @open-window="handleOpenInWindow"
+        @open-browser="handleOpenInBrowser"
+      />
 
       <!-- 原生隧道列表 -->
-      <n-card
+      <WebuiTunnelList
         v-if="webuiStore.showEmbedded && webuiStore.isRunning"
-        :bordered="true"
-        class="webui-embed-section"
-      >
-        <template #header>
-          <SectionHeader :icon="Monitor">
-            <span>隧道列表</span>
-            <n-button
-              text
-              type="info"
-              @click="refreshTunnels"
-              :loading="tunnelsLoading"
-              style="margin-left: auto"
-            >
-              <template #icon>
-                <RefreshCw :size="18" />
-              </template>
-            </n-button>
-          </SectionHeader>
-        </template>
-
-        <!-- 加载状态 -->
-        <div v-if="tunnelsLoading && tunnels.length === 0" class="tunnels-loading">
-          <n-spin size="large" />
-          <p>加载隧道列表中...</p>
-        </div>
-
-        <!-- 错误状态 -->
-        <div v-else-if="tunnelsError" class="tunnels-error">
-          <n-alert type="error" :title="tunnelsError" />
-          <n-button type="primary" @click="refreshTunnels" style="margin-top: 16px">
-            重试
-          </n-button>
-        </div>
-
-        <!-- 隧道列表 -->
-        <div v-else-if="tunnels.length > 0" class="tunnels-grid">
-          <n-card
-            v-for="tunnel in tunnels"
-            :key="tunnel.proxyId"
-            :bordered="true"
-            class="tunnel-card"
-            size="small"
-          >
-            <template #header>
-              <div class="tunnel-header">
-                <span class="tunnel-name">{{ tunnel.proxyName }}</span>
-                <n-tag
-                  :type="tunnel.isOnline ? 'success' : 'default'"
-                  :bordered="false"
-                  size="small"
-                >
-                  {{ tunnel.isOnline ? "在线" : "离线" }}
-                </n-tag>
-              </div>
-            </template>
-
-            <div class="tunnel-info">
-              <div class="info-row">
-                <span class="info-label">协议:</span>
-                <span class="info-value">{{ tunnel.proxyType.toUpperCase() }}</span>
-              </div>
-              <div
-                class="info-row"
-                v-if="tunnel.proxyType === 'tcp' || tunnel.proxyType === 'udp'"
-              >
-                <span class="info-label">远程端口:</span>
-                <span class="info-value">{{ tunnel.remotePort }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">节点:</span>
-                <span class="info-value">#{{ tunnel.nodeId }}</span>
-              </div>
-            </div>
-
-            <template #action>
-              <div class="tunnel-actions">
-                <n-button
-                  v-if="!tunnel.isOnline"
-                  type="primary"
-                  size="small"
-                  @click="startTunnel(tunnel.proxyId)"
-                  :loading="tunnelActionLoading[tunnel.proxyId]"
-                >
-                  <template #icon>
-                    <Play :size="14" />
-                  </template>
-                  启动
-                </n-button>
-                <n-button
-                  v-else
-                  type="warning"
-                  size="small"
-                  @click="stopTunnel(tunnel.proxyId)"
-                  :loading="tunnelActionLoading[tunnel.proxyId]"
-                >
-                  <template #icon>
-                    <Square :size="14" />
-                  </template>
-                  停止
-                </n-button>
-              </div>
-            </template>
-          </n-card>
-        </div>
-
-        <!-- 空状态 -->
-        <div v-else class="tunnels-empty">
-          <n-empty description="暂无隧道数据" />
-        </div>
-      </n-card>
+        :tunnels="tunnels"
+        :tunnels-loading="tunnelsLoading"
+        :tunnels-error="tunnelsError"
+        :tunnel-action-loading="tunnelActionLoading"
+        @refresh="refreshTunnels"
+        @start="startTunnel"
+        @stop="stopTunnel"
+      />
 
       <!-- WebUI 运行日志卡片 -->
-      <n-card
+      <WebuiLogPanel
         v-if="webuiStore.isRunning"
-        :bordered="true"
-        class="webui-logs-section"
-      >
-        <template #header>
-          <SectionHeader :icon="FileText">
-            <span>Mefrpc 运行日志</span>
-            <n-tag type="error" size="medium" style="margin-left: 8px">
-              如果您截图分享此页面请打码红色字体内容
-            </n-tag>
-            <n-space :size="8" style="margin-left: auto">
-              <n-button
-                text
-                type="info"
-                @click="copyLogs"
-                :disabled="!logs || logs.length === 0"
-              >
-                <template #icon>
-                  <Copy :size="18" />
-                </template>
-                复制
-              </n-button>
-              <n-button
-                v-if="enableAi"
-                text
-                type="info"
-                @click="handleAIAnalyze"
-                :loading="aiAnalyzing"
-                :disabled="!logs || logs.length === 0"
-              >
-                <template #icon>
-                  <Brain :size="18" />
-                </template>
-                AI 分析
-              </n-button>
-            </n-space>
-          </SectionHeader>
-        </template>
-
-        <div class="logs-content">
-          <div v-if="logsLoading && (!logs || logs.length === 0)" class="logs-loading">
-            <n-spin size="large" />
-            <p>加载日志中...</p>
-          </div>
-          <div v-else-if="logsError" class="logs-error">
-            <n-alert type="error" :title="logsError" />
-          </div>
-          <div v-else-if="logs && logs.length > 0" class="logs-text" ref="logsTextRef">
-            <div
-              v-for="(log, index) in logs"
-              :key="index"
-              class="log-line"
-              v-html="colorizeLog(log)"
-            ></div>
-          </div>
-          <div v-else class="logs-empty">
-            <n-empty description="暂无日志数据" />
-          </div>
-        </div>
-      </n-card>
+        :logs="logs"
+        :logs-loading="logsLoading"
+        :logs-error="logsError"
+        :enable-ai="enableAi"
+        :ai-analyzing="aiAnalyzing"
+        @copy="copyLogs"
+        @analyze="handleAIAnalyze"
+      />
     </div>
   </div>
 
@@ -310,31 +59,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useMessage } from "naive-ui";
-import {
-  Settings,
-  Play,
-  Square,
-  ExternalLink,
-  Monitor,
-  RefreshCw,
-  FileText,
-  Copy,
-  Brain,
-} from "@lucide/vue";
-import SectionHeader from "@/components/common/SectionHeader.vue";
 import { useWebuiStore } from "../stores/webui";
 import { useSettingsStore } from "@/stores/settings";
 import { invoke } from "@tauri-apps/api/core";
 import { extractProxyList, invokeTauriResponse, invokeTauriText } from "@/utils/tauriResponse";
 import { loadUnifiedConfig } from "@/utils/unifiedConfig";
 import { extractErrorMessage } from "@/utils/errorHandler";
-import { formatLogHtml, getSanitizedLogsText } from "@/utils/logSanitizer";
+import { getSanitizedLogsText } from "@/utils/logSanitizer";
 import { parseMarkdown } from "@/utils/markdownParser";
 import { copyToClipboard } from "@/utils/clipboard";
 import { useAIAnalysis } from "@/composables/useAIAnalysis";
 import type { Tunnel as TunnelRecord } from "@/types/tunnel";
+import WebuiSettingsPanel from "@/components/webui/WebuiSettingsPanel.vue";
+import WebuiTunnelList from "@/components/webui/WebuiTunnelList.vue";
+import WebuiLogPanel from "@/components/webui/WebuiLogPanel.vue";
 
 const message = useMessage();
 const webuiStore = useWebuiStore();
@@ -363,7 +103,6 @@ const logs = ref<string[]>([]);
 const logsLoading = ref(false);
 const logsError = ref("");
 const autoRefreshLogs = ref(true); // 默认开启自动刷新
-const logsTextRef = ref<HTMLElement | null>(null);
 let logsRefreshInterval: number | null = null;
 let lastLogsSnapshot = "";
 const { aiAnalyzing, analysisResult, showAnalysisModal, handleAIAnalyze } = useAIAnalysis(logs, message);
@@ -594,13 +333,6 @@ const fetchLogs = async (): Promise<void> => {
 
       lastLogsSnapshot = nextSnapshot;
       logs.value = logsArray;
-      
-      // 自动滚动到底部
-      nextTick(() => {
-        if (logsTextRef.value) {
-          logsTextRef.value.scrollTop = logsTextRef.value.scrollHeight;
-        }
-      });
     } catch (error) {
       console.error("获取日志失败:", error);
       logsError.value = error instanceof Error ? error.message : "获取日志失败";
@@ -681,12 +413,6 @@ watch(
   }
 );
 
-// 为日志添加颜色（与隧道管理相同的渲染逻辑）
-const colorizeLog = (log: string): string => {
-  return formatLogHtml(log, "line");
-};
-
-// 监听 WebUI 运行状态变化
 watch(
   () => webuiStore.isRunning,
   async (isRunning) => {
@@ -738,7 +464,6 @@ const handleOpenInWindow = async () => {
   }
 };
 
-// 组件挂载时加载设置
 onMounted(() => {
   webuiStore.loadSettings();
   // 启动定期状态检查
@@ -800,197 +525,5 @@ const stopStatusCheck = () => {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.webui-section,
-.webui-embed-section,
-.webui-logs-section {
-  background: var(--app-card-color);
-  border: 1px solid var(--app-border-color);
-  border-radius: 0px;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.setting-item-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.setting-label {
-  font-size: 14px;
-  color: var(--n-text-color);
-  white-space: nowrap;
-}
-
-.setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-}
-
-.setting-info {
-  flex: 1;
-}
-
-.setting-info h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--n-text-color);
-}
-
-/* 隧道列表样式 */
-.tunnels-loading,
-.tunnels-error,
-.tunnels-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  text-align: center;
-}
-
-.tunnels-loading p {
-  margin-top: 16px;
-  color: var(--n-text-color-depth-3);
-}
-
-.tunnels-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.tunnel-card {
-  border-radius: 0;
-}
-
-.tunnel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tunnel-name {
-  font-size: 14px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tunnel-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.info-label {
-  font-size: 13px;
-  color: var(--n-text-color-depth-2);
-}
-
-.info-value {
-  font-size: 13px;
-  color: var(--n-text-color);
-  font-weight: 500;
-}
-
-.tunnel-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.tunnel-actions .n-button {
-  flex: 1;
-}
-
-/* WebUI 日志卡片样式 */
-.logs-content {
-  height: 400px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.logs-loading,
-.logs-error,
-.logs-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  text-align: center;
-}
-
-.logs-loading p {
-  margin-top: 16px;
-  color: var(--n-text-color-depth-3);
-}
-
-.logs-text {
-  flex: 1;
-  overflow-y: auto;
-  background: var(--n-color-embedded);
-  border: 1px solid var(--n-border-color);
-  border-radius: 6px;
-  padding: 12px;
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.log-line {
-  margin-bottom: 2px;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-.log-line:last-child {
-  margin-bottom: 0;
-}
-
-@media (max-width: 768px) {
-  .mefrp-webui {
-    padding: 10px;
-  }
-
-  .settings-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .setting-item-inline {
-    width: 100%;
-  }
-
-  .setting-item-inline input,
-  .setting-item-inline .n-input-number {
-    flex: 1;
-  }
-
-  .tunnels-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .logs-content {
-    height: 300px;
-  }
 }
 </style>
