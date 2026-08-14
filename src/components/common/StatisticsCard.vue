@@ -7,6 +7,14 @@
         </div>
       </div>
     </template>
+    <template v-else-if="errorMsg">
+      <div class="stats-error">
+        <n-text depth="3">统计信息加载失败：{{ errorMsg }}</n-text>
+        <n-button size="small" quaternary type="primary" @click="fetchStatistics">
+          重试
+        </n-button>
+      </div>
+    </template>
     <template v-else>
       <div class="stats-grid">
         <!-- 用户数量 -->
@@ -70,7 +78,11 @@ interface Statistics {
   traffic: number;
 }
 
+// 缓存 10 分钟：平台统计为低变数据，过期后自动重新拉取
+const CACHE_DURATION = 10 * 60 * 1000;
+
 let statisticsLoadedOnce = false;
+let statisticsLoadedAt = 0;
 let statisticsLoadingPromise: Promise<void> | null = null;
 
 const statistics = ref<Statistics>({
@@ -81,6 +93,7 @@ const statistics = ref<Statistics>({
 });
 
 const loading = ref(true);
+const errorMsg = ref("");
 const message = useMessage();
 
 // 格式化数字（添加千位分隔符）
@@ -96,6 +109,7 @@ const fetchStatistics = async () => {
   }
 
   loading.value = true;
+  errorMsg.value = "";
   statisticsLoadingPromise = (async () => {
     try {
     const { getStatistics } = await import('@/api/system');
@@ -109,14 +123,14 @@ const fetchStatistics = async () => {
         traffic: res.data.traffic || 0,
       };
       statisticsLoadedOnce = true;
+      statisticsLoadedAt = Date.now();
     } else {
+      errorMsg.value = res.message || '未知错误';
       console.error('获取统计信息失败:', res.message);
-      message.error(`获取统计信息失败: ${res.message || '未知错误'}`);
     }
     } catch (error) {
       console.error('获取统计信息失败:', error);
-      const errorMessage = error && typeof error === 'string' ? error : '请检查网络连接';
-      message.error(`获取统计信息失败: ${errorMessage}`);
+      errorMsg.value = error && typeof error === 'string' ? error : '请检查网络连接';
     } finally {
       loading.value = false;
       statisticsLoadingPromise = null;
@@ -127,7 +141,10 @@ const fetchStatistics = async () => {
 };
 
 onMounted(() => {
-  if (statisticsLoadedOnce) {
+  // 缓存有效（成功加载过且未过期）时直接使用，否则重新拉取
+  const cacheValid =
+    statisticsLoadedOnce && Date.now() - statisticsLoadedAt < CACHE_DURATION;
+  if (cacheValid) {
     loading.value = false;
     return;
   }
@@ -147,6 +164,15 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+}
+
+.stats-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0;
+  min-height: 96px;
 }
 
 .stat-item {

@@ -39,11 +39,6 @@
  * - Manages application settings (AppSettings)
  * - Validates auto-start tunnel IDs against Tunnel Store
  * 
- * ### CreateTunnel Store (createTunnel.ts)
- * - Manages multi-step tunnel creation flow
- * - Tracks current page (node-selection | tunnel-config)
- * - Stores selected node for tunnel configuration
- * 
  * ### UI Store (ui.ts)
  * - Manages global UI state (theme, sidebar)
  * - Handles theme switching and persistence
@@ -71,7 +66,6 @@ export { useUserStore } from './user';
 export { useTunnelStore } from './tunnel';
 export { useNodeStore } from './node';
 export { useSettingsStore } from './settings';
-export { useCreateTunnelStore } from './createTunnel';
 export { useUIStore } from './ui';
 export { useThemeStore } from './theme';
 export { useWebuiStore } from './webui';

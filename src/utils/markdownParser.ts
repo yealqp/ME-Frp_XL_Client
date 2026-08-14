@@ -35,13 +35,17 @@ marked.setOptions({
 
 /**
  * Unescape special characters in content
+ *
+ * 顺序说明：必须先处理 `\\`（两个反斜杠→一个），再处理 `\n`/`\t` 等，
+ * 否则输入中的字面 `\\n`（反斜杠+n）会被误展开成换行，
+ * 例如 Windows 路径 `C:\new` 会被破坏成 `C:` + 换行 + `ew`。
  */
 function unescapeContent(content: string): string {
   return content
+    .replace(/\\\\/g, '\\')
     .replace(/\\n/g, '\n')
     .replace(/\\t/g, '\t')
     .replace(/\\r/g, '\r')
-    .replace(/\\\\/g, '\\')
     .replace(/\\"/g, '"')
     .replace(/\\'/g, "'")
     .replace(/\\&/g, '&')

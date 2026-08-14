@@ -24,6 +24,10 @@ export const useNodeStore = defineStore('node', () => {
   const filterOnlineOnly = ref(false);
   const filterNotOverloaded = ref(false);
 
+  // 数值求和守卫：接口字段缺失/非数值时按 0 处理，避免 NaN 污染统计数据
+  const num = (value: number | null | undefined): number =>
+    typeof value === "number" && Number.isFinite(value) ? value : 0;
+
   // Getters
   const totalNodes = computed(() => nodes.value.length);
   
@@ -32,19 +36,19 @@ export const useNodeStore = defineStore('node', () => {
   );
   
   const totalOnlineUsers = computed(() => 
-    nodes.value.reduce((sum, n) => sum + n.onlineClient, 0)
+    nodes.value.reduce((sum, n) => sum + num(n.onlineClient), 0)
   );
   
   const totalOnlineProxies = computed(() => 
-    nodes.value.reduce((sum, n) => sum + n.onlineProxy, 0)
+    nodes.value.reduce((sum, n) => sum + num(n.onlineProxy), 0)
   );
   
   const totalTrafficIn = computed(() => 
-    nodes.value.reduce((sum, n) => sum + n.totalTrafficIn, 0)
+    nodes.value.reduce((sum, n) => sum + num(n.totalTrafficIn), 0)
   );
   
   const totalTrafficOut = computed(() => 
-    nodes.value.reduce((sum, n) => sum + n.totalTrafficOut, 0)
+    nodes.value.reduce((sum, n) => sum + num(n.totalTrafficOut), 0)
   );
 
   // Filtered nodes based on search and filters
@@ -57,15 +61,19 @@ export const useNodeStore = defineStore('node', () => {
     }
 
     // Not overloaded filter (load < 80%)
+    // 仅对 0~100 范围内的有效负载取反；缺失/异常负载不视为"未过载"
     if (filterNotOverloaded.value) {
-      filtered = filtered.filter(node => node.loadPercent < 80);
+      filtered = filtered.filter(node => {
+        const load = node.loadPercent;
+        return typeof load === "number" && Number.isFinite(load) && load >= 0 && load < 80;
+      });
     }
 
     // Search filter
     if (searchKeyword.value.trim()) {
       const keyword = searchKeyword.value.trim().toLowerCase();
       filtered = filtered.filter(node => 
-        node.name.toLowerCase().includes(keyword) || 
+        (node.name || "").toLowerCase().includes(keyword) || 
         node.nodeId.toString().includes(keyword)
       );
     }

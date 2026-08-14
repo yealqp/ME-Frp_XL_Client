@@ -432,58 +432,87 @@ const handleStop = async () => {
   }
 };
 
-// 登录 WebUI
-const loginWebUI = async () => {
-  try {
-    const session = await invokeTauriText("webui_login", {
-      password: webuiStore.settings.pass,
-    });
-    
-    sessionCookie.value = session;
-    // 登录成功后获取隧道列表
-    await fetchTunnels();
-    // 启动定期刷新
-    startTunnelsRefresh();
-  } catch (error) {
-    console.error("登录 WebUI 失败:", error);
-    tunnelsError.value = `登录 WebUI 失败: ${extractErrorMessage(error, "登录 WebUI 失败")}`;
+// 登录 WebUI（in-flight 去重，避免并发触发重复登录）
+let loginInFlight: Promise<void> | null = null;
+const loginWebUI = async (): Promise<void> => {
+  if (loginInFlight) {
+    return loginInFlight;
   }
+
+  loginInFlight = (async () => {
+    try {
+      const session = await invokeTauriText("webui_login", {
+        password: webuiStore.settings.pass,
+      });
+
+      sessionCookie.value = session;
+      // 登录成功后获取隧道列表
+      await fetchTunnels();
+      // 启动定期刷新
+      startTunnelsRefresh();
+    } catch (error) {
+      console.error("登录 WebUI 失败:", error);
+      tunnelsError.value = `登录 WebUI 失败: ${extractErrorMessage(error, "登录 WebUI 失败")}`;
+    }
+  })().finally(() => {
+    loginInFlight = null;
+  });
+
+  return loginInFlight;
 };
 
-// 获取隧道列表
-const fetchTunnels = async () => {
+// 获取隧道列表（in-flight 去重，避免 5s 轮询与手动刷新并发堆叠）
+let fetchTunnelsInFlight: Promise<void> | null = null;
+let reauthInProgress = false;
+const fetchTunnels = async (): Promise<void> => {
+  if (fetchTunnelsInFlight) {
+    return fetchTunnelsInFlight;
+  }
+
   if (!sessionCookie.value) {
-    await loginWebUI();
-    return;
+    return loginWebUI();
   }
 
-  tunnelsLoading.value = true;
-  tunnelsError.value = "";
+  fetchTunnelsInFlight = (async () => {
+    tunnelsLoading.value = true;
+    tunnelsError.value = "";
 
-  try {
-    const userToken = await getRequiredConfigToken("userToken", "未找到用户 Token，请先登录");
+    try {
+      const userToken = await getRequiredConfigToken("userToken", "未找到用户 Token，请先登录");
 
-    const result = await invokeTauriResponse<TunnelListPayload | Tunnel[]>("webui_get_tunnels", {
-      session: sessionCookie.value,
-      userToken,
-    });
+      const result = await invokeTauriResponse<TunnelListPayload | Tunnel[]>("webui_get_tunnels", {
+        session: sessionCookie.value,
+        userToken,
+      });
 
-    if (result.code === 200) {
-      tunnels.value = extractProxyList(result.data);
-    } else {
-      throw new Error(result.message || "获取隧道列表失败");
+      if (result.code === 200) {
+        tunnels.value = extractProxyList(result.data);
+      } else {
+        throw new Error(result.message || "获取隧道列表失败");
+      }
+    } catch (error) {
+      console.error("获取隧道列表失败:", error);
+      tunnelsError.value = extractErrorMessage(error, "获取隧道列表失败");
+      // 认证失败时尝试重新登录（reauthInProgress 防 401→重登→再 401 无限递归）
+      const isAuthError =
+        tunnelsError.value.includes("401") || tunnelsError.value.includes("认证");
+      if (isAuthError && !reauthInProgress) {
+        reauthInProgress = true;
+        sessionCookie.value = "";
+        try {
+          await loginWebUI();
+        } finally {
+          reauthInProgress = false;
+        }
+      }
+    } finally {
+      tunnelsLoading.value = false;
     }
-  } catch (error) {
-    console.error("获取隧道列表失败:", error);
-    tunnelsError.value = extractErrorMessage(error, "获取隧道列表失败");
-    // 如果是认证失败，尝试重新登录
-    if (tunnelsError.value.includes("401") || tunnelsError.value.includes("认证")) {
-      sessionCookie.value = "";
-      await loginWebUI();
-    }
-  } finally {
-    tunnelsLoading.value = false;
-  }
+  })().finally(() => {
+    fetchTunnelsInFlight = null;
+  });
+
+  return fetchTunnelsInFlight;
 };
 
 // 刷新隧道列表
@@ -545,33 +574,44 @@ const stopTunnelsRefresh = () => {
   }
 };
 
-// 获取日志（直接从后端进程日志获取）
-const fetchLogs = async () => {
-  logsLoading.value = true;
-  logsError.value = "";
-
-  try {
-    const logsArray = await invoke<string[]>("get_webui_logs");
-    const nextSnapshot = logsArray.join("\n");
-    if (nextSnapshot === lastLogsSnapshot) {
-      return;
-    }
-
-    lastLogsSnapshot = nextSnapshot;
-    logs.value = logsArray;
-    
-    // 自动滚动到底部
-    nextTick(() => {
-      if (logsTextRef.value) {
-        logsTextRef.value.scrollTop = logsTextRef.value.scrollHeight;
-      }
-    });
-  } catch (error) {
-    console.error("获取日志失败:", error);
-    logsError.value = error instanceof Error ? error.message : "获取日志失败";
-  } finally {
-    logsLoading.value = false;
+// 获取日志（1s 轮询：in-flight 去重，避免慢请求堆叠与响应乱序回写）
+let fetchLogsInFlight: Promise<void> | null = null;
+const fetchLogs = async (): Promise<void> => {
+  if (fetchLogsInFlight) {
+    return fetchLogsInFlight;
   }
+
+  fetchLogsInFlight = (async () => {
+    logsLoading.value = true;
+    logsError.value = "";
+
+    try {
+      const logsArray = await invoke<string[]>("get_webui_logs");
+      const nextSnapshot = logsArray.join("\n");
+      if (nextSnapshot === lastLogsSnapshot) {
+        return;
+      }
+
+      lastLogsSnapshot = nextSnapshot;
+      logs.value = logsArray;
+      
+      // 自动滚动到底部
+      nextTick(() => {
+        if (logsTextRef.value) {
+          logsTextRef.value.scrollTop = logsTextRef.value.scrollHeight;
+        }
+      });
+    } catch (error) {
+      console.error("获取日志失败:", error);
+      logsError.value = error instanceof Error ? error.message : "获取日志失败";
+    } finally {
+      logsLoading.value = false;
+    }
+  })().finally(() => {
+    fetchLogsInFlight = null;
+  });
+
+  return fetchLogsInFlight;
 };
 
 // 复制日志（净化后的版本，移除 ANSI 转义序列和特殊字符）
@@ -670,9 +710,10 @@ const handleSaveSettings = async () => {
     clearTimeout(saveSettingsDebounceTimer);
   }
   
-  // 设置新的定时器，500ms 后保存
+  // 用户点击"保存"：持久化地址/端口/密码
   saveSettingsDebounceTimer = window.setTimeout(async () => {
-    const result = await webuiStore.saveSettings();
+    // 密码在点击保存时落盘持久化
+    const result = await webuiStore.saveSettings(true);
     if (result.success) {
       message.success(result.message);
     } else {
@@ -716,11 +757,13 @@ onMounted(() => {
   }
 });
 
-// 组件卸载时停止定时器
+// 组件卸载时停止定时器并清除会话
 onUnmounted(() => {
   stopStatusCheck();
   stopTunnelsRefresh();
   stopLogsRefresh();
+  // 清理会话 cookie（敏感信息，卸载后立即清除）
+  sessionCookie.value = "";
   // 清理防抖定时器
   if (saveSettingsDebounceTimer !== null) {
     clearTimeout(saveSettingsDebounceTimer);

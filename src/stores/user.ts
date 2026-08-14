@@ -10,6 +10,7 @@ import { defineStore } from 'pinia';
 import type { UserDetailInfo } from '@/types/user';
 import { getUserInfo as apiGetUserInfo } from '@/api/auth';
 import { useAuthStore } from './auth';
+import { formatTraffic } from '@/utils/timeFormatter';
 
 export const useUserStore = defineStore('user', () => {
   // State
@@ -35,12 +36,12 @@ export const useUserStore = defineStore('user', () => {
 
   /**
    * Format traffic for display
-   * @returns Formatted traffic string in GB (e.g., "50.5 GB")
+   * 复用 formatTraffic（自动升单位），并对缺失/负值/NaN 兜底
+   * @returns Formatted traffic string (e.g., "50.5 GB" / "1024.00 GB")
    */
   const formattedTraffic = computed(() => {
-    if (!userInfo.value) return '0 GB';
-    const trafficInGB = (userInfo.value.traffic / 1024).toFixed(2);
-    return `${trafficInGB} GB`;
+    if (!userInfo.value) return '-';
+    return formatTraffic(userInfo.value.traffic);
   });
 
   /**
@@ -80,7 +81,7 @@ export const useUserStore = defineStore('user', () => {
         const res = await apiGetUserInfo(authStore.userToken);
         if (res.code === 200) {
           const data = res.data;
-          if (data && typeof data === 'object' && 'inBound' in data && 'outBound' in data) {
+          if (data && typeof data === 'object' && 'inBound' in data && 'outBound' in data && 'traffic' in data) {
             userInfo.value = data as UserDetailInfo;
           } else {
             throw new Error('用户信息数据格式错误');

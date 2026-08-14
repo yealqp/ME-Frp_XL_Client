@@ -32,7 +32,8 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+/** 带超时的 fetch（30s），供系统内其它裸 fetch 调用点复用 */
+export async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {

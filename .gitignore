@@ -4,7 +4,6 @@ node_modules
 dist
 test
 src-tauri/target
-src-tauri/Cargo.lock
 src-tauri/*.toml
 src-tauri/config.yaml
 !src-tauri/Cargo.toml
@@ -13,3 +12,7 @@ src-tauri/config.yaml
 *.test.ts
 *tests*
 .claude/
+
+# 服务端部署敏感文件与运行时数据（切勿提交）
+server/ai_key.txt
+server/feedbacks/

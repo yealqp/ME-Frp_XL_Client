@@ -99,6 +99,11 @@ const totalTrafficOut = computed(() => nodeStore.totalTrafficOut);
 
 // 格式化运行时长或离线时长
 const formatUptime = (seconds: number, isOnline: boolean): string => {
+  // 异常数据（缺失/负数/NaN）兜底，避免出现"负天"等怪文案
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return isOnline ? '已在线' : '离线';
+  }
+
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);

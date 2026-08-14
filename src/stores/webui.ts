@@ -16,6 +16,33 @@ interface ActionResult {
   message: string;
 }
 
+// 仅允许合法主机名（避免脏值污染 URL / 注入请求）
+function sanitizeAddr(addr: string): string {
+  const trimmed = addr.trim();
+  if (!trimmed) {
+    return 'localhost';
+  }
+  // 拒绝协议、路径、端口、空白、通配符
+  if (
+    trimmed.includes('://') ||
+    trimmed.includes('/') ||
+    trimmed.includes(':') ||
+    trimmed.includes(' ') ||
+    trimmed.includes('*')
+  ) {
+    return 'localhost';
+  }
+  return trimmed;
+}
+
+// 端口校验：1~65535 整数
+function sanitizePort(port: number): number {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return 1201;
+  }
+  return port;
+}
+
 export const useWebuiStore = defineStore('webui', () => {
 
   // 状态
@@ -30,9 +57,11 @@ export const useWebuiStore = defineStore('webui', () => {
   const isStopping = ref(false);
   const showEmbedded = ref(false);
 
-  // 计算属性
+  // 计算属性（基于校验后的 addr/port）
   const webuiUrl = computed(() => {
-    return `http://${settings.value.addr}:${settings.value.port}`;
+    const addr = sanitizeAddr(settings.value.addr);
+    const port = sanitizePort(settings.value.port);
+    return `http://${addr}:${port}`;
   });
 
   // 加载 WebUI 设置
@@ -40,22 +69,25 @@ export const useWebuiStore = defineStore('webui', () => {
     try {
       const config = await loadUnifiedConfig();
 
-      if (config.webuiAddr) settings.value.addr = config.webuiAddr;
-      if (config.webuiPort) settings.value.port = config.webuiPort;
+      if (config.webuiAddr) settings.value.addr = sanitizeAddr(config.webuiAddr);
+      if (config.webuiPort) settings.value.port = sanitizePort(config.webuiPort);
       if (config.webuiPass) settings.value.pass = config.webuiPass;
     } catch (error) {
       console.error('加载 WebUI 设置失败:', error);
     }
   };
 
-  // 保存 WebUI 设置
-  const saveSettings = async (): Promise<ActionResult> => {
+  // 保存 WebUI 设置（密码仅在输入过时落盘，避免心跳保存明文）
+  const saveSettings = async (persistPass = false): Promise<ActionResult> => {
     try {
-      await mergeUnifiedConfig({
-        webuiAddr: settings.value.addr,
-        webuiPort: settings.value.port,
-        webuiPass: settings.value.pass,
-      });
+      const patch: Record<string, unknown> = {
+        webuiAddr: sanitizeAddr(settings.value.addr),
+        webuiPort: sanitizePort(settings.value.port),
+      };
+      if (persistPass) {
+        patch.webuiPass = settings.value.pass;
+      }
+      await mergeUnifiedConfig(patch);
       return { success: true, message: 'WebUI 设置已保存' };
     } catch (error) {
       console.error('保存 WebUI 设置失败:', error);
@@ -113,6 +145,9 @@ export const useWebuiStore = defineStore('webui', () => {
   const start = async () => {
     isStarting.value = true;
     try {
+      // 使用校验后的地址/端口（防止脏值传入后端命令）
+      settings.value.addr = sanitizeAddr(settings.value.addr);
+      settings.value.port = sanitizePort(settings.value.port);
       return await runWebuiCommand('start_webui', 'WebUI 启动成功', '启动 WebUI 失败', {
         addr: settings.value.addr,
         port: settings.value.port,

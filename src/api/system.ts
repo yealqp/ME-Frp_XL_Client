@@ -4,7 +4,7 @@
  * System-related API calls to api.mefrp.com (NOT xlc.mefrp.yealqp.cn or other external APIs).
  */
 
-import { apiGet, apiPost, API_BASE_URL } from "./client";
+import { apiGet, apiPost, API_BASE_URL, fetchWithTimeout } from "./client";
 import type { ApiResponse } from "@/types/api";
 
 export interface OperationLogResponse {
@@ -85,7 +85,24 @@ export interface GeoIpData {
 
 /** 获取 IP 地理位置（免费 GeoIP 兜底方案） */
 export async function getGeoIp(): Promise<GeoIpData> {
-  const res = await fetch(`${API_BASE_URL}/geoip`);
+  const res = await fetchWithTimeout(`${API_BASE_URL}/geoip`, { method: "GET" });
   if (!res.ok) throw new Error(`GeoIP 请求失败: ${res.status}`);
-  return res.json();
+
+  const raw: unknown = await res.json();
+  if (
+    typeof raw !== "object" ||
+    raw === null ||
+    !("latitude" in raw) ||
+    !("longitude" in raw)
+  ) {
+    throw new Error("GeoIP 响应数据格式错误");
+  }
+
+  const latitude = Number((raw as Record<string, unknown>).latitude);
+  const longitude = Number((raw as Record<string, unknown>).longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("GeoIP 响应坐标无效");
+  }
+
+  return { latitude, longitude };
 }
