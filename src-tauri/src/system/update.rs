@@ -52,12 +52,18 @@ async fn fetch_version_and_changelog() -> Result<(RemoteVersion, HashMap<String,
         .await
         .map_err(|e| format!("解析版本信息失败: {e}"))?;
 
-    // 解析完整的更新日志
+    // 解析完整的更新日志（tpca.json 每版本为 { date, changes } 对象格式，
+    // 统一提取 changes 列表；解析失败时回退为空）
     let full_changelog = if changelog_response.status().is_success() {
         changelog_response
             .json::<ChangelogResponse>()
             .await
-            .map(|r| r.data)
+            .map(|r| {
+                r.data
+                    .into_iter()
+                    .map(|(version, entry)| (version, entry.changes()))
+                    .collect::<HashMap<_, _>>()
+            })
             .unwrap_or_default()
     } else {
         HashMap::new()
