@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: ME-Frp XL Client Server API
+  description: |
+    XL Client 客户端调用的服务端接口（部署于 xlc.mefrp.yealqp.cn）。
+
+    认证方式：所有端点均要求 `Authorization: Bearer <共享密钥>` 请求头。
+    共享密钥为客户端与服务器预共享的防滥用密钥（非用户 token），
+    由客户端构建时从 `server/secrets.env` 注入。
+  version: 2.2.5
+servers:
+  - url: https://xlc.mefrp.yealqp.cn
+    description: 生产环境
+tags:
+  - name: feedback
+    description: 用户反馈提交（保存 JSON 文件 + QQ 群通知）
+  - name: analysis
+    description: 用户统计上报（按 MEFrpID 去重写入 MySQL）
+  - name: ai-analysis
+    description: AI 日志分析转发（服务端注入系统提示词，转发 OpenAI 兼容接口）
+paths:
+  /feedbacks.php:
+    post:
+      tags: [feedback]
+      summary: 提交用户反馈
+      description: |
+        校验并保存反馈内容到服务端 feedbacks/ 目录（JSON 文件），
+        并异步发送 QQ 群通知（OneBot 协议，失败不影响响应）。
+      operationId: sendFeedback
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+            examples:
+              基本反馈:
+                value:
+                  user_id: 12345
+                  content: 客户端在启动隧道时崩溃，复现步骤：……
+      responses:
+        '200':
+          description: 反馈保存成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /analysis.php:
+    post:
+      tags: [analysis]
+      summary: 上报用户统计信息
+      description: |
+        上报 Dashboard 访问用户信息，按 MEFrpID 唯一键去重（重复上报返回 duplicate=true）。
+      operationId: reportAnalysis
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisRequest'
+            examples:
+              用户上报:
+                value:
+                  MEFrpID: 12345
+                  username: example_user
+                  email: user@example.com
+      responses:
+        '200':
+          description: 上报成功（duplicate=true 表示已存在，未重复写入）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /ai_analysis.php:
+    post:
+      tags: [ai-analysis]
+      summary: AI 日志分析
+      description: |
+        接收客户端隧道日志，在服务端注入系统提示词（SYSTEM_PROMPT），
+        以 OpenAI completions 格式转发到 AI 服务并返回分析结果。
+        服务端限制：日志 ≤ 20000 字符、自定义提示 ≤ 2000 字符。
+      operationId: analyzeLog
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIAnalysisRequest'
+            examples:
+              日志分析:
+                value:
+                  log_content: |
+                    2026-07-06 10:00:00 [I] 启动隧道成功，您可以通过 xxx.mefrp.cn 访问您的服务
+                  tunnel_name: web-1
+                  tunnel_type: http
+      responses:
+        '200':
+          description: 分析成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIAnalysisSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+        '500':
+          description: 服务器内部错误（如 AI 密钥未在服务端配置）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '502':
+          description: AI 上游服务错误（转发失败/上游非 2xx/响应过大/解析失败）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: 客户端预共享密钥（与服务器端 PHP 中 API_SECRET 一致，构建时注入）
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: 人类可读的错误信息
+      example:
+        error: Unauthorized
+    FeedbackRequest:
+      type: object
+      required: [user_id, content]
+      properties:
+        user_id:
+          type: integer
+          format: int32
+          description: 用户 ID（必须大于 0）
+          minimum: 1
+          example: 12345
+        content:
+          type: string
+          description: 反馈内容（非空，最多 10000 字符）
+          maxLength: 10000
+          example: 客户端在启动隧道时崩溃
+    FeedbackSuccess:
+      type: object
+      required: [ok, file, message]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        file:
+          type: string
+          description: 保存的反馈文件名
+          example: feedback_20260706_120000_12345_a1b2c3d4.json
+        message:
+          type: string
+          example: Feedback saved successfully
+    AnalysisRequest:
+      type: object
+      required: [MEFrpID, username, email]
+      properties:
+        MEFrpID:
+          type: integer
+          format: int32
+          description: ME-Frp 用户 ID（必须大于 0）
+          minimum: 1
+          example: 12345
+        username:
+          type: string
+          description: 用户名（非空）
+          minLength: 1
+          example: example_user
+        email:
+          type: string
+          format: email
+          description: 邮箱（非空且必须为合法邮箱格式）
+          example: user@example.com
+    AnalysisSuccess:
+      type: object
+      required: [ok, duplicate, message]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        duplicate:
+          type: boolean
+          description: 是否为重复上报（该 MEFrpID 已存在）
+        message:
+          type: string
+          example: Analysis saved successfully
+    AIAnalysisRequest:
+      type: object
+      required: [log_content]
+      properties:
+        log_content:
+          type: string
+          description: 隧道日志原始内容（非空，最多 20000 字符）
+          maxLength: 20000
+          example: 2026-07-06 10:00:00 [I] 启动隧道成功
+        custom_prompt:
+          type: string
+          description: 用户自定义分析要求（可选，最多 2000 字符）
+          maxLength: 2000
+        tunnel_name:
+          type: string
+          description: 隧道名称（可选，最多 200 字符）
+          maxLength: 200
+        tunnel_type:
+          type: string
+          description: 隧道类型，如 http / tcp / udp（可选，最多 200 字符）
+          maxLength: 200
+    AIAnalysisSuccess:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          const: true
+        data:
+          type: object
+          required: [content]
+          properties:
+            content:
+              type: string
+              description: AI 分析结果文本
+              example: 日志显示隧道连接正常……
+  responses:
+    BadRequest:
+      description: 请求体为空或 JSON 解析失败
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Bearer token 缺失或不匹配
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    MethodNotAllowed:
+      description: 仅允许 POST（含 CORS 预检 OPTIONS → 204）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unprocessable:
+      description: 请求体字段缺失/类型错误/超出长度限制
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: 服务器内部错误（写文件/数据库失败）
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
