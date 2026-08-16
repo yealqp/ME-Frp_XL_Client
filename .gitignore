@@ -15,3 +15,6 @@ src-tauri/config.yaml
 
 # 服务端部署代码与敏感数据（不公开，独立部署到服务器）
 server/
+
+# 内部 API 文档（不公开）
+apidoc/
