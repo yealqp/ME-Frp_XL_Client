@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ME-Frp XL Client",
-  "version": "2.2.5-dev",
+  "version": "2.2.5",
   "identifier": "me-frp-desktop-unoffical",
   "build": {
     "beforeDevCommand": "pnpm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File tauri/nsis/generate-assets.ps1 && pnpm run build",
+    "beforeBuildCommand": "powershell -NoProfile -ExecutionPolicy Bypass -File src-tauri/tauri/nsis/generate-assets.ps1 && pnpm run build",
     "frontendDist": "../dist"
   },
   "app": {

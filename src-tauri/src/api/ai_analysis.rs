@@ -13,7 +13,15 @@ use crate::api::client::create_http_client;
 use serde::{Deserialize, Serialize};
 
 const AI_ANALYSIS_API_URL: &str = "https://xlc.mefrp.yealqp.cn/ai_analysis.php";
-const AI_ANALYSIS_API_TOKEN: &str = "yealqpxlclientaianalysissecret";
+
+// 客户端预共享密钥（防滥用认证）：
+// - 生产构建通过环境变量 XL_AI_ANALYSIS_TOKEN 注入覆盖，源码仓库不保留敏感明文
+// - 未注入时回退内置默认值，保持开箱即用；服务端应配合 IP 限流兜底
+// 构建示例：$env:XL_AI_ANALYSIS_TOKEN="<强随机值>"; cargo build --release
+const AI_ANALYSIS_API_TOKEN: &str = match option_env!("XL_AI_ANALYSIS_TOKEN") {
+    Some(token) => token,
+    None => "yealqpxlclientaianalysissecret",
+};
 
 /// 与 server/ai_analysis.php 的 MAX_LOG_LENGTH / MAX_PROMPT_LENGTH 保持一致
 const MAX_LOG_CHARS: usize = 20_000;

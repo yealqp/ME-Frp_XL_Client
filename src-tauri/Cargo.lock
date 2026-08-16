@@ -6115,7 +6115,7 @@ dependencies = [
 
 [[package]]
 name = "xl-client"
-version = "2.2.5-dev"
+version = "2.2.5"
 dependencies = [
  "base64 0.22.1",
  "reqwest",

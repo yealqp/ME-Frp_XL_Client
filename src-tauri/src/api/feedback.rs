@@ -6,7 +6,15 @@ use crate::api::client::{create_http_client, send_request, with_bearer_auth};
 use serde::{Deserialize, Serialize};
 
 const FEEDBACK_API_URL: &str = "https://xlc.mefrp.yealqp.cn/feedbacks.php";
-const FEEDBACK_API_TOKEN: &str = "yealqpxlclientfeedbacksecret";
+
+// 客户端预共享密钥（防滥用认证）：
+// - 生产构建通过环境变量 XL_FEEDBACK_TOKEN 注入覆盖，源码仓库不保留敏感明文
+// - 未注入时回退内置默认值，保持开箱即用；服务端应配合 IP 限流兜底
+// 构建示例：$env:XL_FEEDBACK_TOKEN="<强随机值>"; cargo build --release
+const FEEDBACK_API_TOKEN: &str = match option_env!("XL_FEEDBACK_TOKEN") {
+    Some(token) => token,
+    None => "yealqpxlclientfeedbacksecret",
+};
 
 /// 发送到反馈服务器的请求体
 #[derive(Serialize, Deserialize, Debug)]

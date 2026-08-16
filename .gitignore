@@ -13,6 +13,5 @@ src-tauri/config.yaml
 *tests*
 .claude/
 
-# 服务端部署敏感文件与运行时数据（切勿提交）
-server/ai_key.txt
-server/feedbacks/
+# 服务端部署代码与敏感数据（不公开，独立部署到服务器）
+server/
