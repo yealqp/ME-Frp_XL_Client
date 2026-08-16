@@ -8,13 +8,9 @@ use serde::{Deserialize, Serialize};
 const FEEDBACK_API_URL: &str = "https://xlc.mefrp.yealqp.cn/feedbacks.php";
 
 // 客户端预共享密钥（防滥用认证）：
-// - 生产构建通过环境变量 XL_FEEDBACK_TOKEN 注入覆盖，源码仓库不保留敏感明文
-// - 未注入时回退内置默认值，保持开箱即用；服务端应配合 IP 限流兜底
-// 构建示例：$env:XL_FEEDBACK_TOKEN="<强随机值>"; cargo build --release
-const FEEDBACK_API_TOKEN: &str = match option_env!("XL_FEEDBACK_TOKEN") {
-    Some(token) => token,
-    None => "yealqpxlclientfeedbacksecret",
-};
+// - 由 build.rs 从 server/secrets.env 读取注入（源码默认留空，无明文）
+// - 未配置时为空字符串，调用服务端会被 401 拒绝（提示需配置密钥）
+const FEEDBACK_API_TOKEN: &str = env!("XL_FEEDBACK_TOKEN");
 
 /// 发送到反馈服务器的请求体
 #[derive(Serialize, Deserialize, Debug)]
