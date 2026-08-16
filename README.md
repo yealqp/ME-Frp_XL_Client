@@ -88,4 +88,6 @@ pnpm tauri build
 
 ## 许可证
 
-[MIT](LICENSE)
+[GNU General Public License v3.0 (GPLv3)](LICENSE)
+
+本项目基于 GPLv3 开源：您可以自由使用、修改和分发，但衍生作品必须同样以 GPLv3 协议开源。
